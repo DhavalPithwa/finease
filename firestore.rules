@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper to check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Individual User Data
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      // Transactions subcollection
+      match /transactions/{transactionId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // Goals subcollection
+      match /goals/{goalId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Assets and Liabilities
+      match /assets/{assetId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /liabilities/{liabilityId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Admin Access (Aggregate Data)
+    match /system_health/{docId} {
+      allow read: if isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow write: if false; // Only system processes can write
+    }
+  }
+}
