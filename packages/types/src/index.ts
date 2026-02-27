@@ -1,43 +1,56 @@
+export type UserRole = "user" | "admin";
+
 export interface User {
   id: string;
   email: string;
   displayName: string;
-  role: "user" | "admin";
+  role: UserRole;
+  createdAt: string;
 }
 
-export interface Asset {
-  id: string;
-  name: string;
-  value: number;
-  type: "bank" | "cash" | "investment" | "other";
-  lastUpdated: string;
-}
+export type AccountType = "bank" | "cash" | "loan" | "investment";
 
-export interface Liability {
+export interface Account {
   id: string;
+  userId: string;
   name: string;
-  value: number;
-  type: "loan" | "credit_card" | "mortgage" | "other";
-  lastUpdated: string;
+  type: AccountType;
+  balance: number;
+  currency: string;
+  institutionName?: string;
+  lastSyncedAt: string;
 }
 
 export interface FinancialGoal {
   id: string;
+  userId: string;
   name: string;
   targetAmount: number;
   currentAmount: number;
-  deadline: string;
+  targetDate: string;
   startDate: string;
+  category: string;
+  icon?: string;
 }
+
+export type TransactionStatus = "pending" | "approved" | "rejected";
+export type TransactionType = "income" | "expense" | "transfer";
 
 export interface Transaction {
   id: string;
+  userId: string;
+  accountId: string;
+  toAccountId?: string; // For transfers
   amount: number;
   date: string;
+  description: string;
   category: string;
-  type: "income" | "expense";
-  source: "bank" | "cash";
-  isBounce?: boolean; // For the "Bounce" toggle (unexpected money)
+  type: TransactionType;
+  status: TransactionStatus;
+  metadata?: {
+    originalInstitutionDescription?: string;
+    isCashWithdrawal?: boolean;
+  };
 }
 
 export interface DashboardStats {
@@ -45,15 +58,12 @@ export interface DashboardStats {
   totalAssets: number;
   totalLiabilities: number;
   netWorthHistory: { month: string; value: number }[];
-  assetLiabilitySplit: {
-    name: string;
-    value: number;
-    type: "asset" | "liability";
-  }[];
-  goalProgress: {
+  assetAllocation: { name: string; value: number; color: string }[];
+  goalPacing: {
     goalId: string;
-    percentageSaved: number;
-    expectedPercentage: number; // The "Pace" line
+    goalName: string;
+    actualPercentage: number;
+    expectedPercentage: number;
+    status: "ahead" | "behind" | "ontrack";
   }[];
-  expenseCategories: { category: string; amount: number; isBounce: boolean }[];
 }

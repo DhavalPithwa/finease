@@ -1,102 +1,178 @@
-import Image, { type ImageProps } from "next/image";
-import { Button } from "@repo/ui/button";
-import styles from "./page.module.css";
+"use client";
 
-type Props = Omit<ImageProps, "src"> & {
-  srcLight: string;
-  srcDark: string;
-};
+import { useState } from "react";
+import { NetWorthChart } from "@/components/dashboard/NetWorthChart";
+import { AssetAllocationDonut } from "@/components/dashboard/AssetLiabilityDonut";
+import { GoalProgressCard } from "@/components/dashboard/GoalProgressCard";
+import { VerificationList } from "@/components/verification/VerificationList";
+import { AccountList } from "@/components/accounts/AccountList";
+import { TransferModal } from "@/components/accounts/TransferModal";
+import { FileUploadZone } from "@/components/verification/FileUploadZone";
+import { StatWidget } from "@/components/ui/StatWidget";
+import type { ParsedTransaction } from "@/lib/csv-parser";
 
-const ThemeImage = (props: Props) => {
-  const { srcLight, srcDark, ...rest } = props;
-
-  return (
-    <>
-      <Image {...rest} src={srcLight} className="imgLight" />
-      <Image {...rest} src={srcDark} className="imgDark" />
-    </>
-  );
-};
+import { MOCK_STATS, MOCK_GOALS, MOCK_ACCOUNTS, MOCK_TRANSACTIONS } from "@/lib/mock-data";
+import { Plus, RefreshCw, AlertCircle, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <ThemeImage
-          className={styles.logo}
-          srcLight="turborepo-dark.svg"
-          srcDark="turborepo-light.svg"
-          alt="Turborepo logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>apps/web/app/page.tsx</code>
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [pendingTransactions, setPendingTransactions] = useState(MOCK_TRANSACTIONS);
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new/clone?demo-description=Learn+to+implement+a+monorepo+with+a+two+Next.js+sites+that+has+installed+three+local+packages.&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F4K8ZISWAzJ8X1504ca0zmC%2F0b21a1c6246add355e55816278ef54bc%2FBasic.png&demo-title=Monorepo+with+Turborepo&demo-url=https%3A%2F%2Fexamples-basic-web.vercel.sh%2F&from=templates&project-name=Monorepo+with+Turborepo&repository-name=monorepo-turborepo&repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fturborepo%2Ftree%2Fmain%2Fexamples%2Fbasic&root-directory=apps%2Fdocs&skippable-integrations=1&teamSlug=vercel&utm_source=create-turbo"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://turborepo.dev/docs?utm_source"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
+  const handleApprove = (id: string) => {
+    setPendingTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Financial Command Center</h1>
+          <p className="text-slate-500 font-medium mt-1">Welcome back, Rahul. Here represents your unified wealth landscape.</p>
         </div>
-        <Button appName="web" className={styles.secondary}>
-          Open alert
-        </Button>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com/templates?search=turborepo&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsTransferOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-primary/25 active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            Add Transaction
+          </button>
+          <button className="p-2.5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-border-dark rounded-xl text-slate-500 hover:text-primary transition-colors">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Primary Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatWidget 
+          label="Cash Flow" 
+          value="+₹2.45L" 
+          subValue="This Month" 
+          icon={<ArrowUpRight className="w-5 h-5" />} 
+          iconBg="bg-emerald-500/10" 
+          iconColor="text-emerald-500" 
+        />
+        <StatWidget 
+          label="Total Expenses" 
+          value="₹1.12L" 
+          subValue="45% Savings Rate" 
+          icon={<ArrowDownRight className="w-5 h-5" />} 
+          iconBg="bg-blue-500/10" 
+          iconColor="text-blue-500" 
+        />
+        <StatWidget 
+          label="Unmatched Items" 
+          value={pendingTransactions.length} 
+          subValue="Awaiting Verification" 
+          icon={<AlertCircle className="w-5 h-5" />} 
+          iconBg="bg-amber-500/10" 
+          iconColor="text-amber-500" 
+        />
+        <StatWidget 
+          label="Net Change" 
+          value="+₹12.5L" 
+          subValue="YoY Growth" 
+          icon={<RefreshCw className="w-5 h-5" />} 
+          iconBg="bg-primary/10" 
+          iconColor="text-primary" 
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Net Worth Chart (Lager Span) */}
+        <div className="lg:col-span-2">
+          <NetWorthChart 
+            data={MOCK_STATS.netWorthHistory} 
+            currentNetWorth={MOCK_STATS.netWorth} 
+            percentageChange={12.5} 
           />
-          Examples
-        </a>
-        <a
-          href="https://turborepo.dev?utm_source=create-turbo"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+        </div>
+
+        {/* Asset Allocation Donut */}
+        <div className="lg:col-span-1">
+          <AssetAllocationDonut data={MOCK_STATS.assetAllocation} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Goal Navigator */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Goal Navigator</h3>
+            <button className="text-sm font-bold text-primary hover:underline">View All</button>
+          </div>
+          {MOCK_GOALS.map((goal) => {
+            const pace = MOCK_STATS.goalPacing.find(p => p.goalId === goal.id);
+            return (
+              <GoalProgressCard 
+                key={goal.id}
+                name={goal.name}
+                targetAmount={goal.targetAmount}
+                currentAmount={goal.currentAmount}
+                percentageSaved={pace?.actualPercentage || 0}
+                expectedPercentage={pace?.expectedPercentage || 0}
+                targetDate={goal.targetDate}
+              />
+            );
+          })}
+        </div>
+
+        {/* Verification & Staging Area */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Verification & Staging</h3>
+            <p className="text-xs text-slate-500 font-medium">Stage your bank statements to reconcile accounts</p>
+          </div>
+          
+          <FileUploadZone 
+            onTransactionsParsed={(parsed: ParsedTransaction[]) => {
+              const newTransactions = parsed.map(tx => ({
+                id: `staged-${Date.now()}-${Math.random()}`,
+                userId: "current-user",
+                accountId: "staged",
+                amount: tx.amount,
+                date: tx.date,
+                description: tx.description,
+                category: tx.category,
+                type: tx.type === "income" ? "income" as const : "expense" as const,
+                status: "pending" as const,
+                metadata: { isStaged: true }
+              }));
+              setPendingTransactions(prev => [...newTransactions, ...prev]);
+            }} 
           />
-          Go to turborepo.dev →
-        </a>
-      </footer>
+
+
+          <VerificationList 
+            transactions={pendingTransactions} 
+            onApprove={handleApprove}
+            onReject={handleApprove}
+          />
+        </div>
+      </div>
+
+
+      {/* Account Management section */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white">Managed Accounts</h3>
+          <button className="text-sm font-bold text-primary hover:underline">Manage Connections</button>
+        </div>
+        <AccountList accounts={MOCK_ACCOUNTS} />
+      </div>
+
+      {/* Transfer UI */}
+      <TransferModal 
+        isOpen={isTransferOpen} 
+        onClose={() => setIsTransferOpen(false)} 
+        onTransfer={(amount) => {
+          console.log("Transferring", amount);
+          setIsTransferOpen(false);
+        }} 
+      />
     </div>
   );
 }
+

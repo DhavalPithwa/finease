@@ -1,37 +1,60 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-emerald: oklch(0.7 0.25 150);
-  --color-brand-background: oklch(0.12 0.02 250);
-  --color-brand-card: oklch(0.18 0.02 250);
-  --color-brand-accent: oklch(0.65 0.2 250);
+  /* FinEase Design Tokens */
+  --color-primary: #135bec;
+  --color-primary-dark: #0e45b5;
+  --color-background-light: #f6f6f8;
+  --color-background-dark: #0f1115;
+  --color-surface-dark: #181b21;
+  --color-border-dark: #2a2f3a;
+
+  --color-emerald-accent: #10b981;
+  --color-red-accent: #ef4444;
+
+  --font-display: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0 0);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: oklch(0.129 0 0);
-    --foreground: oklch(0.984 0 0);
+    --background: #f6f6f8;
+    --foreground: #0f172a;
+  }
+
+  .dark {
+    --background: #0f1115;
+    --foreground: #f8fafc;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply font-body antialiased;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-}
+@layer components {
+  .finease-card {
+    @apply rounded-xl border bg-white shadow-sm transition-all hover:shadow-md dark:bg-surface-dark dark:border-border-dark;
+  }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.5rem;
-}
+  .glass-header {
+    @apply sticky top-0 z-50 w-full border-b backdrop-blur-md bg-white/80 border-gray-200 dark:bg-background-dark/80 dark:border-border-dark;
+  }
 
-.chart-gradient-emerald {
-  fill: url(#emeraldGradient);
+  .status-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border;
+  }
+
+  .status-ahead {
+    @apply bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20;
+  }
+
+  .status-behind {
+    @apply bg-red-50 text-red-700 border-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20;
+  }
 }

@@ -1,7 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Target, TrendingUp } from "lucide-react";
+import { Target, CheckCircle, AlertCircle } from "lucide-react";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { ProgressBar } from "@/components/ui/ProgressBar";
+import { formatCurrency } from "@/lib/utils";
 
 interface GoalProgressProps {
   name: string;
@@ -9,7 +12,7 @@ interface GoalProgressProps {
   currentAmount: number;
   percentageSaved: number;
   expectedPercentage: number;
-  deadline: string;
+  targetDate: string;
 }
 
 export function GoalProgressCard({ 
@@ -18,70 +21,66 @@ export function GoalProgressCard({
   currentAmount, 
   percentageSaved, 
   expectedPercentage,
-  deadline 
+  targetDate 
 }: GoalProgressProps) {
-  const isOnTrack = percentageSaved >= expectedPercentage;
+  const diff = percentageSaved - expectedPercentage;
+  const status = diff >= 0 ? (diff > 5 ? "ahead" : "ontrack") : "behind";
+  
+  const statusConfig = {
+    ahead: { 
+      label: "Ahead of schedule", 
+      badge: "ahead",
+      icon: <CheckCircle className="w-3.5 h-3.5" />,
+      color: "text-emerald-600"
+    },
+    ontrack: { 
+      label: "On Track", 
+      badge: "ontrack",
+      icon: <CheckCircle className="w-3.5 h-3.5" />,
+      color: "text-blue-600"
+    },
+    behind: { 
+      label: `Behind by ${Math.abs(Math.round(diff))}%`, 
+      badge: "behind",
+      icon: <AlertCircle className="w-3.5 h-3.5" />,
+      color: "text-red-500"
+    }
+  };
+
+  const currentStatus = statusConfig[status as keyof typeof statusConfig];
 
   return (
-    <div className="p-6 glass-card">
-      <div className="flex items-center justify-between mb-4">
+    <Card className="flex flex-col gap-4">
+      <div className="flex justify-between items-end">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-brand-accent/20 rounded-lg">
-            <Target className="w-5 h-5 text-brand-accent" />
+          <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg text-indigo-600 border border-indigo-100 dark:border-indigo-500/20">
+            <Target className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="font-bold text-white">{name}</h4>
-            <p className="text-xs text-gray-400">Target: ${targetAmount.toLocaleString()}</p>
+            <p className="text-slate-900 dark:text-white text-sm font-bold">{name}</p>
+            <p className="text-xs text-slate-500 font-medium">Target: {formatCurrency(targetAmount)} by {new Date(targetDate).getFullYear()}</p>
           </div>
         </div>
-        <div className="text-right">
-          <div className={`text-sm font-bold ${isOnTrack ? 'text-emerald-500' : 'text-amber-500'}`}>
-            {isOnTrack ? 'On Track' : 'Behind Pace'}
-          </div>
-          <p className="text-xs text-gray-400">Until {new Date(deadline).toLocaleDateString()}</p>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {/* Saved Progress Bar */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs">
-            <span className="text-gray-400">Saved: ${currentAmount.toLocaleString()}</span>
-            <span className="text-white font-medium">{percentageSaved}%</span>
-          </div>
-          <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden relative">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${percentageSaved}%` }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="h-full bg-emerald-500 rounded-full"
-            />
-          </div>
-        </div>
-
-        {/* Pace Line Bar */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs">
-            <span className="text-gray-400">Required Pace</span>
-            <span className="text-gray-300 font-medium">{expectedPercentage}%</span>
-          </div>
-          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${expectedPercentage}%` }}
-              transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-              className="h-full bg-blue-500/50 rounded-full"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-xs">
-        <TrendingUp className="w-3 h-3 text-emerald-500" />
-        <span className="text-gray-400">
-          You need to save <span className="text-white font-medium">$1,200/mo</span> to hit this goal.
+        <span className="text-slate-900 dark:text-white text-sm font-bold bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-100 dark:border-slate-700">
+          {Math.round(percentageSaved)}%
         </span>
       </div>
-    </div>
+
+      <div className="space-y-3">
+        <ProgressBar 
+          progress={percentageSaved} 
+          expectedPace={expectedPercentage}
+          barClassName={status === 'behind' ? 'bg-red-500' : 'bg-indigo-500'}
+        />
+        
+        <div className="flex justify-between text-xs font-medium">
+          <span className="text-slate-500">Saved: {formatCurrency(currentAmount)}</span>
+          <Badge variant={currentStatus.badge as "ahead" | "behind" | "ontrack" | "default"} icon={currentStatus.icon}>
+            {currentStatus.label}
+          </Badge>
+        </div>
+      </div>
+    </Card>
   );
 }
+
