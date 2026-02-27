@@ -31,6 +31,7 @@ export function UserMenu() {
       <div className="relative group">
         <button className="size-8 rounded-full bg-gradient-to-tr from-primary to-emerald-400 p-[px] overflow-hidden">
           {user.photoURL ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img 
               src={user.photoURL} 
               alt={user.displayName || ""} 

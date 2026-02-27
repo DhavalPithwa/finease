@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { formatCurrency } from "@/lib/utils";
 import { ArrowLeftRight, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 

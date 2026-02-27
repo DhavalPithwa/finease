@@ -11,7 +11,7 @@ interface AssetAllocationData {
   color: string;
 }
 
-export function AssetAllocationDonut({ data }: { data: AssetAllocationData[] }) {
+export function AssetLiabilityDonut({ data }: { data: AssetAllocationData[] }) {
   const total = data.reduce((acc, curr) => acc + curr.value, 0);
 
   return (

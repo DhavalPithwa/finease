@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { NetWorthChart } from "@/components/dashboard/NetWorthChart";
-import { AssetAllocationDonut } from "@/components/dashboard/AssetLiabilityDonut";
+import { AssetLiabilityDonut } from "@/components/dashboard/AssetLiabilityDonut";
 import { GoalProgressCard } from "@/components/dashboard/GoalProgressCard";
 import { VerificationList } from "@/components/verification/VerificationList";
 import { AccountList } from "@/components/accounts/AccountList";
@@ -92,7 +92,7 @@ export default function Home() {
 
         {/* Asset Allocation Donut */}
         <div className="lg:col-span-1">
-          <AssetAllocationDonut data={MOCK_STATS.assetAllocation} />
+          <AssetLiabilityDonut data={MOCK_STATS.assetLiabilitySplit} />
         </div>
       </div>
 
@@ -104,14 +104,14 @@ export default function Home() {
             <button className="text-sm font-bold text-primary hover:underline">View All</button>
           </div>
           {MOCK_GOALS.map((goal) => {
-            const pace = MOCK_STATS.goalPacing.find(p => p.goalId === goal.id);
+            const pace = MOCK_STATS.goalProgress.find(p => p.goalId === goal.id);
             return (
               <GoalProgressCard 
                 key={goal.id}
                 name={goal.name}
                 targetAmount={goal.targetAmount}
                 currentAmount={goal.currentAmount}
-                percentageSaved={pace?.actualPercentage || 0}
+                percentageSaved={pace?.percentageSaved || 0}
                 expectedPercentage={pace?.expectedPercentage || 0}
                 targetDate={goal.targetDate}
               />

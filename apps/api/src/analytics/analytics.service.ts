@@ -6,11 +6,11 @@ export class AnalyticsService {
   /**
    * Formats raw Firestore transaction and asset data into Recharts-friendly JSON
    */
-  async getDashboardStats(userId: string): Promise<DashboardStats> {
+  getDashboardStats(): Promise<DashboardStats> {
     // In a real implementation, this would fetch from Firestore:
     // const assets = await this.firestore.collection('users').doc(userId).collection('assets').get();
     // const liabilities = await this.firestore.collection('users').doc(userId).collection('liabilities').get();
-    
+
     // Logic for "Net Worth" over time
     const netWorthHistory = [
       { month: 'Jan', value: 95000 },
@@ -23,10 +23,30 @@ export class AnalyticsService {
 
     // Logic for "Asset vs Liability Split"
     const assetLiabilitySplit = [
-      { name: 'Bank Accounts', value: 85000, type: 'asset' as const },
-      { name: 'Real Estate', value: 450000, type: 'asset' as const },
-      { name: 'Mortgage', value: 380000, type: 'liability' as const },
-      { name: 'Car Loan', value: 15000, type: 'liability' as const },
+      {
+        name: 'Bank Accounts',
+        value: 85000,
+        type: 'asset' as const,
+        color: '#10b981',
+      },
+      {
+        name: 'Real Estate',
+        value: 450000,
+        type: 'asset' as const,
+        color: '#3b82f6',
+      },
+      {
+        name: 'Mortgage',
+        value: 380000,
+        type: 'liability' as const,
+        color: '#ef4444',
+      },
+      {
+        name: 'Car Loan',
+        value: 15000,
+        type: 'liability' as const,
+        color: '#f59e0b',
+      },
     ];
 
     // Logic for "Goal Progress" with Pace Lines
@@ -40,7 +60,7 @@ export class AnalyticsService {
         goalId: 'goal_2',
         percentageSaved: 40,
         expectedPercentage: 35, // Ahead of pace
-      }
+      },
     ];
 
     // Logic for "Expense Categories" with Bounce Toggle flag
@@ -52,14 +72,14 @@ export class AnalyticsService {
     ];
 
     const totalAssets = assetLiabilitySplit
-      .filter(i => i.type === 'asset')
-      .reduce((sum, i) => sum + i.value, 0);
-      
-    const totalLiabilities = assetLiabilitySplit
-      .filter(i => i.type === 'liability')
+      .filter((i) => i.type === 'asset')
       .reduce((sum, i) => sum + i.value, 0);
 
-    return {
+    const totalLiabilities = assetLiabilitySplit
+      .filter((i) => i.type === 'liability')
+      .reduce((sum, i) => sum + i.value, 0);
+
+    return Promise.resolve({
       netWorth: totalAssets - totalLiabilities,
       totalAssets,
       totalLiabilities,
@@ -67,6 +87,6 @@ export class AnalyticsService {
       assetLiabilitySplit,
       goalProgress,
       expenseCategories,
-    };
+    });
   }
 }

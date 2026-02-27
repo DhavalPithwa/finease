@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Param } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { DashboardStats } from '@repo/types';
 
@@ -7,7 +7,10 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('dashboard/:userId')
-  async getDashboard(@Param('userId') userId: string): Promise<DashboardStats> {
-    return this.analyticsService.getDashboardStats(userId);
+  async getDashboard(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @Param('userId') _userId: string,
+  ): Promise<DashboardStats> {
+    return this.analyticsService.getDashboardStats();
   }
 }

@@ -98,26 +98,28 @@ export const MOCK_STATS: DashboardStats = {
     { month: "Sep", value: 12200000 },
     { month: "Nov", value: 12450000 },
   ],
-  assetAllocation: [
-    { name: "Equity", value: 7650000, color: "#135bec" },
-    { name: "Debt", value: 2780000, color: "#10b981" },
-    { name: "Gold", value: 1390000, color: "#f59e0b" },
-    { name: "Liquid", value: 630000, color: "#ef4444" },
+  assetLiabilitySplit: [
+    { name: "Equity", value: 7650000, type: "asset", color: "#135bec" },
+    { name: "Debt", value: 2780000, type: "asset", color: "#10b981" },
+    { name: "Gold", value: 1390000, type: "asset", color: "#f59e0b" },
+    { name: "Liquid", value: 630000, type: "asset", color: "#ef4444" },
   ],
-  goalPacing: [
+  goalProgress: [
     {
       goalId: "goal-1",
-      goalName: "Retirement",
-      actualPercentage: 65,
+      percentageSaved: 65,
       expectedPercentage: 62,
-      status: "ahead",
     },
     {
       goalId: "goal-2",
-      goalName: "Child Education",
-      actualPercentage: 42,
+      percentageSaved: 42,
       expectedPercentage: 48,
-      status: "behind",
     },
   ],
+  expenseCategories: [
+     { category: 'Rent', amount: 2000, isBounce: false },
+     { category: 'Groceries', amount: 600, isBounce: false },
+     { category: 'Emergency Car Repair', amount: 1200, isBounce: true },
+     { category: 'Bonus Shopping', amount: 500, isBounce: true },
+  ]
 };

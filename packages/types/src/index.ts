@@ -50,6 +50,7 @@ export interface Transaction {
   metadata?: {
     originalInstitutionDescription?: string;
     isCashWithdrawal?: boolean;
+    isStaged?: boolean;
   };
 }
 
@@ -58,12 +59,20 @@ export interface DashboardStats {
   totalAssets: number;
   totalLiabilities: number;
   netWorthHistory: { month: string; value: number }[];
-  assetAllocation: { name: string; value: number; color: string }[];
-  goalPacing: {
+  assetLiabilitySplit: { 
+    name: string; 
+    value: number; 
+    type: 'asset' | 'liability'; 
+    color: string; 
+  }[];
+  goalProgress: {
     goalId: string;
-    goalName: string;
-    actualPercentage: number;
+    percentageSaved: number;
     expectedPercentage: number;
-    status: "ahead" | "behind" | "ontrack";
+  }[];
+  expenseCategories: {
+    category: string;
+    amount: number;
+    isBounce: boolean;
   }[];
 }

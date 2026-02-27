@@ -31,7 +31,11 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
-            <NetWorthChart data={stats.netWorthHistory} />
+            <NetWorthChart 
+              data={stats.netWorthHistory} 
+              currentNetWorth={stats.netWorth}
+              percentageChange={12.5}
+            />
           </div>
           <div>
             <AssetLiabilityDonut data={stats.assetLiabilitySplit} />
@@ -49,7 +53,7 @@ export default function DashboardPage() {
                 currentAmount={goal.targetAmount * ((stats.goalProgress[idx]?.percentageSaved || 0) / 100)}
                 percentageSaved={stats.goalProgress[idx]?.percentageSaved || 0}
                 expectedPercentage={stats.goalProgress[idx]?.expectedPercentage || 0}
-                deadline={goal.deadline}
+                targetDate={goal.targetDate}
               />
             ))}
           </div>
