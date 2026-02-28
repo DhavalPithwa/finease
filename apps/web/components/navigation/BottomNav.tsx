@@ -10,7 +10,7 @@ export function BottomNav() {
   const { user } = useAuth();
 
   const links = [
-    { href: "/dashboard", label: "Home", icon: "home" },
+    { href: "/dashboard", label: "Dashboard", icon: "home" },
     { href: "/transactions", label: "Transact", icon: "currency_rupee" },
     { href: "/goals", label: "Goals", icon: "track_changes" },
     { href: "/portfolio", label: "Portfolio", icon: "trending_up" },

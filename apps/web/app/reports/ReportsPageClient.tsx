@@ -1,22 +1,66 @@
 "use client";
 
-import { MOCK_STATS } from "@/lib/mock-data";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 import { ExpenseChart } from "@/components/dashboard/ExpenseChart";
+import { Transaction } from "@repo/types";
 
 export default function ReportsPageClient() {
-  const expenseBreakdown = [
-    { category: "Housing", amount: 24000, percent: 45, color: "bg-indigo-500" },
-    { category: "Food & Dining", amount: 12500, percent: 25, color: "bg-orange-500" },
-    { category: "Transport", amount: 8200, percent: 15, color: "bg-blue-500" },
-    { category: "Shopping", amount: 5100, percent: 10, color: "bg-pink-500" },
-  ];
+  const accounts = useSelector((state: RootState) => state.accounts.items);
+  const transactions = useSelector((state: RootState) => state.transactions.items);
+  const categories = useSelector((state: RootState) => state.categories.items);
+
+  const accountsWithBalance = accounts.map((acc: any) => {
+    let currentBalance = acc.balance;
+    transactions.forEach((tx: any) => {
+      if (tx.isAutomated) return;
+      if (tx.accountId === acc.id) {
+        if (tx.type === 'expense') currentBalance -= tx.amount;
+        if (tx.type === 'income') currentBalance += tx.amount;
+      }
+      if (tx.toAccountId === acc.id) {
+        currentBalance += tx.amount;
+      }
+    });
+    return { ...acc, computedBalance: currentBalance };
+  });
+
+  const netWorth = accountsWithBalance.reduce((sum: number, acc: any) => acc.type !== 'loan' ? sum + acc.computedBalance : sum - acc.computedBalance, 0);
+  
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  const currentMonthTx = transactions.filter((tx: Transaction) => {
+    const d = new Date(tx.date);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+
+  const inflow = currentMonthTx.filter((tx: Transaction) => tx.type === 'income').reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
+  const outflow = currentMonthTx.filter((tx: Transaction) => tx.type === 'expense').reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
+
+  const categoryTotals = currentMonthTx.filter((tx: Transaction) => tx.type === 'expense').reduce((acc: Record<string, number>, tx: Transaction) => {
+    acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const expenseBreakdown = Object.entries(categoryTotals)
+    .sort((a: [string, any], b: [string, any]) => (b[1] as number) - (a[1] as number))
+    .map(([category, amount]: [string, any]) => {
+      const catSettings = categories.find((c: any) => c.name === category);
+      return {
+        category,
+        amount: amount as number,
+        percent: outflow > 0 ? ((amount as number) / outflow) * 100 : 0,
+        color: catSettings?.color || "bg-slate-500"
+      };
+    });
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 w-full">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Financial Reports</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Analytics for Oct 2023</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Analytics for current month</p>
         </div>
       </div>
 
@@ -26,8 +70,8 @@ export default function ReportsPageClient() {
             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Net Worth</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">₹ {MOCK_STATS.netWorth.toLocaleString()}</h2>
-            <span className="text-sm font-semibold text-emerald-500">+12.4%</span>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">₹ {netWorth.toLocaleString()}</h2>
+            <span className="text-sm font-semibold text-slate-500">Live</span>
           </div>
         </div>
         
@@ -36,11 +80,12 @@ export default function ReportsPageClient() {
             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Monthly Cash Flow</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">₹ 1,24,000</h2>
+            <h2 className="text-3xl font-bold text-emerald-500">₹ {inflow.toLocaleString()}</h2>
             <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Inflow</span>
           </div>
-          <div className="mt-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5">
-            <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: "65%" }}></div>
+          <div className="flex items-baseline gap-2 mt-1">
+            <h2 className="text-2xl font-bold text-rose-500">₹ {outflow.toLocaleString()}</h2>
+            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Outflow</span>
           </div>
         </div>
 
@@ -49,8 +94,9 @@ export default function ReportsPageClient() {
             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Portfolio Organic Growth</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">₹ 5,20,000</h2>
-            <span className="text-sm font-semibold text-emerald-500">↑ 12.5%</span>
+            <h2 className={`text-3xl font-bold ${inflow - outflow >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              ₹ {(inflow - outflow).toLocaleString()}
+            </h2>
           </div>
         </div>
       </div>

@@ -1,54 +1,63 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { setUser, updateUserProfile as reduxUpdateUserProfile } from "@/store/slices/userSlice";
+import { RootState } from "@/store";
 
 interface User {
   uid: string;
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
+  gender?: string;
+  dob?: string;
+  phone?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogle: (email?: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const dispatch = useDispatch();
+  const user = useSelector((state: RootState) => state.user.profile);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage for mock auth state
-    const storedUser = localStorage.getItem("mock_finease_user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
     setLoading(false);
   }, []);
 
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = async (email?: string, name?: string) => {
+    const cleanName = name || (email ? (email.split("@")[0] || "User") : "Dhaval Pithwa");
+    const cleanEmail = email || "dpithwa@example.com";
+    
     const mockUser: User = {
       uid: "local-mock-uid",
-      email: "mockuser@example.com",
-      displayName: "Mock User",
-      photoURL: "https://api.dicebear.com/7.x/avataaars/svg?seed=mockuser",
+      email: cleanEmail,
+      displayName: cleanName,
+      photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(cleanName)}`,
     };
-    setUser(mockUser);
-    localStorage.setItem("mock_finease_user", JSON.stringify(mockUser));
+    dispatch(setUser(mockUser));
   };
 
   const logout = async () => {
-    setUser(null);
-    localStorage.removeItem("mock_finease_user");
+    dispatch(setUser(null));
+  };
+
+  const updateProfile = (updates: Partial<User>) => {
+    if (!user) return;
+    dispatch(reduxUpdateUserProfile(updates));
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, loading, loginWithGoogle, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

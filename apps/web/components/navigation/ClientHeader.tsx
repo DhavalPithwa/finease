@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Search } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/navigation/ThemeToggle";
 import { UserMenu } from "@/components/auth/UserMenu";
@@ -19,16 +18,6 @@ export function ClientHeader() {
             <Logo className="w-8 h-8 transition-transform group-hover:scale-105" />
             <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">FinEase</span>
           </Link>
-          
-          {user && (
-            <div className="hidden md:flex relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                placeholder="Search assets..." 
-                className="bg-slate-100 dark:bg-surface-dark border-none rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all w-64 outline-none text-slate-900 dark:text-white"
-              />
-            </div>
-          )}
         </div>
         
         {user && <TopNav />}

@@ -51,6 +51,9 @@ export interface Transaction {
     originalInstitutionDescription?: string;
     isCashWithdrawal?: boolean;
   };
+  isAutomated?: boolean;
+  frequency?: string;
+  recurringCount?: string | number;
 }
 
 export interface DashboardStats {

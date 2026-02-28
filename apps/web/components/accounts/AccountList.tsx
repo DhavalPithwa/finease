@@ -3,14 +3,22 @@
 import { Account } from "@repo/types";
 import { Card } from "@/components/ui/Card";
 import { formatCurrency } from "@/lib/utils";
-import { Building2, Wallet, Landmark } from "lucide-react";
+import { Building2, Wallet, Landmark, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { removeAccount, updateAccount } from "@/store/slices/accountsSlice";
+import { AddAccountModal } from "./AddAccountModal";
 
 interface AccountListProps {
   accounts: Account[];
 }
 
 export function AccountList({ accounts }: AccountListProps) {
+  const dispatch = useDispatch();
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const getIcon = (type: string) => {
     switch (type) {
       case "bank": return <Landmark className="w-5 h-5" />;
@@ -37,7 +45,25 @@ export function AccountList({ accounts }: AccountListProps) {
             <div className={`p-2 rounded-lg ${getTypeColor(account.type)}`}>
               {getIcon(account.type)}
             </div>
-            <Badge variant="default" className="capitalize">{account.type}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="default" className="capitalize">{account.type}</Badge>
+              <button 
+                onClick={() => { setEditingAccount(account); setIsModalOpen(true); }}
+                className="text-slate-400 hover:text-primary transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to delete this account?")) {
+                    dispatch(removeAccount(account.id));
+                  }
+                }}
+                className="text-slate-400 hover:text-red-500 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           <div className="space-y-1">
             <h4 className="text-slate-900 dark:text-white font-bold">{account.name}</h4>
@@ -47,7 +73,7 @@ export function AccountList({ accounts }: AccountListProps) {
           </div>
           <div className="mt-6">
             <p className="text-2xl font-black text-slate-900 dark:text-white">
-              {formatCurrency(account.balance)}
+              {formatCurrency((account as any).computedBalance !== undefined ? (account as any).computedBalance : account.balance)}
             </p>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
               Last synced {new Date(account.lastSyncedAt).toLocaleDateString()}
@@ -55,6 +81,23 @@ export function AccountList({ accounts }: AccountListProps) {
           </div>
         </Card>
       ))}
+
+      <AddAccountModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        account={editingAccount}
+        onSave={(data) => {
+          if (editingAccount) {
+            dispatch(updateAccount({
+              ...editingAccount,
+              name: data.name,
+              type: data.type as any,
+              balance: parseFloat(data.balance) || 0
+            }));
+          }
+          setIsModalOpen(false);
+        }}
+      />
     </div>
   );
 }

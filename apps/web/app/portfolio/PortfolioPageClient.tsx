@@ -1,15 +1,22 @@
 "use client";
 
-import { MOCK_STATS } from "@/lib/mock-data";
 import { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "@/store";
+import { addAccount } from "@/store/slices/accountsSlice";
 import { NetWorthChart } from "@/components/dashboard/NetWorthChart";
 import { AddInvestmentModal } from "@/components/portfolio/AddInvestmentModal";
 
 export default function PortfolioPageClient() {
+  const dispatch = useDispatch();
   const [isAddInvestmentOpen, setIsAddInvestmentOpen] = useState(false);
-  const assets = MOCK_STATS.assetAllocation.reduce((sum, item) => sum + item.value, 0);
-  // Simple mock deduction for liabilities
-  const liabilities = 350000; 
+  const accounts = useSelector((state: RootState) => state.accounts.items);
+
+  const investments = accounts.filter(a => a.type === 'investment');
+  const loans = accounts.filter(a => a.type === 'loan');
+  
+  const assets = accounts.filter(a => a.type !== 'loan').reduce((sum, item) => sum + item.balance, 0);
+  const liabilities = Math.abs(loans.reduce((sum, item) => sum + item.balance, 0));
   const netWorth = assets - liabilities;
 
   return (
@@ -81,14 +88,62 @@ export default function PortfolioPageClient() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 mt-8">
-        <NetWorthChart data={MOCK_STATS.netWorthHistory} currentNetWorth={netWorth} percentageChange={12.5} />
+        <NetWorthChart data={[]} currentNetWorth={netWorth} percentageChange={0} />
+      </div>
+
+      <div className="space-y-6">
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white">Your Investments</h3>
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-border-dark dark:bg-surface-dark">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
+              <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-[#0b0d12] dark:text-slate-300">
+                <tr>
+                  <th className="px-6 py-4" scope="col">Name</th>
+                  <th className="px-6 py-4" scope="col">Type</th>
+                  <th className="px-6 py-4 text-right" scope="col">Value</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-border-dark">
+                {investments.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-6 text-center text-slate-500">No investments added yet.</td>
+                  </tr>
+                ) : (
+                  investments.map(inv => (
+                    <tr key={inv.id} className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-slate-900 dark:text-white">{inv.name}</div>
+                      </td>
+                      <td className="px-6 py-4 uppercase text-xs font-bold text-slate-500">
+                        {inv.type}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="font-bold text-slate-900 dark:text-white">
+                          ₹{inv.balance.toLocaleString()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <AddInvestmentModal 
         isOpen={isAddInvestmentOpen}
         onClose={() => setIsAddInvestmentOpen(false)}
         onSave={(data) => {
-          console.log("Saving investment", data);
+          dispatch(addAccount({
+            id: `inv-${Date.now()}`,
+            userId: "user-1",
+            name: data.assetName,
+            type: "investment",
+            balance: parseFloat(data.value) || 0,
+            currency: "INR",
+            lastSyncedAt: new Date().toISOString()
+          }));
           setIsAddInvestmentOpen(false);
         }}
       />

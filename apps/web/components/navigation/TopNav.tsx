@@ -8,8 +8,8 @@ export function TopNav() {
   const pathname = usePathname();
 
   const navLinks = [
-    { href: "/dashboard", label: "Command Center" },
-    { href: "/goals", label: "North Star" },
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/goals", label: "Goals" },
     { href: "/portfolio", label: "Portfolio" },
     { href: "/transactions", label: "Transactions" },
     { href: "/reports", label: "Reports" },

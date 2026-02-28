@@ -68,7 +68,7 @@ export function EditGoalModal({ isOpen, onClose, onSave, editingGoal }: EditGoal
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. Dream Home"
-                  className="w-full p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
+                  className="w-full p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -79,7 +79,7 @@ export function EditGoalModal({ isOpen, onClose, onSave, editingGoal }: EditGoal
                   value={formData.targetAmount || ""}
                   onChange={(e) => setFormData({ ...formData, targetAmount: Number(e.target.value) })}
                   placeholder="0.00"
-                  className="w-full p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
+                  className="w-full p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -89,7 +89,7 @@ export function EditGoalModal({ isOpen, onClose, onSave, editingGoal }: EditGoal
                   type="date" 
                   value={formData.targetDate}
                   onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
-                  className="w-full p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
+                  className="w-full p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
                 />
               </div>
 

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { formatCurrency } from "@/lib/utils";
 import { ArrowLeftRight, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -12,7 +13,10 @@ interface TransferModalProps {
 }
 
 export function TransferModal({ isOpen, onClose, onTransfer }: TransferModalProps) {
+  const accounts = useSelector((state: RootState) => state.accounts.items);
   const [amount, setAmount] = useState("");
+  const [fromAccount, setFromAccount] = useState("");
+  const [toAccount, setToAccount] = useState("");
 
   return (
     <AnimatePresence>
@@ -33,14 +37,32 @@ export function TransferModal({ isOpen, onClose, onTransfer }: TransferModalProp
 
           <div className="p-6 space-y-6">
             <div className="flex items-center justify-between gap-4">
-              <div className="flex-1 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-border-dark">
+              <div className="flex-1 p-4 bg-slate-50 dark:bg-[#0b0d12] rounded-xl border border-slate-100 dark:border-border-dark">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">From</p>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">HDFC Bank</p>
+                <select 
+                  className="w-full bg-transparent text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-0"
+                  value={fromAccount}
+                  onChange={(e) => setFromAccount(e.target.value)}
+                >
+                  <option value="">Select Account</option>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name}</option>
+                  ))}
+                </select>
               </div>
               <ArrowLeftRight className="w-5 h-5 text-primary flex-shrink-0" />
-              <div className="flex-1 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-border-dark">
+              <div className="flex-1 p-4 bg-slate-50 dark:bg-[#0b0d12] rounded-xl border border-slate-100 dark:border-border-dark">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">To</p>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">Cash Wallet</p>
+                <select 
+                  className="w-full bg-transparent text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-0"
+                  value={toAccount}
+                  onChange={(e) => setToAccount(e.target.value)}
+                >
+                  <option value="">Select Account</option>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -56,8 +78,9 @@ export function TransferModal({ isOpen, onClose, onTransfer }: TransferModalProp
             </div>
 
             <button 
-              onClick={() => onTransfer(Number(amount), "acc-1", "acc-2")}
-              className="w-full py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
+              onClick={() => onTransfer(Number(amount), fromAccount, toAccount)}
+              disabled={!amount || !fromAccount || !toAccount || fromAccount === toAccount}
+              className="w-full py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Confirm Withdrawal
             </button>
