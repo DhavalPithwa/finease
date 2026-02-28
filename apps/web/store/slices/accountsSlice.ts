@@ -16,6 +16,13 @@ export const accountsSlice = createSlice({
     addAccount: (state, action: PayloadAction<Account>) => {
       state.items.push(action.payload);
     },
+    updateAccountBalance: (state, action: PayloadAction<{ id: string; amountChange: number }>) => {
+      state.items = state.items.map(acc => 
+        acc.id === action.payload.id 
+          ? { ...acc, balance: Number(acc.balance) + Number(action.payload.amountChange) }
+          : acc
+      );
+    },
     updateAccount: (state, action: PayloadAction<Account>) => {
       const index = state.items.findIndex(acc => acc.id === action.payload.id);
       if (index !== -1) {
@@ -28,5 +35,5 @@ export const accountsSlice = createSlice({
   },
 });
 
-export const { addAccount, updateAccount, removeAccount } = accountsSlice.actions;
+export const { addAccount, updateAccountBalance, updateAccount, removeAccount } = accountsSlice.actions;
 export default accountsSlice.reducer;

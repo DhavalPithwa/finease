@@ -3,6 +3,7 @@
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useState, useEffect } from "react";
 import { User as UserIcon, Phone, Mail, Calendar, UserCog } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuth();
@@ -32,7 +33,7 @@ export default function SettingsPage() {
       gender: formData.gender,
       dob: formData.dob,
     });
-    alert("Profile Updated Successfully!");
+    toast.success("Profile Updated Successfully!");
   };
 
   if (!user) return null;

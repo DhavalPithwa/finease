@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import toast from "react-hot-toast";
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -30,34 +31,66 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
   });
 
   useEffect(() => {
-    if (transaction) {
-      setFormData({
-        description: transaction.description,
-        amount: String(transaction.amount),
-        category: transaction.category,
-        date: new Date(transaction.date).toISOString().split("T")[0],
-        accountId: transaction.accountId || "acc-1",
-        toAccountId: transaction.toAccountId || "",
-        type: transaction.type || "expense",
-        isAutomated: transaction.isAutomated || false,
-        frequency: transaction.frequency || "monthly",
-        recurringCount: transaction.recurringCount || "12",
-      });
+    if (isOpen) {
+      if (transaction) {
+        setFormData({
+          description: transaction.description,
+          amount: String(transaction.amount),
+          category: transaction.category,
+          date: new Date(transaction.date).toISOString().split("T")[0],
+          accountId: transaction.accountId || "acc-1",
+          toAccountId: transaction.toAccountId || "",
+          type: transaction.type || "expense",
+          isAutomated: transaction.isAutomated || false,
+          frequency: transaction.frequency || "monthly",
+          recurringCount: transaction.recurringCount || "12",
+        });
+      } else {
+        const defaultAcc = accounts.find(a => a.type !== "investment");
+        setFormData({
+          description: "",
+          amount: "",
+          category: "Uncategorized",
+          date: new Date().toISOString().split("T")[0],
+          accountId: defaultAcc ? defaultAcc.id : "",
+          toAccountId: "",
+          type: "expense",
+          isAutomated: false,
+          frequency: "monthly",
+          recurringCount: "12",
+        });
+      }
     } else {
-      setFormData({
-        description: "",
-        amount: "",
-        category: "Uncategorized",
-        date: new Date().toISOString().split("T")[0],
-        accountId: "acc-1",
-        toAccountId: "",
-        type: "expense",
-        isAutomated: false,
-        frequency: "monthly",
-        recurringCount: "12",
-      });
+      setTimeout(() => {
+        const defaultAcc = accounts.find(a => a.type !== "investment");
+        setFormData({
+          description: "",
+          amount: "",
+          category: "Uncategorized",
+          date: new Date().toISOString().split("T")[0],
+          accountId: defaultAcc ? defaultAcc.id : "",
+          toAccountId: "",
+          type: "expense",
+          isAutomated: false,
+          frequency: "monthly",
+          recurringCount: "12",
+        });
+      }, 300);
     }
-  }, [transaction, isOpen]);
+  }, [transaction, isOpen, accounts]);
+
+  const handleSave = () => {
+    if (!formData.description || !formData.amount) {
+      toast.error("Please fill required fields (description & amount)");
+      return;
+    }
+    if (!formData.accountId) {
+      toast.error("Please select a primary account");
+      return;
+    }
+    onSave(formData);
+    toast.success(transaction ? "Transaction updated" : "Transaction added");
+  };
 
   return (
     <AnimatePresence>
@@ -146,7 +179,8 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
                         onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
                         className="w-full p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
                       >
-                        {accounts.map(acc => (
+                        <option value="" disabled>Select an account</option>
+                        {accounts.filter(acc => acc.type !== "investment").map(acc => (
                           <option key={acc.id} value={acc.id}>{acc.name} ({acc.type.toUpperCase()})</option>
                         ))}
                       </select>
@@ -173,6 +207,7 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
                       onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
                       className="w-full p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
                     >
+                      <option value="" disabled>Select an account</option>
                       {accounts.filter(acc => acc.type !== "investment").map(acc => (
                         <option key={acc.id} value={acc.id}>{acc.name} ({acc.type.toUpperCase()})</option>
                       ))}
@@ -236,7 +271,7 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
               )}
 
               <button 
-                onClick={() => onSave(formData)}
+                onClick={handleSave}
                 className="w-full mt-4 py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
               >
                 {transaction ? "Update Entry" : "Save Transaction"}

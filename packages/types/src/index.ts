@@ -15,6 +15,7 @@ export interface Account {
   userId: string;
   name: string;
   type: AccountType;
+  assetType: string;
   balance: number;
   currency: string;
   institutionName?: string;

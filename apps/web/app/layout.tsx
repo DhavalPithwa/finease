@@ -8,6 +8,7 @@ import { ClientHeader } from "@/components/navigation/ClientHeader";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 
 import { ReduxProvider } from "@/components/providers/ReduxProvider";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -43,6 +44,12 @@ export default function RootLayout({
               </main>
               
               <BottomNav />
+              <Toaster position="bottom-right" toastOptions={{
+                 style: {
+                   background: '#333',
+                   color: '#fff',
+                 },
+               }} />
             </AuthProvider>
           </ReduxProvider>
         </ThemeProvider>

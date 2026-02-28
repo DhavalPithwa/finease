@@ -10,8 +10,9 @@ import { RootState } from "@/store";
 import { addAccount } from "@/store/slices/accountsSlice";
 import { AddAccountModal } from "@/components/accounts/AddAccountModal";
 import { FinancialGoal } from "@repo/types";
-import { addCategory, updateCategory } from "@/store/slices/categoriesSlice";
+import { addCategory, updateCategory, removeCategory } from "@/store/slices/categoriesSlice";
 import { AddCategoryModal } from "@/components/categories/AddCategoryModal";
+import toast from "react-hot-toast";
 
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -22,25 +23,12 @@ export default function Home() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<{ id: string; name: string; color: string } | null>(null);
   const accounts = useSelector((state: RootState) => state.accounts.items);
-  const transactions = useSelector((state: RootState) => state.transactions.items);
   const categories = useSelector((state: RootState) => state.categories.items);
   const goals = useSelector((state: RootState) => state.goals.items);
   const stats = useSelector((state: RootState) => state.stats.data);
 
-  const accountsWithBalance = accounts.map((acc: any) => {
-    let currentBalance = acc.balance;
-    transactions.forEach((tx: any) => {
-      if (tx.isAutomated) return;
-      if (tx.accountId === acc.id) {
-        if (tx.type === 'expense') currentBalance -= tx.amount;
-        if (tx.type === 'income') currentBalance += tx.amount;
-      }
-      if (tx.toAccountId === acc.id) {
-        currentBalance += tx.amount;
-      }
-    });
-    return { ...acc, computedBalance: currentBalance };
-  });
+  const regularAccounts = accounts.filter(acc => acc.type !== 'investment');
+  const investmentAccounts = accounts.filter(acc => acc.type === 'investment');
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 w-full">
@@ -70,8 +58,15 @@ export default function Home() {
 
       <div className="space-y-6">
         <h3 className="text-xl font-bold text-slate-900 dark:text-white">Your Accounts</h3>
-        <AccountList accounts={accountsWithBalance as any} />
+        <AccountList accounts={regularAccounts} />
       </div>
+
+      {investmentAccounts.length > 0 && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white">Your Investments</h3>
+          <AccountList accounts={investmentAccounts} />
+        </div>
+      )}
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -148,6 +143,7 @@ export default function Home() {
             userId: "user-1",
             name: data.name,
             type: data.type as any,
+            assetType: "",
             balance: parseFloat(data.balance) || 0,
             currency: "INR",
             lastSyncedAt: new Date().toISOString()
@@ -174,6 +170,11 @@ export default function Home() {
             }));
           }
           setIsCategoryModalOpen(false);
+        }}
+        onDelete={(id) => {
+          dispatch(removeCategory(id));
+          setIsCategoryModalOpen(false);
+          toast.success("Category deleted");
         }}
       />
     </div>

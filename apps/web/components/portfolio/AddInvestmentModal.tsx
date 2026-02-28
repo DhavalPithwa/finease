@@ -1,21 +1,60 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
+import { Account } from "@repo/types";
+import toast from "react-hot-toast";
 
 interface AddInvestmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: { assetName: string; assetType: string; amount: string }) => void;
+  investment?: Account | null;
 }
 
-export function AddInvestmentModal({ isOpen, onClose, onSave }: AddInvestmentModalProps) {
+export function AddInvestmentModal({ isOpen, onClose, onSave, investment }: AddInvestmentModalProps) {
+  const assetTypes = useSelector((state: RootState) => state.assetTypes.items);
   const [formData, setFormData] = useState({
     assetName: "",
-    type: "Equity",
+    assetType: assetTypes[0]?.name || "Equity",
     amount: "",
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      if (investment) {
+        setFormData({
+          assetName: investment.name,
+          assetType: investment.assetType || assetTypes[0]?.name || "Equity",
+          amount: String(investment.balance),
+        });
+      } else {
+        setFormData({
+          assetName: "",
+          assetType: assetTypes[0]?.name || "Equity",
+          amount: "",
+        });
+      }
+    } else {
+      setTimeout(() => setFormData({ assetName: "", assetType: assetTypes[0]?.name || "Equity", amount: "" }), 300);
+    }
+  }, [investment, isOpen, assetTypes]);
+
+  const handleSave = () => {
+    if (!formData.assetName) {
+      toast.error("Please enter an asset name");
+      return;
+    }
+    if (!formData.amount) {
+      toast.error("Please enter capital invested");
+      return;
+    }
+    onSave(formData);
+    toast.success(investment ? "Investment updated successfully" : "Investment logged successfully");
+  };
 
   return (
     <AnimatePresence>
@@ -28,7 +67,9 @@ export function AddInvestmentModal({ isOpen, onClose, onSave }: AddInvestmentMod
             className="w-full max-w-md bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-border-dark shadow-2xl overflow-hidden"
           >
             <div className="p-6 border-b border-slate-100 dark:border-border-dark flex items-center justify-between">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Add Investment</h3>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                 {investment ? "Edit Investment" : "Add Investment"}
+              </h3>
               <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-slate-500" />
               </button>
@@ -49,15 +90,13 @@ export function AddInvestmentModal({ isOpen, onClose, onSave }: AddInvestmentMod
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Asset Class</label>
                 <select 
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  value={formData.assetType}
+                  onChange={(e) => setFormData({ ...formData, assetType: e.target.value })}
                   className="w-full p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
                 >
-                  <option>Equity</option>
-                  <option>Debt</option>
-                  <option>Gold</option>
-                  <option>Liquid</option>
-                  <option>Real Estate</option>
+                  {assetTypes.map((type) => (
+                    <option key={type.id} value={type.name}>{type.name}</option>
+                  ))}
                 </select>
               </div>
 
@@ -68,15 +107,25 @@ export function AddInvestmentModal({ isOpen, onClose, onSave }: AddInvestmentMod
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   placeholder="0.00"
-                  className="w-full p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
+                  disabled={!!investment}
+                  className={`w-full p-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none ${
+                    investment 
+                      ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed border-slate-200 dark:border-border-dark/50" 
+                      : "bg-slate-50 dark:bg-[#0b0d12] text-slate-900 dark:text-white border-slate-200 dark:border-border-dark"
+                  }`}
                 />
+                {investment && (
+                   <p className="text-[10px] text-slate-400 uppercase font-bold ml-1 pt-1">
+                     Capital Invested cannot be edited manually once created. Use transactions to adjust.
+                   </p>
+                )}
               </div>
 
               <button 
-                onClick={() => onSave(formData)}
+                onClick={handleSave}
                 className="w-full mt-4 py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
               >
-                Log Investment
+                {investment ? "Update Investment" : "Log Investment"}
               </button>
             </div>
           </motion.div>

@@ -2,27 +2,27 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface AddCategoryModalProps {
+interface AddAssetTypeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: { id?: string; name: string; color: string }) => void;
   onDelete?: (id: string) => void;
-  category?: { id: string; name: string; color: string } | null;
+  assetType?: { id: string; name: string; color: string } | null;
 }
 
-export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }: AddCategoryModalProps) {
+export function AddAssetTypeModal({ isOpen, onClose, onSave, onDelete, assetType }: AddAssetTypeModalProps) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("bg-indigo-500");
 
   useEffect(() => {
-    if (category) {
-      setName(category.name);
-      setColor(category.color);
+    if (assetType) {
+      setName(assetType.name);
+      setColor(assetType.color);
     } else {
       setName("");
       setColor("bg-indigo-500");
     }
-  }, [category, isOpen]);
+  }, [assetType, isOpen]);
 
   const colors = [
     "bg-indigo-500",
@@ -48,7 +48,7 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
         >
           <div className="p-6 border-b border-slate-100 dark:border-border-dark flex items-center justify-between">
             <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-              {category ? "Edit Category" : "New Category"}
+              {assetType ? "Edit Asset Class" : "New Asset Class"}
             </h3>
             <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
               <X className="w-5 h-5 text-slate-500" />
@@ -57,12 +57,12 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
 
           <div className="p-6 space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Category Name</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Asset Class Name</label>
               <input 
                 type="text" 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Subscriptions"
+                placeholder="e.g. Mutual Funds"
                 className="w-full p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
               />
             </div>
@@ -84,19 +84,19 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
               <button 
                 onClick={() => {
                   if(name.trim()) {
-                    onSave({ id: category?.id, name, color });
+                    onSave({ id: assetType?.id, name, color });
                     setName("");
                     setColor("bg-indigo-500");
                   }
                 }}
                 className="flex-1 py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
               >
-                {category ? "Update Category" : "Create Category"}
+                {assetType ? "Update Asset Class" : "Create Asset Class"}
               </button>
               
-              {category && onDelete && (
+              {assetType && onDelete && (
                 <button 
-                  onClick={() => onDelete(category.id)}
+                  onClick={() => onDelete(assetType.id)}
                   className="px-6 py-4 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 font-bold rounded-xl transition-all active:scale-[0.98]"
                 >
                   Delete

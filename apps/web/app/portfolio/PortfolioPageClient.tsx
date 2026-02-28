@@ -6,11 +6,18 @@ import { RootState } from "@/store";
 import { addAccount } from "@/store/slices/accountsSlice";
 import { NetWorthChart } from "@/components/dashboard/NetWorthChart";
 import { AddInvestmentModal } from "@/components/portfolio/AddInvestmentModal";
+import { AddAssetTypeModal } from "@/components/portfolio/AddAssetTypeModal";
+import { addAssetType, updateAssetType, removeAssetType } from "@/store/slices/assetTypesSlice";
+import toast from "react-hot-toast";
 
 export default function PortfolioPageClient() {
   const dispatch = useDispatch();
   const [isAddInvestmentOpen, setIsAddInvestmentOpen] = useState(false);
+  const [isAssetTypeModalOpen, setIsAssetTypeModalOpen] = useState(false);
+  const [editingAssetType, setEditingAssetType] = useState<{ id: string; name: string; color: string } | null>(null);
+  
   const accounts = useSelector((state: RootState) => state.accounts.items);
+  const assetTypes = useSelector((state: RootState) => state.assetTypes.items);
 
   const investments = accounts.filter(a => a.type === 'investment');
   const loans = accounts.filter(a => a.type === 'loan');
@@ -27,6 +34,12 @@ export default function PortfolioPageClient() {
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Track your wealth growth across all asset classes.</p>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => { setEditingAssetType(null); setIsAssetTypeModalOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-lg transition-colors shadow-sm"
+          >
+            + Asset Class
+          </button>
           <button className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-border-dark dark:bg-surface-dark dark:text-slate-200 dark:hover:bg-surface-hover transition">
             <span className="material-symbols-outlined text-lg">download</span>
             Export
@@ -36,7 +49,7 @@ export default function PortfolioPageClient() {
             className="flex items-center gap-2 px-4 py-2 bg-primary rounded-lg text-sm font-medium text-white hover:bg-primary-dark transition shadow-lg shadow-primary/25"
           >
             <span className="material-symbols-outlined text-lg">add</span>
-            Add Investment
+            Investment
           </button>
         </div>
       </div>
@@ -91,6 +104,30 @@ export default function PortfolioPageClient() {
         <NetWorthChart data={[]} currentNetWorth={netWorth} percentageChange={0} />
       </div>
 
+      <div className="space-y-6 mb-8 mt-8">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white">Asset Classes</h3>
+          <button 
+             onClick={() => { setEditingAssetType(null); setIsAssetTypeModalOpen(true); }}
+             className="text-sm font-bold text-primary hover:underline"
+          >
+             Add New
+          </button>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {assetTypes.map(c => (
+            <div 
+              key={c.id} 
+              onClick={() => { setEditingAssetType(c); setIsAssetTypeModalOpen(true); }}
+              className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark flex items-center justify-between cursor-pointer hover:border-primary transition-colors group"
+            >
+               <span className="font-bold text-sm text-slate-700 dark:text-slate-300">{c.name}</span>
+               <div className={`w-3 h-3 rounded-full ${c.color}`} />
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="space-y-6">
         <h3 className="text-xl font-bold text-slate-900 dark:text-white">Your Investments</h3>
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-border-dark dark:bg-surface-dark">
@@ -115,7 +152,7 @@ export default function PortfolioPageClient() {
                         <div className="font-medium text-slate-900 dark:text-white">{inv.name}</div>
                       </td>
                       <td className="px-6 py-4 uppercase text-xs font-bold text-slate-500">
-                        {inv.type}
+                        {inv.assetType || inv.type}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span className="font-bold text-slate-900 dark:text-white">
@@ -140,11 +177,39 @@ export default function PortfolioPageClient() {
             userId: "user-1",
             name: data.assetName,
             type: "investment",
-            balance: parseFloat(data.value) || 0,
+            assetType: data.assetType ??"",
+            balance: parseFloat(data.amount) || 0,
             currency: "INR",
             lastSyncedAt: new Date().toISOString()
           }));
           setIsAddInvestmentOpen(false);
+        }}
+      />
+      
+      <AddAssetTypeModal 
+        isOpen={isAssetTypeModalOpen}
+        assetType={editingAssetType}
+        onClose={() => setIsAssetTypeModalOpen(false)}
+        onSave={(data) => {
+          if (data.id) {
+            dispatch(updateAssetType({
+              id: data.id,
+              name: data.name,
+              color: data.color
+            }));
+          } else {
+            dispatch(addAssetType({
+              id: `ast-${Date.now()}`,
+              name: data.name,
+              color: data.color
+            }));
+          }
+          setIsAssetTypeModalOpen(false);
+        }}
+        onDelete={(id) => {
+          dispatch(removeAssetType(id));
+          setIsAssetTypeModalOpen(false);
+          toast.success("Asset Class deleted");
         }}
       />
     </div>

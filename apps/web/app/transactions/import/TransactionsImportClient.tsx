@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Transaction } from "@repo/types";
+import toast from "react-hot-toast";
 
 export default function TransactionsImportClient() {
   const [file, setFile] = useState<File | null>(null);
@@ -23,7 +24,7 @@ export default function TransactionsImportClient() {
   };
 
   const handleCommit = () => {
-    alert("Committed mock data to local storage state! Returning to transactions.");
+    toast.success("Committed mock data to local storage state!");
     window.location.href = "/transactions";
   };
 

@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import { X, Building2, CreditCard, Wallet } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Account } from "@repo/types";
+import toast from "react-hot-toast";
 
 interface AddAccountModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: { name: string; type: string; balance: string }) => void;
   account?: Account | null;
 }
 
@@ -20,20 +21,41 @@ export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccount
   });
 
   useEffect(() => {
-    if (account) {
-      setFormData({
-        name: account.name,
-        type: account.type,
-        balance: String(account.balance),
-      });
+    if (isOpen) {
+      if (account) {
+        setFormData({
+          name: account.name,
+          type: account.type,
+          balance: String(account.balance),
+        });
+      } else {
+        setFormData({
+          name: "",
+          type: "bank",
+          balance: "",
+        });
+      }
     } else {
-      setFormData({
-        name: "",
-        type: "bank",
-        balance: "",
-      });
+      setTimeout(() => setFormData({ name: "", type: "bank", balance: "" }), 300);
     }
   }, [account, isOpen]);
+
+  const handleSave = () => {
+    if (!formData.name) {
+      toast.error("Please enter an account name");
+      return;
+    }
+    if (!formData.balance) {
+      toast.error("Please enter an initial balance");
+      return;
+    }
+    const safeData = {
+       ...formData,
+       balance: formData.balance,
+    };
+    onSave(safeData);
+    toast.success(account ? "Account updated successfully" : "Account added successfully");
+  };
 
   return (
     <AnimatePresence>
@@ -68,23 +90,26 @@ export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccount
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Account Type</label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <button 
-                    onClick={() => setFormData({ ...formData, type: "bank" })}
+                    disabled={!!account}
+                    onClick={(e) => { e.preventDefault(); setFormData({ ...formData, type: "bank" }); }}
                     className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${formData.type === "bank" ? "bg-primary border-primary text-white" : "bg-slate-50 dark:bg-[#0b0d12] border-slate-200 dark:border-border-dark text-slate-500 dark:text-slate-400 hover:border-primary/50"}`}
                   >
                     <Building2 className="w-5 h-5" />
                     <span className="text-xs font-bold">Bank</span>
                   </button>
                   <button 
-                    onClick={() => setFormData({ ...formData, type: "card" })}
+                    disabled={!!account}
+                    onClick={(e) => { e.preventDefault(); setFormData({ ...formData, type: "card" }); }}
                     className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${formData.type === "card" ? "bg-primary border-primary text-white" : "bg-slate-50 dark:bg-[#0b0d12] border-slate-200 dark:border-border-dark text-slate-500 dark:text-slate-400 hover:border-primary/50"}`}
                   >
                     <CreditCard className="w-5 h-5" />
                     <span className="text-xs font-bold">Card</span>
                   </button>
                   <button 
-                    onClick={() => setFormData({ ...formData, type: "cash" })}
+                    disabled={!!account}
+                    onClick={(e) => { e.preventDefault(); setFormData({ ...formData, type: "cash" }); }}
                     className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${formData.type === "cash" ? "bg-primary border-primary text-white" : "bg-slate-50 dark:bg-[#0b0d12] border-slate-200 dark:border-border-dark text-slate-500 dark:text-slate-400 hover:border-primary/50"}`}
                   >
                     <Wallet className="w-5 h-5" />
@@ -100,12 +125,22 @@ export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccount
                   value={formData.balance}
                   onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
                   placeholder="0.00"
-                  className="w-full p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
+                  disabled={!!account}
+                  className={`w-full p-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none ${
+                    account 
+                      ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed border-slate-200 dark:border-border-dark/50" 
+                      : "bg-slate-50 dark:bg-[#0b0d12] text-slate-900 dark:text-white border-slate-200 dark:border-border-dark"
+                  }`}
                 />
+                {account && (
+                  <p className="text-[10px] text-slate-400 uppercase font-bold ml-1 pt-1">
+                    Initial balance cannot be edited manually once created. Use transactions to adjust.
+                  </p>
+                )}
               </div>
 
               <button 
-                onClick={() => onSave(formData)}
+                onClick={handleSave}
                 className="w-full mt-4 py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
               >
                 {account ? "Update Account" : "Create Account"}

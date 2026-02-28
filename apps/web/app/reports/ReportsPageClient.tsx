@@ -10,22 +10,7 @@ export default function ReportsPageClient() {
   const transactions = useSelector((state: RootState) => state.transactions.items);
   const categories = useSelector((state: RootState) => state.categories.items);
 
-  const accountsWithBalance = accounts.map((acc: any) => {
-    let currentBalance = acc.balance;
-    transactions.forEach((tx: any) => {
-      if (tx.isAutomated) return;
-      if (tx.accountId === acc.id) {
-        if (tx.type === 'expense') currentBalance -= tx.amount;
-        if (tx.type === 'income') currentBalance += tx.amount;
-      }
-      if (tx.toAccountId === acc.id) {
-        currentBalance += tx.amount;
-      }
-    });
-    return { ...acc, computedBalance: currentBalance };
-  });
-
-  const netWorth = accountsWithBalance.reduce((sum: number, acc: any) => acc.type !== 'loan' ? sum + acc.computedBalance : sum - acc.computedBalance, 0);
+  const netWorth = accounts.reduce((sum: number, acc: any) => acc.type !== 'loan' ? sum + acc.balance : sum - acc.balance, 0);
   
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();

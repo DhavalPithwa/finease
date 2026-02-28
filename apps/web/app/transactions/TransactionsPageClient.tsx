@@ -7,9 +7,10 @@ import { AddAccountModal } from "@/components/accounts/AddAccountModal";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 import { addTransaction, updateTransaction, deleteTransaction } from "@/store/slices/transactionsSlice";
-import { addAccount } from "@/store/slices/accountsSlice";
+import { addAccount, updateAccountBalance } from "@/store/slices/accountsSlice";
 import { Transaction } from "@repo/types";
 import { Trash2, Edit2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function TransactionsPageClient() {
   const dispatch = useDispatch();
@@ -19,7 +20,7 @@ export default function TransactionsPageClient() {
   const [activeTab, setActiveTab] = useState<"actual" | "automated">("actual");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
-  const [editingData, setEditingData] = useState<any>(null);
+  const [editingData, setEditingData] = useState<Transaction | null>(null);
 
   const filtered = transactions.filter((t: Transaction) => {
     const isSearchMatch = t.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -39,13 +40,9 @@ export default function TransactionsPageClient() {
             <span className="material-symbols-outlined mr-2 text-lg">upload_file</span>
             Import
           </Link>
-          <button onClick={() => setIsAccountModalOpen(true)} className="inline-flex flex-1 sm:flex-none items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-slate-200 dark:hover:bg-border-dark">
-            <span className="material-symbols-outlined mr-2 text-lg">account_balance</span>
-            Add Account
-          </button>
           <button onClick={() => { setEditingData(null); setIsModalOpen(true); }} className="inline-flex flex-1 sm:flex-none items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark">
             <span className="material-symbols-outlined mr-2 text-lg">add</span>
-            Add Transaction
+            Transaction
           </button>
         </div>
       </div>
@@ -137,9 +134,14 @@ export default function TransactionsPageClient() {
                       </button>
                       <button 
                         onClick={() => {
-                          if (window.confirm("Are you sure you want to delete this transaction?")) {
-                            dispatch(deleteTransaction(tx.id));
+                          if (!tx.isAutomated) {
+                            dispatch(updateAccountBalance({ id: tx.accountId, amountChange: tx.type === 'expense' ? tx.amount : -tx.amount }));
+                            if (tx.toAccountId) {
+                              dispatch(updateAccountBalance({ id: tx.toAccountId, amountChange: -tx.amount }));
+                            }
                           }
+                          dispatch(deleteTransaction(tx.id));
+                          toast.success("Transaction deleted");
                         }}
                         className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-colors"
                       >
@@ -161,6 +163,18 @@ export default function TransactionsPageClient() {
           const amountVar = parseFloat(data.amount);
           
           if (editingData) {
+            if (!editingData.isAutomated) {
+              dispatch(updateAccountBalance({ id: editingData.accountId, amountChange: editingData.type === 'expense' ? editingData.amount : -editingData.amount }));
+              if (editingData.toAccountId) {
+                dispatch(updateAccountBalance({ id: editingData.toAccountId, amountChange: -editingData.amount }));
+              }
+            }
+            if (!data.isAutomated) {
+              dispatch(updateAccountBalance({ id: data.accountId, amountChange: data.type === 'expense' ? -amountVar : amountVar }));
+              if (data.toAccountId) {
+                dispatch(updateAccountBalance({ id: data.toAccountId, amountChange: amountVar }));
+              }
+            }
             dispatch(updateTransaction({ ...editingData, ...data, amount: amountVar }));
           } else {
             const newTx: Transaction = {
@@ -179,6 +193,13 @@ export default function TransactionsPageClient() {
               frequency: data.frequency,
               recurringCount: data.recurringCount
             };
+            
+            if (!newTx.isAutomated) {
+              dispatch(updateAccountBalance({ id: newTx.accountId, amountChange: newTx.type === 'expense' ? -newTx.amount : newTx.amount }));
+              if (newTx.toAccountId) {
+                dispatch(updateAccountBalance({ id: newTx.toAccountId, amountChange: newTx.amount }));
+              }
+            }
             dispatch(addTransaction(newTx));
           }
           setIsModalOpen(false);
@@ -193,6 +214,7 @@ export default function TransactionsPageClient() {
             userId: "user-1",
             name: data.name,
             type: data.type as any,
+            assetType: "",
             balance: parseFloat(data.balance) || 0,
             currency: "INR",
             lastSyncedAt: new Date().toISOString()

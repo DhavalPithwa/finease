@@ -40,7 +40,7 @@ export default function GoalsPageClient() {
           className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg shadow-primary/25"
         >
           <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
-          <span>Add Goal</span>
+          <span>Goal</span>
         </button>
       </div>
 
