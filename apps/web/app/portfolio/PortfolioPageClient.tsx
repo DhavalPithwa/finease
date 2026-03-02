@@ -1,20 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/store";
-import { addAccount } from "@/store/slices/accountsSlice";
+import { RootState, AppDispatch } from "@/store";
+import { fetchAccounts, createAccount, updateAccount, deleteAccount } from "@/store/slices/accountsSlice";
 import { AddInvestmentModal } from "@/components/portfolio/AddInvestmentModal";
 import { AddLiabilityModal } from "@/components/portfolio/AddLiabilityModal";
 import { AddAssetTypeModal } from "@/components/portfolio/AddAssetTypeModal";
 import { addAssetType, updateAssetType, removeAssetType } from "@/store/slices/assetTypesSlice";
-import { updateAccount, removeAccount } from "@/store/slices/accountsSlice";
 import { Account } from "@repo/types";
 import { Edit2, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function PortfolioPageClient() {
-  const dispatch = useDispatch();
+  const { user } = useAuth();
+  const dispatch = useDispatch<AppDispatch>();
+  
+  useEffect(() => {
+    if (user) {
+      dispatch(fetchAccounts());
+    }
+  }, [dispatch, user]);
+
   const [isAddInvestmentOpen, setIsAddInvestmentOpen] = useState(false);
   const [isAssetTypeModalOpen, setIsAssetTypeModalOpen] = useState(false);
   const [editingAssetType, setEditingAssetType] = useState<{ id: string; name: string; color: string } | null>(null);
@@ -183,7 +191,7 @@ export default function PortfolioPageClient() {
                            <button onClick={() => { setEditingInvestment(inv); setIsAddInvestmentOpen(true); }} className="p-2 text-slate-400 hover:text-primary transition-colors">
                              <Edit2 className="w-4 h-4" />
                            </button>
-                           <button onClick={() => dispatch(removeAccount(inv.id))} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                           <button onClick={() => dispatch(deleteAccount(inv.id))} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
                              <Trash2 className="w-4 h-4" />
                            </button>
                         </div>
@@ -292,7 +300,7 @@ export default function PortfolioPageClient() {
                            <button onClick={() => { setEditingLiability(loan); setIsAddLiabilityOpen(true); }} className="p-2 text-slate-400 hover:text-primary transition-colors">
                              <Edit2 className="w-4 h-4" />
                            </button>
-                           <button onClick={() => dispatch(removeAccount(loan.id))} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                           <button onClick={() => dispatch(deleteAccount(loan.id))} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
                              <Trash2 className="w-4 h-4" />
                            </button>
                         </div>
@@ -356,23 +364,22 @@ export default function PortfolioPageClient() {
         onSave={(data) => {
           if (editingInvestment) {
              dispatch(updateAccount({
-                ...editingInvestment,
-                name: data.assetName,
-                assetType: data.assetType || "",
-                balance: parseFloat(data.currentAmount) || editingInvestment.balance,
-                investedAmount: parseFloat(data.investedAmount) || editingInvestment.investedAmount || editingInvestment.balance
+                id: editingInvestment.id,
+                data: {
+                  name: data.assetName,
+                  assetType: data.assetType || "",
+                  balance: parseFloat(data.currentAmount) || editingInvestment.balance,
+                  investedAmount: parseFloat(data.investedAmount) || editingInvestment.investedAmount || editingInvestment.balance
+                }
              }));
           } else {
-             dispatch(addAccount({
-              id: `inv-${Date.now()}`,
-              userId: "user-1",
+             dispatch(createAccount({
               name: data.assetName,
               type: "investment",
               assetType: data.assetType ??"",
               balance: parseFloat(data.currentAmount) || 0,
               investedAmount: parseFloat(data.investedAmount) || 0,
               currency: "INR",
-              lastSyncedAt: new Date().toISOString()
             }));
           }
           setIsAddInvestmentOpen(false);
@@ -395,18 +402,18 @@ export default function PortfolioPageClient() {
           
           if (editingLiability) {
              dispatch(updateAccount({
-                ...editingLiability,
-                name: data.name,
-                type: data.type as "loan",
-                initialAmount: totalLoan,
-                paidAmount: paidAmt,
-                interestPaid: interestPaidVal,
-                balance: -remainingBalance
+                id: editingLiability.id,
+                data: {
+                  name: data.name,
+                  type: data.type as "loan",
+                  initialAmount: totalLoan,
+                  paidAmount: paidAmt,
+                  interestPaid: interestPaidVal,
+                  balance: -remainingBalance
+                }
              }));
           } else {
-             dispatch(addAccount({
-              id: `loan-${Date.now()}`,
-              userId: "user-1",
+             dispatch(createAccount({
               name: data.name,
               type: "loan",
               assetType: "",
@@ -415,7 +422,6 @@ export default function PortfolioPageClient() {
               interestPaid: interestPaidVal,
               balance: -remainingBalance,
               currency: "INR",
-              lastSyncedAt: new Date().toISOString()
             }));
           }
           setIsAddLiabilityOpen(false);

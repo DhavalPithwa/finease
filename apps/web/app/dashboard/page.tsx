@@ -6,21 +6,28 @@ import { AssetAllocationDonut } from "@/components/dashboard/AssetLiabilityDonut
 import { GoalProgressCard } from "@/components/dashboard/GoalProgressCard";
 import { AccountList } from "@/components/accounts/AccountList";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/store";
-import { addAccount } from "@/store/slices/accountsSlice";
+import { RootState, AppDispatch } from "@/store";
+import { createAccount, fetchAccounts } from "@/store/slices/accountsSlice";
 import { AddAccountModal } from "@/components/accounts/AddAccountModal";
 import { FinancialGoal } from "@repo/types";
 import Link from "next/link";
+import { useEffect } from "react";
 
 import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function Home() {
   const { user } = useAuth();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const accounts = useSelector((state: RootState) => state.accounts.items);
   const goals = useSelector((state: RootState) => state.goals.items);
   const stats = useSelector((state: RootState) => state.stats.data);
+
+  useEffect(() => {
+    if (user) {
+      dispatch(fetchAccounts());
+    }
+  }, [dispatch, user]);
 
   const regularAccounts = accounts.filter(acc => acc.type !== 'investment' && acc.type !== 'loan');
   const investmentAccounts = accounts.filter(acc => acc.type === 'investment');
@@ -131,15 +138,11 @@ export default function Home() {
         isOpen={isAccountModalOpen} 
         onClose={() => setIsAccountModalOpen(false)} 
         onSave={(data) => {
-          dispatch(addAccount({
-            id: `acc-${Date.now()}`,
-            userId: "user-1",
+          dispatch(createAccount({
             name: data.name,
             type: data.type as "bank" | "cash" | "loan" | "investment" | "card",
-            assetType: "",
             balance: parseFloat(data.balance) || 0,
             currency: "INR",
-            lastSyncedAt: new Date().toISOString()
           }));
           setIsAccountModalOpen(false);
         }} 

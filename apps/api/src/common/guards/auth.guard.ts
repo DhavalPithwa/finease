@@ -4,12 +4,13 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { FirebaseAdminService } from '../services/firebase-admin.service';
+import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
+import type { RequestWithUser } from '../interfaces/request.interface';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly firebaseAdmin: FirebaseAdminService) {}
+  constructor(private readonly jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -25,11 +26,11 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      const decodedToken = await this.firebaseAdmin
-        .getAuth()
-        .verifyIdToken(token);
-      const req = request as Request & { user: any };
-      req.user = decodedToken;
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: 'finease-secret-123',
+      });
+      // Attach payload to request
+      (request as RequestWithUser).user = payload as RequestWithUser['user'];
       return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired token');

@@ -10,6 +10,8 @@ export default function SignupPage() {
   const { loginWithGoogle, user } = useAuth();
   const [userName, setUserName] = useState("Rahul Sharma");
   const [userEmail, setUserEmail] = useState("Rahul@example.com");
+  const [password, setPassword] = useState("password123");
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -18,11 +20,15 @@ export default function SignupPage() {
     }
   }, [user, router]);
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    loginWithGoogle(userEmail, userName).then(() => {
+    setError(null);
+    try {
+      await loginWithGoogle(userEmail, userName, password);
       router.push("/dashboard");
-    });
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message);
+    }
   };
 
   return (
@@ -35,6 +41,11 @@ export default function SignupPage() {
         </div>
         
         <form onSubmit={handleSignup} className="flex flex-col gap-4">
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 p-3 rounded-xl text-xs font-bold text-red-500 text-center animate-shake">
+              {error}
+            </div>
+          )}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Full Name</label>
             <input 
@@ -59,7 +70,8 @@ export default function SignupPage() {
             <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Password</label>
             <input 
                type="password" 
-               defaultValue="password123"
+               value={password}
+               onChange={(e) => setPassword(e.target.value)}
                className="w-full bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
             />
           </div>

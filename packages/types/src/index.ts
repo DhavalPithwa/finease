@@ -4,6 +4,8 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
+  gender?: "male" | "female" | "other";
+  dob?: string;
   role: UserRole;
   createdAt: string;
 }

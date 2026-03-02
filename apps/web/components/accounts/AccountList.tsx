@@ -7,7 +7,8 @@ import { Building2, Wallet, Landmark, Pencil, Trash2, CreditCard } from "lucide-
 import { Badge } from "@/components/ui/Badge";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
-import { removeAccount, updateAccount } from "@/store/slices/accountsSlice";
+import { AppDispatch } from "@/store";
+import { deleteAccount, updateAccount } from "@/store/slices/accountsSlice";
 import { AddAccountModal } from "./AddAccountModal";
 import { AddInvestmentModal } from "../portfolio/AddInvestmentModal";
 import { AddLiabilityModal } from "../portfolio/AddLiabilityModal";
@@ -18,7 +19,7 @@ interface AccountListProps {
 }
 
 export function AccountList({ accounts }: AccountListProps) {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
@@ -73,7 +74,7 @@ export function AccountList({ accounts }: AccountListProps) {
               </button>
               <button 
                 onClick={() => {
-                  dispatch(removeAccount(account.id));
+                  dispatch(deleteAccount(account.id));
                   toast.success("Account deleted");
                 }}
                 className="text-slate-400 hover:text-red-500 transition-colors"
@@ -116,11 +117,12 @@ export function AccountList({ accounts }: AccountListProps) {
         onSave={(data) => {
           if (editingAccount) {
             dispatch(updateAccount({
-              ...editingAccount,
-              name: data.name,
-              type: data.type as "bank" | "cash" | "loan" | "investment" | "card",
-              assetType: editingAccount.assetType || "",
-              balance: parseFloat(data.balance) || 0
+              id: editingAccount.id,
+              data: {
+                name: data.name,
+                type: data.type as "bank" | "cash" | "loan" | "investment" | "card",
+                balance: parseFloat(data.balance) || 0
+              }
             }));
           }
           setIsAccountModalOpen(false);
@@ -134,11 +136,13 @@ export function AccountList({ accounts }: AccountListProps) {
         onSave={(data) => {
           if (editingAccount) {
             dispatch(updateAccount({
-              ...editingAccount,
-              name: data.assetName,
-              assetType: data.assetType || editingAccount.assetType || "",
-              investedAmount: parseFloat(data.investedAmount) || editingAccount.investedAmount || editingAccount.balance,
-              balance: parseFloat(data.currentAmount) || editingAccount.balance
+              id: editingAccount.id,
+              data: {
+                name: data.assetName,
+                assetType: data.assetType || editingAccount.assetType || "",
+                investedAmount: parseFloat(data.investedAmount) || editingAccount.investedAmount || editingAccount.balance,
+                balance: parseFloat(data.currentAmount) || editingAccount.balance
+              }
             }));
           }
           setIsInvestmentModalOpen(false);
@@ -156,12 +160,14 @@ export function AccountList({ accounts }: AccountListProps) {
             const remainingBalance = totalLoan - paidAmt;
             
             dispatch(updateAccount({
-              ...editingAccount,
-              name: data.name,
-              type: data.type as "loan",
-              initialAmount: totalLoan,
-              paidAmount: paidAmt,
-              balance: -remainingBalance
+              id: editingAccount.id,
+              data: {
+                name: data.name,
+                type: data.type as "loan",
+                initialAmount: totalLoan,
+                paidAmount: paidAmt,
+                balance: -remainingBalance
+              }
             }));
           }
           setIsLiabilityModalOpen(false);
