@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseAdminService } from '@common/services/firebase-admin.service';
-import { Transaction, Account } from '@repo/types';
+import { Transaction, Account, FinancialGoal } from '@repo/types';
 
 @Injectable()
 export class TransactionsService {
   private readonly collectionName = 'transactions';
   private readonly accountsCollection = 'accounts';
+  private readonly goalsCollection = 'goals';
 
   constructor(private readonly firebaseAdmin: FirebaseAdminService) {}
 
@@ -68,18 +69,19 @@ export class TransactionsService {
       .collection(this.accountsCollection)
       .doc(transaction.accountId);
 
-    // 1. Create transaction document
-    // 1. Create transaction document
+    // 1. Calculate and set transaction properties
+    // If a destination is provided, it's effectively a transfer
+    const isTransfer = !!transaction.toAccountId;
+    const effectiveType = isTransfer
+      ? 'transfer'
+      : transaction.type || 'expense';
+
     const status =
       transaction.status ||
       (transaction.isAutomated ? 'pending_confirmation' : 'completed');
 
-    batch.set(txRef, {
-      ...transaction,
-      id: txRef.id,
-      status,
-      date: transaction.date || new Date().toISOString(),
-    });
+    let balanceAfter: number | undefined;
+    let toBalanceAfter: number | undefined;
 
     // 2. Adjust account balance ONLY IF NOT pending_confirmation
     if (status !== 'pending_confirmation') {
@@ -88,46 +90,94 @@ export class TransactionsService {
         const accData = accDoc.data() as Account;
         let balanceChange = Number(transaction.amount);
 
-        if (transaction.type === 'expense') {
+        if (effectiveType === 'expense' || effectiveType === 'transfer') {
           balanceChange = -balanceChange;
         }
 
-        const newBalance = (Number(accData.balance) || 0) + balanceChange;
-        batch.update(accRef, {
-          balance: newBalance,
+        balanceAfter = (Number(accData.balance) || 0) + balanceChange;
+        const accUpdate: Partial<Account> = {
+          balance: balanceAfter,
           lastSyncedAt: new Date().toISOString(),
-        });
+        };
+
+        if (accData.type === 'investment') {
+          accUpdate.investedAmount =
+            (Number(accData.investedAmount) || Number(accData.balance) || 0) +
+            balanceChange;
+        }
+
+        batch.update(accRef, accUpdate);
       }
 
-      // 3. Handle transfers (To account)
-      if (transaction.type === 'transfer' && transaction.toAccountId) {
+      // 3. Handle transfers (To account or Goal)
+      if (transaction.toAccountId) {
+        // First check if it's an account
         const toAccRef = this.db
           .collection(this.accountsCollection)
           .doc(transaction.toAccountId);
         const toAccDoc = await toAccRef.get();
+
         if (toAccDoc.exists) {
           const toAccData = toAccDoc.data() as Account;
           if (toAccData.type === 'debt') {
             const interest = Number(transaction.interestAmount) || 0;
             const principal = Number(transaction.amount) - interest;
 
+            toBalanceAfter = (Number(toAccData.balance) || 0) + principal;
             batch.update(toAccRef, {
-              balance: (Number(toAccData.balance) || 0) + principal,
+              balance: toBalanceAfter,
               paidAmount: (Number(toAccData.paidAmount) || 0) + principal,
               interestPaid: (Number(toAccData.interestPaid) || 0) + interest,
               lastSyncedAt: new Date().toISOString(),
             });
           } else {
-            const newToBalance =
+            toBalanceAfter =
               (Number(toAccData.balance) || 0) + Number(transaction.amount);
-            batch.update(toAccRef, {
-              balance: newToBalance,
+
+            const toAccUpdate: Partial<Account> = {
+              balance: toBalanceAfter,
               lastSyncedAt: new Date().toISOString(),
+            };
+
+            if (toAccData.type === 'investment') {
+              toAccUpdate.investedAmount =
+                (Number(toAccData.investedAmount) ||
+                  Number(toAccData.balance) ||
+                  0) + Number(transaction.amount);
+            }
+
+            batch.update(toAccRef, toAccUpdate);
+          }
+        } else {
+          // If not found in accounts, check if it's a goal
+          const goalRef = this.db
+            .collection(this.goalsCollection)
+            .doc(transaction.toAccountId);
+          const goalDoc = await goalRef.get();
+
+          if (goalDoc.exists) {
+            const goalData = goalDoc.data() as FinancialGoal;
+            toBalanceAfter =
+              (Number(goalData.currentAmount) || 0) +
+              Number(transaction.amount);
+            batch.update(goalRef, {
+              currentAmount: toBalanceAfter,
             });
           }
         }
       }
     }
+
+    // 4. Create transaction document with calculated balances
+    batch.set(txRef, {
+      ...transaction,
+      id: txRef.id,
+      status,
+      type: effectiveType,
+      date: transaction.date || new Date().toISOString(),
+      balanceAfter,
+      toBalanceAfter,
+    });
 
     await batch.commit();
     const createdTx = await txRef.get();
@@ -164,31 +214,71 @@ export class TransactionsService {
       if (oldAccDoc.exists) {
         const oldAccData = oldAccDoc.data() as Account;
         let rev = Number(oldTx.amount);
-        if (oldTx.type !== 'expense') rev = -rev;
-        batch.update(oldAccRef, {
-          balance: (Number(oldAccData.balance) || 0) + rev,
+        if (oldTx.type !== 'income') {
+          // Revert based on original type
+          rev = -rev; // If it was expense/transfer, add it back. If income, subtract.
+        }
+        const oldAccBalance = (Number(oldAccData.balance) || 0) - rev;
+        const oldAccUpdate: Partial<Account> = {
+          balance: oldAccBalance,
           lastSyncedAt: new Date().toISOString(),
-        });
+        };
+
+        if (oldAccData.type === 'investment') {
+          oldAccUpdate.investedAmount =
+            (Number(oldAccData.investedAmount) ||
+              Number(oldAccData.balance) ||
+              0) - rev;
+        }
+
+        batch.update(oldAccRef, oldAccUpdate);
       }
 
-      if (oldTx.type === 'transfer' && oldTx.toAccountId) {
+      if (oldTx.toAccountId) {
+        // Try account first
         const toAccRef = this.db
           .collection(this.accountsCollection)
           .doc(oldTx.toAccountId);
         const toAccDoc = await toAccRef.get();
         if (toAccDoc.exists) {
           const toAccData = toAccDoc.data() as Account;
+          const revertAmount = Number(oldTx.amount);
+
           if (toAccData.type === 'debt') {
             const interest = Number(oldTx.interestAmount) || 0;
-            const principal = Number(oldTx.amount) - interest;
+            const principal = revertAmount - interest;
             batch.update(toAccRef, {
               balance: (Number(toAccData.balance) || 0) - principal,
               paidAmount: (Number(toAccData.paidAmount) || 0) - principal,
               interestPaid: (Number(toAccData.interestPaid) || 0) - interest,
             });
           } else {
-            batch.update(toAccRef, {
-              balance: (Number(toAccData.balance) || 0) - Number(oldTx.amount),
+            const newToBalance =
+              (Number(toAccData.balance) || 0) - revertAmount;
+            const toAccUpdate: Partial<Account> = {
+              balance: newToBalance,
+            };
+
+            if (toAccData.type === 'investment') {
+              toAccUpdate.investedAmount =
+                (Number(toAccData.investedAmount) ||
+                  Number(toAccData.balance) ||
+                  0) - revertAmount;
+            }
+
+            batch.update(toAccRef, toAccUpdate);
+          }
+        } else {
+          // Check goal
+          const goalRef = this.db
+            .collection(this.goalsCollection)
+            .doc(oldTx.toAccountId);
+          const goalDoc = await goalRef.get();
+          if (goalDoc.exists) {
+            const goalData = goalDoc.data() as FinancialGoal;
+            batch.update(goalRef, {
+              currentAmount:
+                (Number(goalData.currentAmount) || 0) - Number(oldTx.amount),
             });
           }
         }
@@ -197,9 +287,15 @@ export class TransactionsService {
 
     // Apply New
     const newTx = { ...oldTx, ...updateData };
+    const isTransfer = !!newTx.toAccountId;
+    const effectiveType = isTransfer ? 'transfer' : newTx.type || 'expense';
+
     const status =
       newTx.status ||
       (newTx.isAutomated ? 'pending_confirmation' : 'completed');
+
+    let balanceAfter: number | undefined;
+    let toBalanceAfter: number | undefined;
 
     if (status !== 'pending_confirmation') {
       const newAccRef = this.db
@@ -209,38 +305,84 @@ export class TransactionsService {
       if (newAccDoc.exists) {
         const newAccData = newAccDoc.data() as Account;
         let change = Number(newTx.amount);
-        if (newTx.type === 'expense') change = -change;
-        batch.update(newAccRef, {
-          balance: (Number(newAccData.balance) || 0) + change,
+        if (effectiveType === 'expense' || effectiveType === 'transfer') {
+          change = -change;
+        }
+        balanceAfter = (Number(newAccData.balance) || 0) + change;
+        const newAccUpdate: Partial<Account> = {
+          balance: balanceAfter,
           lastSyncedAt: new Date().toISOString(),
-        });
+        };
+
+        if (newAccData.type === 'investment') {
+          newAccUpdate.investedAmount =
+            (Number(newAccData.investedAmount) ||
+              Number(newAccData.balance) ||
+              0) + change;
+        }
+
+        batch.update(newAccRef, newAccUpdate);
       }
 
-      if (newTx.type === 'transfer' && newTx.toAccountId) {
+      if (newTx.toAccountId) {
+        // Try account first
         const toAccRef = this.db
           .collection(this.accountsCollection)
           .doc(newTx.toAccountId);
         const toAccDoc = await toAccRef.get();
         if (toAccDoc.exists) {
           const toAccData = toAccDoc.data() as Account;
+          const applyAmount = Number(newTx.amount);
+
           if (toAccData.type === 'debt') {
             const interest = Number(newTx.interestAmount) || 0;
-            const principal = Number(newTx.amount) - interest;
+            const principal = applyAmount - interest;
+            toBalanceAfter = (Number(toAccData.balance) || 0) + principal;
             batch.update(toAccRef, {
-              balance: (Number(toAccData.balance) || 0) + principal,
+              balance: toBalanceAfter,
               paidAmount: (Number(toAccData.paidAmount) || 0) + principal,
               interestPaid: (Number(toAccData.interestPaid) || 0) + interest,
             });
           } else {
-            batch.update(toAccRef, {
-              balance: (Number(toAccData.balance) || 0) + Number(newTx.amount),
+            toBalanceAfter = (Number(toAccData.balance) || 0) + applyAmount;
+            const toAccUpdate: Partial<Account> = {
+              balance: toBalanceAfter,
+            };
+
+            if (toAccData.type === 'investment') {
+              toAccUpdate.investedAmount =
+                (Number(toAccData.investedAmount) ||
+                  Number(toAccData.balance) ||
+                  0) + applyAmount;
+            }
+
+            batch.update(toAccRef, toAccUpdate);
+          }
+        } else {
+          // Check goal
+          const goalRef = this.db
+            .collection(this.goalsCollection)
+            .doc(newTx.toAccountId);
+          const goalDoc = await goalRef.get();
+          if (goalDoc.exists) {
+            const goalData = goalDoc.data() as FinancialGoal;
+            toBalanceAfter =
+              (Number(goalData.currentAmount) || 0) + Number(newTx.amount);
+            batch.update(goalRef, {
+              currentAmount: toBalanceAfter,
             });
           }
         }
       }
     }
 
-    batch.update(this.collection.doc(id), { ...updateData, status });
+    batch.update(this.collection.doc(id), {
+      ...updateData,
+      status,
+      type: effectiveType,
+      balanceAfter,
+      toBalanceAfter,
+    });
     await batch.commit();
     return this.findOne(id);
   }
@@ -268,18 +410,29 @@ export class TransactionsService {
 
       // If original was expense (subtracted), we ADD it back.
       // If original was income (added), we SUBTRACT it.
-      if (txData.type !== 'expense') {
-        balanceReversion = -balanceReversion;
+      if (txData.type !== 'income') {
+        // Revert based on original type
+        balanceReversion = -balanceReversion; // If it was expense/transfer, add it back. If income, subtract.
       }
 
-      batch.update(accRef, {
-        balance: (Number(accData.balance) || 0) + balanceReversion,
+      const newBalance = (Number(accData.balance) || 0) - balanceReversion;
+      const accUpdatePage: Partial<Account> = {
+        balance: newBalance,
         lastSyncedAt: new Date().toISOString(),
-      });
+      };
+
+      if (accData.type === 'investment') {
+        accUpdatePage.investedAmount =
+          (Number(accData.investedAmount) || Number(accData.balance) || 0) -
+          balanceReversion;
+      }
+
+      batch.update(accRef, accUpdatePage);
     }
 
     // 2. Revert transfer toAccount balance
-    if (txData.type === 'transfer' && txData.toAccountId) {
+    if (txData.toAccountId) {
+      // First check if it's an account
       const toAccRef = this.db
         .collection(this.accountsCollection)
         .doc(txData.toAccountId);
@@ -287,9 +440,11 @@ export class TransactionsService {
 
       if (toAccDoc.exists) {
         const toAccData = toAccDoc.data() as Account;
+        const revertAmount = Number(txData.amount);
+
         if (toAccData.type === 'debt') {
           const interest = Number(txData.interestAmount) || 0;
-          const principal = Number(txData.amount) - interest;
+          const principal = revertAmount - interest;
 
           batch.update(toAccRef, {
             balance: (Number(toAccData.balance) || 0) - principal,
@@ -299,9 +454,32 @@ export class TransactionsService {
           });
         } else {
           // Transfer was ADDED to toAccount, so we SUBTRACT.
-          batch.update(toAccRef, {
-            balance: (Number(toAccData.balance) || 0) - Number(txData.amount),
+          const newToBalance = (Number(toAccData.balance) || 0) - revertAmount;
+          const toAccUpdate: Partial<Account> = {
+            balance: newToBalance,
             lastSyncedAt: new Date().toISOString(),
+          };
+
+          if (toAccData.type === 'investment') {
+            toAccUpdate.investedAmount =
+              (Number(toAccData.investedAmount) ||
+                Number(toAccData.balance) ||
+                0) - revertAmount;
+          }
+
+          batch.update(toAccRef, toAccUpdate);
+        }
+      } else {
+        // If not found in accounts, check if it's a goal
+        const goalRef = this.db
+          .collection(this.goalsCollection)
+          .doc(txData.toAccountId);
+        const goalDoc = await goalRef.get();
+        if (goalDoc.exists) {
+          const goalData = goalDoc.data() as FinancialGoal;
+          batch.update(goalRef, {
+            currentAmount:
+              (Number(goalData.currentAmount) || 0) - Number(txData.amount),
           });
         }
       }
@@ -309,6 +487,17 @@ export class TransactionsService {
 
     // 3. Delete transaction
     batch.delete(txRef);
+    await batch.commit();
+  }
+
+  async removeByAccountId(accountId: string): Promise<void> {
+    const snapshot = await this.collection
+      .where('accountId', '==', accountId)
+      .get();
+    const batch = this.db.batch();
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
     await batch.commit();
   }
 
@@ -327,7 +516,8 @@ export class TransactionsService {
     }
 
     // 1. Update status to completed
-    batch.update(txRef, { status: 'completed' });
+    let balanceAfter: number | undefined;
+    let toBalanceAfter: number | undefined;
 
     // 2. Adjust primary account balance
     const accRef = this.db
@@ -337,40 +527,86 @@ export class TransactionsService {
     if (accDoc.exists) {
       const accData = accDoc.data() as Account;
       let balanceChange = Number(txData.amount);
-      if (txData.type === 'expense') balanceChange = -balanceChange;
+      if (txData.type === 'expense' || txData.type === 'transfer') {
+        balanceChange = -balanceChange;
+      }
 
-      batch.update(accRef, {
-        balance: (Number(accData.balance) || 0) + balanceChange,
+      balanceAfter = (Number(accData.balance) || 0) + balanceChange;
+      const confirmAccUpdate: Partial<Account> = {
+        balance: balanceAfter,
         lastSyncedAt: new Date().toISOString(),
-      });
+      };
+
+      if (accData.type === 'investment') {
+        confirmAccUpdate.investedAmount =
+          (Number(accData.investedAmount) || Number(accData.balance) || 0) +
+          balanceChange;
+      }
+
+      batch.update(accRef, confirmAccUpdate);
     }
 
-    // 3. Handle transfers
-    if (txData.type === 'transfer' && txData.toAccountId) {
+    // 3. Handle transfers (Account or Goal)
+    if (txData.toAccountId) {
       const toAccRef = this.db
         .collection(this.accountsCollection)
         .doc(txData.toAccountId);
       const toAccDoc = await toAccRef.get();
+
       if (toAccDoc.exists) {
         const toAccData = toAccDoc.data() as Account;
+        const applyAmount = Number(txData.amount);
+
         if (toAccData.type === 'debt') {
           const interest = Number(txData.interestAmount) || 0;
-          const principal = Number(txData.amount) - interest;
+          const principal = applyAmount - interest;
 
+          toBalanceAfter = (Number(toAccData.balance) || 0) + principal;
           batch.update(toAccRef, {
-            balance: (Number(toAccData.balance) || 0) + principal,
+            balance: toBalanceAfter,
             paidAmount: (Number(toAccData.paidAmount) || 0) + principal,
             interestPaid: (Number(toAccData.interestPaid) || 0) + interest,
             lastSyncedAt: new Date().toISOString(),
           });
         } else {
-          batch.update(toAccRef, {
-            balance: (Number(toAccData.balance) || 0) + Number(txData.amount),
+          toBalanceAfter = (Number(toAccData.balance) || 0) + applyAmount;
+          const confirmToAccUpdate: Partial<Account> = {
+            balance: toBalanceAfter,
             lastSyncedAt: new Date().toISOString(),
+          };
+
+          if (toAccData.type === 'investment') {
+            confirmToAccUpdate.investedAmount =
+              (Number(toAccData.investedAmount) ||
+                Number(toAccData.balance) ||
+                0) + applyAmount;
+          }
+
+          batch.update(toAccRef, confirmToAccUpdate);
+        }
+      } else {
+        // Goal?
+        const goalRef = this.db
+          .collection(this.goalsCollection)
+          .doc(txData.toAccountId);
+        const goalDoc = await goalRef.get();
+        if (goalDoc.exists) {
+          const goalData = goalDoc.data() as FinancialGoal;
+          toBalanceAfter =
+            (Number(goalData.currentAmount) || 0) + Number(txData.amount);
+          batch.update(goalRef, {
+            currentAmount: toBalanceAfter,
           });
         }
       }
     }
+
+    // 4. Update status and store balances
+    batch.update(txRef, {
+      status: 'completed',
+      balanceAfter,
+      toBalanceAfter,
+    });
 
     // 4. Generate next occurrence if automated
     if (txData.isAutomated && txData.frequency) {
@@ -401,6 +637,6 @@ export class TransactionsService {
     }
 
     await batch.commit();
-    return { ...txData, status: 'completed' };
+    return { ...txData, status: 'completed' } as Transaction;
   }
 }

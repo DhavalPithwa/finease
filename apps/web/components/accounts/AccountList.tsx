@@ -11,6 +11,7 @@ import { deleteAccount, updateAccount } from "@/store/slices/accountsSlice";
 import { AddAccountModal } from "./AddAccountModal";
 import { AddInvestmentModal } from "@/components/portfolio/AddInvestmentModal";
 import { AddLiabilityModal } from "@/components/portfolio/AddLiabilityModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import toast from "react-hot-toast";
 
 interface AccountListProps {
@@ -23,6 +24,7 @@ export function AccountList({ accounts }: AccountListProps) {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   const [isLiabilityModalOpen, setIsLiabilityModalOpen] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -130,10 +132,7 @@ export function AccountList({ accounts }: AccountListProps) {
                 </button>
                 <button 
                   onClick={() => {
-                    if (confirm("Are you sure you want to delete this account?")) {
-                      dispatch(deleteAccount(account.id));
-                      toast.success("Account deleted");
-                    }
+                    setAccountToDelete(account);
                   }}
                   className="p-1 text-slate-400 hover:text-red-500 transition-colors rounded hover:bg-red-50 dark:hover:bg-red-500/10"
                 >
@@ -210,6 +209,20 @@ export function AccountList({ accounts }: AccountListProps) {
           }
           setIsLiabilityModalOpen(false);
         }}
+      />
+    <ConfirmModal 
+        isOpen={!!accountToDelete}
+        title="Delete Account"
+        message={`Are you sure you want to permanently delete "${accountToDelete?.name}"? All associated transactions will also be deleted. This action cannot be undone.`}
+        confirmText="Delete"
+        onConfirm={() => {
+          if (accountToDelete) {
+            dispatch(deleteAccount(accountToDelete.id));
+            toast.success("Account deleted");
+          }
+          setAccountToDelete(null);
+        }}
+        onCancel={() => setAccountToDelete(null)}
       />
     </div>
   );

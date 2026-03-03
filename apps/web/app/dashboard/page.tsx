@@ -52,15 +52,58 @@ export default function Home() {
     color: colors[idx % colors.length] || '#000000'
   }));
 
+  // Computed Net Worth History (Last 6 Months)
+  const computedNetWorthHistory = useMemo(() => {
+    const history: { month: string; value: number; dateObj: Date }[] = [];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const now = new Date();
+    
+    // Create an initial array of the last 6 months (including current)
+    for (let i = 0; i < 6; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        history.unshift({
+            month: `${months[d.getMonth()]}`,
+            value: 0,
+            dateObj: d
+        });
+    }
+
+    // Work backwards from the realTimeNetWorth to compute historical values
+    let runningNW = realTimeNetWorth;
+    // Set current month's calculated value
+    history[5]!.value = runningNW;
+    
+    for (let i = 4; i >= 0; i--) {
+        const nextMonthData = history[i+1]!;
+        const nextMonth = nextMonthData.dateObj;
+        
+        // Find transactions that happened in nextMonth to reverse them
+        const txInNextMonth = transactions.filter(tx => {
+            if (tx.status === 'pending_confirmation') return false;
+            const txDate = new Date(tx.date);
+            return txDate.getMonth() === nextMonth.getMonth() && txDate.getFullYear() === nextMonth.getFullYear();
+        });
+
+        // Reversing: if we earned income, the past NW was LOWER. If we spent, the past NW was HIGHER.
+        const netFlowNextMonth = txInNextMonth.reduce((acc, tx) => {
+            return acc + (tx.type === 'income' ? tx.amount : -tx.amount);
+        }, 0);
+
+        runningNW = runningNW - netFlowNextMonth;
+        history[i]!.value = runningNW;
+    }
+
+    return history.map(h => ({ month: h.month, value: h.value > 0 ? h.value : 0 }));
+  }, [transactions, realTimeNetWorth]);
+
   // Net Worth Change percentage
   const netWorthChange = useMemo(() => {
-    const history = stats.netWorthHistory || [];
-    if (history.length < 2) return 0;
-    const last = history[history.length - 1]?.value || 0;
-    const prev = history[history.length - 2]?.value || 0;
-    if (prev === 0) return 0;
+    if (computedNetWorthHistory.length < 2) return 0;
+    const last = computedNetWorthHistory[computedNetWorthHistory.length - 1]?.value || 0;
+    const prev = computedNetWorthHistory[computedNetWorthHistory.length - 2]?.value || 0;
+    if (prev === 0) return last > 0 ? 100 : 0;
     return parseFloat(((last - prev) / prev * 100).toFixed(1));
-  }, [stats.netWorthHistory]);
+  }, [computedNetWorthHistory]);
 
   // Dynamic Insights Calculation
   const insights = useMemo(() => {
@@ -217,7 +260,7 @@ export default function Home() {
       {/* Row 2: Wealth Pulse */}
       <div>
         <NetWorthChart 
-            data={stats.netWorthHistory || []} 
+            data={computedNetWorthHistory} 
             currentNetWorth={realTimeNetWorth} 
             percentageChange={netWorthChange} 
         />

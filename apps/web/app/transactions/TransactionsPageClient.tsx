@@ -11,12 +11,15 @@ import { fetchTransactions, createTransaction, deleteTransaction, updateTransact
 import { fetchAccounts, createAccount } from "@/store/slices/accountsSlice";
 import { addCategoryAction, updateCategoryAction, removeCategoryAction } from "@/store/slices/categoriesSlice";
 import { AddCategoryModal } from "@/components/categories/AddCategoryModal";
-import { Transaction } from "@repo/types";
+import { CategoryParentType, Transaction } from "@repo/types";
 import { Trash2, Edit2, Filter, X, ChevronDown, Calendar as CalendarIcon, ArrowRight, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { formatDate } from "@/lib/utils";
 import { useEffect } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+
+const liquidTypes = ["bank", "cash", "card"];
 
 export default function TransactionsPageClient() {
   const { user } = useAuth();
@@ -41,6 +44,7 @@ export default function TransactionsPageClient() {
   const [editingData, setEditingData] = useState<Transaction | null>(null);
   const [viewingData, setViewingData] = useState<Transaction | null>(null);
   const [editingCategory, setEditingCategory] = useState<{ id: string; name: string; color: string } | null>(null);
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
 
   // Filter States
   const [filterCategory, setFilterCategory] = useState("all");
@@ -62,6 +66,31 @@ export default function TransactionsPageClient() {
     ).length;
   }, [transactions]);
 
+  const explodedTransactions = useMemo(() => {
+    const result: Transaction[] = [];
+    (transactions || []).forEach(t => {
+      // Add the primary transaction
+      result.push(t);
+
+      // If it's a transfer between liquid accounts, add a virtual "credit" entry
+      if (t.type === 'transfer' && t.toAccountId) {
+        const toAcc = accounts.find(a => a.id === t.toAccountId);
+        if (toAcc && liquidTypes.includes(toAcc.type)) {
+          result.push({
+            ...t,
+            id: `${t.id}-credit`,
+            accountId: t.toAccountId,
+            toAccountId: t.accountId,
+            type: 'income',
+            balanceAfter: t.toBalanceAfter,
+            isVirtual: true,
+          } as Transaction & { isVirtual: boolean });
+        }
+      }
+    });
+    return result;
+  }, [transactions, accounts]);
+
   const [sortConfig, setSortConfig] = useState<{ key: keyof Transaction | 'date'; direction: 'asc' | 'desc' }>({
     key: 'date',
     direction: 'desc'
@@ -75,7 +104,7 @@ export default function TransactionsPageClient() {
   };
 
   const filtered = useMemo(() => {
-    const result = transactions.filter((t: Transaction) => {
+    const result = explodedTransactions.filter((t: Transaction) => {
       // Basic Tab & Search
       const isSearchMatch = t.description.toLowerCase().includes(searchTerm.toLowerCase());
       const isTabMatch = activeTab === "automated" 
@@ -88,11 +117,7 @@ export default function TransactionsPageClient() {
       if (filterCategory !== "all" && t.category !== filterCategory) return false;
 
       // Account Filter
-      if (filterAccount !== "all") {
-        const isSource = t.accountId === filterAccount;
-        const isDest = t.toAccountId === filterAccount;
-        if (!isSource && !isDest) return false;
-      }
+      if (filterAccount !== "all" && t.accountId !== filterAccount) return false;
 
       // Type Filter
       if (filterType !== "all" && t.type !== filterType) return false;
@@ -131,7 +156,7 @@ export default function TransactionsPageClient() {
     });
 
     return sortedResult;
-  }, [transactions, searchTerm, activeTab, filterCategory, filterAccount, filterType, filterDateFrom, filterDateTo, sortConfig]);
+  }, [explodedTransactions, searchTerm, activeTab, filterCategory, filterAccount, filterType, filterDateFrom, filterDateTo, sortConfig, categories, accounts]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedTransactions = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -230,13 +255,13 @@ export default function TransactionsPageClient() {
             <div key={c.id} className="relative group/chip">
               <button 
                 onClick={() => { 
-                  setFilterCategory(c.name); 
+                  setFilterCategory(c.id); 
                   setCurrentPage(1); 
                 }}
                 onDoubleClick={() => { setEditingCategory(c); setIsCategoryModalOpen(true); }}
-                className={`pl-4 pr-10 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all border flex items-center gap-3 relative overflow-hidden backdrop-blur-sm ${filterCategory === c.name ? 'border-primary bg-primary/[0.03] text-primary dark:text-primary-light shadow-lg shadow-primary/5' : 'bg-white/50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20'}`}
+                className={`pl-4 pr-10 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all border flex items-center gap-3 relative overflow-hidden backdrop-blur-sm ${filterCategory === c.id ? 'border-primary bg-primary/[0.03] text-primary dark:text-primary-light shadow-lg shadow-primary/5' : 'bg-white/50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20'}`}
               >
-                <div className={`w-2 h-2 rounded-full shadow-sm ${c.color} ${filterCategory === c.name ? 'ring-4 ring-primary/20 scale-110' : ''} transition-all`} />
+                <div className={`w-2 h-2 rounded-full shadow-sm ${c.color} ${filterCategory === c.id ? 'ring-4 ring-primary/20 scale-110' : ''} transition-all`} />
                 {c.name}
               </button>
               
@@ -381,14 +406,21 @@ export default function TransactionsPageClient() {
               <div className="flex justify-between items-start mb-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${categories.find(c => c.name === tx.category)?.color || 'bg-slate-400'}`} />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{tx.category}</span>
+                    <div className={`w-2 h-2 rounded-full ${categories.find(c => c.id === tx.category)?.color || 'bg-slate-400'}`} />
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {categories.find(c => c.id === tx.category)?.name || tx.category}
+                    </span>
                   </div>
                   <h4 className="text-sm font-black text-slate-900 dark:text-white tracking-tight">{tx.description}</h4>
                 </div>
-                <div className={`text-right font-black text-base tracking-tighter ${tx.type === 'expense' ? 'text-rose-500' : tx.type === 'income' ? 'text-emerald-500' : 'text-primary'}`}>
-                  {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''} ₹{tx.amount.toLocaleString()}
+                <div className={`text-right font-black text-base tracking-tighter ${tx.type === 'expense' || tx.type === 'transfer' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                  {tx.type === 'expense' || tx.type === 'transfer' ? '-' : '+'} ₹{tx.amount.toLocaleString()}
                 </div>
+              </div>
+              
+              <div className="flex justify-between items-center mb-4 px-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Balance After</span>
+                <span className="text-xs font-black text-slate-600 dark:text-slate-300 tracking-tight">₹{(tx.balanceAfter ?? 0).toLocaleString()}</span>
               </div>
               
               <div className="flex justify-between items-end pt-4 border-t border-slate-50 dark:border-white/5">
@@ -429,10 +461,7 @@ export default function TransactionsPageClient() {
                       <button 
                         onClick={(e) => { 
                           e.stopPropagation(); 
-                          if (confirm("Delete this activity?")) {
-                            dispatch(deleteTransaction(tx.id));
-                            toast.success("Activity Deleted");
-                          }
+                          setTransactionToDelete(tx);
                         }} 
                         className="p-1.5 text-rose-400"
                       >
@@ -485,6 +514,7 @@ export default function TransactionsPageClient() {
                     )}
                   </div>
                 </th>
+                <th className="px-8 py-6 text-right" scope="col">Running Balance</th>
                 <th className="px-8 py-6 text-right w-36" scope="col">Operations</th>
               </tr>
             </thead>
@@ -536,17 +566,20 @@ export default function TransactionsPageClient() {
                   </td>
                   <td className="px-8 py-5">
                     <span className="inline-flex items-center rounded-xl bg-slate-50 border border-slate-100 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.1em] text-slate-600 dark:bg-slate-800/50 dark:border-white/5 dark:text-slate-400">
-                      <div className={`w-1.5 h-1.5 rounded-full mr-2 ${categories.find(c => c.name === tx.category)?.color || 'bg-slate-400'}`} />
-                      {tx.category}
+                      <div className={`w-1.5 h-1.5 rounded-full mr-2 ${categories.find(c => c.id === tx.category)?.color || 'bg-slate-400'}`} />
+                      {categories.find(c => c.id === tx.category)?.name || tx.category}
                     </span>
                   </td>
                   <td className="px-8 py-5 text-right flex flex-col items-end gap-1">
-                    <span className={`text-base font-black tracking-tighter ${tx.type === 'expense' ? 'text-rose-500' : tx.type === 'income' ? 'text-emerald-500' : 'text-primary'}`}>
-                      {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''} ₹{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <span className={`text-base font-black tracking-tighter ${tx.type === 'expense' || tx.type === 'transfer' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                      {tx.type === 'expense' || tx.type === 'transfer' ? '-' : '+'} ₹{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                     {tx.status === 'pending_confirmation' && (
                        <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 bg-orange-500/5 px-2 py-0.5 rounded-md border border-orange-500/10">Pending Confirmation</span>
                     )}
+                  </td>
+                  <td className="px-8 py-5 text-right font-bold text-slate-500 text-xs">
+                    {tx.balanceAfter !== undefined ? `₹${tx.balanceAfter.toLocaleString()}` : "—"}
                   </td>
                   <td className="px-8 py-5 text-right">
                     <div className="flex items-center justify-end gap-2 transition-opacity">
@@ -567,27 +600,28 @@ export default function TransactionsPageClient() {
                           Confirm
                         </button>
                       )}
-                      <button 
-                        type="button"
-                        onClick={() => { setEditingData(tx); setIsModalOpen(true); }}
-                        className="p-2.5 rounded-xl hover:bg-primary/10 text-slate-400 hover:text-primary transition-all border border-transparent hover:border-primary/20"
-                        title="Edit entry"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          if (confirm("Permanently delete this activity?")) {
-                            dispatch(deleteTransaction(tx.id));
-                            toast.success("Activity Deleted");
-                          }
-                        }}
-                        className="p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-all border border-transparent hover:border-rose-500/20"
-                        title="Delete entry"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {!(tx as Transaction & { isVirtual?: boolean }).isVirtual && (
+                        <>
+                          <button 
+                            type="button"
+                            onClick={() => { setEditingData(tx); setIsModalOpen(true); }}
+                            className="p-2.5 rounded-xl hover:bg-primary/10 text-slate-400 hover:text-primary transition-all border border-transparent hover:border-primary/20"
+                            title="Edit entry"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setTransactionToDelete(tx);
+                            }}
+                            className="p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-all border border-transparent hover:border-rose-500/20"
+                            title="Delete entry"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -681,6 +715,7 @@ export default function TransactionsPageClient() {
         transaction={viewingData}
         accounts={accounts}
         goals={goals}
+        categories={categories}
       />
 
       <AddAccountModal 
@@ -718,13 +753,15 @@ export default function TransactionsPageClient() {
               id: data.id,
               data: {
                 name: data.name,
-                color: data.color
+                color: data.color,
+                parentType: data.parentType as CategoryParentType
               }
             }));
           } else {
             dispatch(addCategoryAction({
               name: data.name,
-              color: data.color
+              color: data.color,
+              parentType: data.parentType as CategoryParentType
             }));
           }
           setIsCategoryModalOpen(false);
@@ -735,6 +772,21 @@ export default function TransactionsPageClient() {
           setIsCategoryModalOpen(false);
           toast.success("Category deleted");
         }}
+      />
+      
+      <ConfirmModal 
+        isOpen={!!transactionToDelete}
+        title="Delete Activity"
+        message={`Are you sure you want to permanently delete this ${transactionToDelete?.isAutomated ? "automated " : ""}activity? This action cannot be undone.`}
+        confirmText="Delete"
+        onConfirm={() => {
+          if (transactionToDelete) {
+            dispatch(deleteTransaction(transactionToDelete.id));
+            toast.success("Activity Deleted");
+          }
+          setTransactionToDelete(null);
+        }}
+        onCancel={() => setTransactionToDelete(null)}
       />
     </div>
   );

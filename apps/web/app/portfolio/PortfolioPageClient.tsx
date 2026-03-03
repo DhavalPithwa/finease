@@ -187,8 +187,8 @@ export default function PortfolioPageClient() {
                         <div className="flex justify-between items-start">
                             <div className="space-y-1">
                                 <span className={`text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${assetTypes.find(a => a.name === inv.assetType)?.color || 'bg-slate-400'}`} />
-                                    {inv.assetType || 'General'}
+                                    <div className={`w-1.5 h-1.5 rounded-full ${assetTypes.find(a => a.id === inv.assetType)?.color || 'bg-slate-400'}`} />
+                                    {assetTypes.find(a => a.id === inv.assetType)?.name || inv.assetType || 'General'}
                                 </span>
                                 <h4 className="text-base font-black text-slate-900 dark:text-white tracking-tight">{inv.name}</h4>
                             </div>
@@ -240,8 +240,8 @@ export default function PortfolioPageClient() {
                       </td>
                       <td className="px-8 py-5">
                         <span className="inline-flex items-center rounded-xl bg-slate-50 border border-slate-100 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.1em] text-slate-600 dark:bg-slate-800/50 dark:border-white/5 dark:text-slate-400">
-                            <div className={`w-1.5 h-1.5 rounded-full mr-2 ${assetTypes.find(a => a.name === inv.assetType)?.color || 'bg-slate-400'}`} />
-                            {inv.assetType || inv.type}
+                            <div className={`w-1.5 h-1.5 rounded-full mr-2 ${assetTypes.find(a => a.id === inv.assetType)?.color || 'bg-slate-400'}`} />
+                            {assetTypes.find(a => a.id === inv.assetType)?.name || inv.assetType || inv.type}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-right">

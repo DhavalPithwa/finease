@@ -1,26 +1,29 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { id?: string; name: string; color: string }) => void;
+  onSave: (data: { id?: string; name: string; color: string; parentType?: string }) => void;
   onDelete?: (id: string) => void;
-  category?: { id: string; name: string; color: string } | null;
+  category?: { id: string; name: string; color: string; parentType?: string } | null;
 }
 
 export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }: AddCategoryModalProps) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("bg-indigo-500");
+  const [parentType, setParentType] = useState("needs");
 
   useEffect(() => {
     if (category) {
       setName(category.name);
       setColor(category.color);
+      setParentType(category.parentType || "needs");
     } else {
       setName("");
       setColor("bg-indigo-500");
+      setParentType("needs");
     }
   }, [category, isOpen]);
 
@@ -67,6 +70,23 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
               />
             </div>
 
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Parent Hierarchy</label>
+              <div className="relative">
+                <select 
+                  value={parentType}
+                  onChange={(e) => setParentType(e.target.value)}
+                  className="w-full p-4 pr-10 appearance-none bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-white/5 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-sm font-bold text-slate-900 dark:text-white"
+                >
+                  <option value="needs">Needs</option>
+                  <option value="wants">Wants</option>
+                  <option value="savings">Savings</option>
+                  <option value="income">Income</option>
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
+
             <div className="space-y-3">
               <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Visual Signature</label>
               <div className="flex flex-wrap gap-4 mt-2">
@@ -84,9 +104,10 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
               <button 
                 onClick={() => {
                   if(name.trim()) {
-                    onSave({ id: category?.id, name, color });
+                    onSave({ id: category?.id, name, color, parentType });
                     setName("");
                     setColor("bg-indigo-500");
+                    setParentType("needs");
                   }
                 }}
                 className="w-full py-5 bg-primary hover:bg-primary-dark text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"

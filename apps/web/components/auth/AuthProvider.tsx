@@ -19,6 +19,11 @@ interface AuthUser {
   gender?: string;
   dob?: string;
   phone?: string;
+  budgetTargets?: {
+    needs: number;
+    wants: number;
+    savings: number;
+  };
 }
 
 interface ApiUserResponse {
@@ -29,6 +34,11 @@ interface ApiUserResponse {
   photoURL?: string;
   gender?: string;
   dob?: string;
+  budgetTargets?: {
+    needs: number;
+    wants: number;
+    savings: number;
+  };
 }
 
 interface ApiAuthResponse {
@@ -57,6 +67,7 @@ function buildUser(userData: ApiUserResponse): AuthUser {
       `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userData.displayName || "User")}`,
     gender: userData.gender,
     dob: userData.dob,
+    budgetTargets: userData.budgetTargets,
   };
 }
 

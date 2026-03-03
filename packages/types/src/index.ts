@@ -8,6 +8,11 @@ export interface User {
   dob?: string;
   role: UserRole;
   createdAt: string;
+  budgetTargets?: {
+    needs: number;
+    wants: number;
+    savings: number;
+  };
 }
 
 export type AccountType = "bank" | "cash" | "debt" | "investment" | "card" | "asset";
@@ -42,12 +47,15 @@ export interface FinancialGoal {
   icon?: string;
 }
 
+export type CategoryParentType = "needs" | "wants" | "savings" | "income";
+
 export interface Category {
   id: string;
   userId: string;
   name: string;
   color: string;
   type?: "expense" | "income";
+  parentType?: CategoryParentType;
 }
 
 export interface AssetClass {
@@ -80,6 +88,8 @@ export interface Transaction {
   isAutomated?: boolean;
   frequency?: TransactionFrequency;
   recurringCount?: string | number;
+  balanceAfter?: number;
+  toBalanceAfter?: number;
 }
 
 export interface DashboardStats {

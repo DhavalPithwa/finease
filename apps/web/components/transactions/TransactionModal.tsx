@@ -7,7 +7,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import toast from "react-hot-toast";
 
-import { Transaction, TransactionFrequency } from "@repo/types";
+import { Transaction, TransactionFrequency, FinancialGoal, Category } from "@repo/types";
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -36,7 +36,7 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
     description: "",
     amount: "",
     interestAmount: "",
-    category: "Uncategorized",
+    category: "uncategorized",
     date: new Date().toISOString().split("T")[0] ?? "",
     accountId: "acc-1",
     toAccountId: "",
@@ -53,7 +53,7 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
           description: transaction.description,
           amount: String(transaction.amount),
           interestAmount: transaction.interestAmount ? String(transaction.interestAmount) : "",
-          category: transaction.category,
+          category: transaction.category || "uncategorized",
           date: new Date(transaction.date).toISOString().split("T")[0] ?? "",
           accountId: transaction.accountId || "acc-1",
           toAccountId: transaction.toAccountId || "",
@@ -68,7 +68,7 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
           description: "",
           amount: "",
           interestAmount: "",
-          category: "Uncategorized",
+          category: "uncategorized",
           date: new Date().toISOString().split("T")[0] ?? "",
           accountId: defaultAcc ? defaultAcc.id : "",
           toAccountId: "",
@@ -85,7 +85,7 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
           description: "",
           amount: "",
           interestAmount: "",
-          category: "Uncategorized",
+          category: "uncategorized",
           date: new Date().toISOString().split("T")[0] ?? "",
           accountId: defaultAcc ? defaultAcc.id : "",
           toAccountId: "",
@@ -208,7 +208,9 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
                         >
                           <option value="" disabled>Select an account</option>
                           {accounts.filter(a => ["bank", "cash", "card"].includes(a.type)).map(acc => (
-                            <option key={acc.id} value={acc.id}>{acc.name} ({acc.type.toUpperCase()})</option>
+                            <option key={acc.id} value={acc.id}>
+                              {acc.name} ({acc.type.toUpperCase()}) - ₹{acc.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </option>
                           ))}
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
@@ -224,14 +226,16 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
                         >
                           <option value="">(None)</option>
                           <optgroup label="Accounts & Investments">
-                            {accounts.filter(acc => acc.id !== formData.accountId).map(acc => (
-                              <option key={acc.id} value={acc.id}>{acc.name} ({acc.type.toUpperCase()})</option>
+                            {accounts.filter(acc => acc.id !== formData.accountId && acc.type !== 'asset').map(acc => (
+                              <option key={acc.id} value={acc.id}>
+                                {acc.name} ({acc.type.toUpperCase()}) - ₹{acc.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              </option>
                             ))}
                           </optgroup>
                           {goals && goals.length > 0 && (
                             <optgroup label="Goals (Direct Top-up)">
-                              {goals.map((g: { id: string; name: string }) => (
-                                <option key={g.id} value={g.id}>{g.name}</option>
+                              {goals.map((g: FinancialGoal) => (
+                                <option key={g.id} value={g.id}>{g.name} - ₹{g.currentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</option>
                               ))}
                             </optgroup>
                           )}
@@ -266,7 +270,9 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
                       >
                         <option value="" disabled>Select an account</option>
                         {accounts.filter(a => ["bank", "cash", "card"].includes(a.type)).map(acc => (
-                          <option key={acc.id} value={acc.id}>{acc.name} ({acc.type.toUpperCase()})</option>
+                          <option key={acc.id} value={acc.id}>
+                            {acc.name} ({acc.type.toUpperCase()}) - ₹{acc.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </option>
                         ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
@@ -284,10 +290,10 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       className="w-full p-3 pr-10 appearance-none bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
                     >
-                      {categories.map((c: { id: string; name: string }) => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
+                      <option value="uncategorized">Uncategorized</option>
+                      {categories.map((c: Category) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
-                      <option value="Uncategorized">Uncategorized</option>
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                   </div>

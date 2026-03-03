@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { Category } from '@repo/types';
 import { FirebaseAdminService } from '@common/services/firebase-admin.service';
 
 @Injectable()
 export class CategoriesService {
   private readonly collectionName = 'categories';
+  private readonly transactionsCollection = 'transactions';
 
   constructor(private readonly firebase: FirebaseAdminService) {}
 
@@ -37,6 +38,19 @@ export class CategoriesService {
   }
 
   async remove(id: string): Promise<void> {
+    // Check if any transaction is using this category
+    const transactionsSnapshot = await this.db
+      .collection(this.transactionsCollection)
+      .where('category', '==', id)
+      .limit(1)
+      .get();
+
+    if (!transactionsSnapshot.empty) {
+      throw new BadRequestException(
+        'Cannot delete Category: it is still associated with one or more transactions. Please update those transactions first.',
+      );
+    }
+
     await this.collection.doc(id).delete();
   }
 }
