@@ -16,8 +16,15 @@ export const metadata: Metadata = {
   title: "FinEase | Make your finances easy",
   description: "Comprehensive wealth management for modern investors. Track your INR assets, investments, and expenses in one secure place.",
   manifest: "/manifest.json",
+  themeColor: "#135bec",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "FinEase",
+  },
   icons: {
     icon: "/favicon.svg",
+    apple: "/icon-192x192.png",
   },
 };
 
@@ -54,6 +61,24 @@ export default function RootLayout({
             </AuthProvider>
           </ReduxProvider>
         </ThemeProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(registration) {
+                      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    },
+                    function(err) {
+                      console.log('ServiceWorker registration failed: ', err);
+                    }
+                  );
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
