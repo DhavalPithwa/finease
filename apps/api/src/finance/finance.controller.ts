@@ -10,13 +10,13 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { AuthGuard } from '@common/guards/auth.guard';
-import { GoalService } from '@finance/goal.service';
-import { ReconciliationService } from '@finance/reconciliation.service';
-import { AccountsService } from '@finance/accounts.service';
-import { TransactionsService } from '@finance/transactions.service';
-import { CategoriesService } from '@finance/categories.service';
-import { AssetClassesService } from '@finance/asset-classes.service';
+import { AuthGuard } from '../common/guards/auth.guard';
+import { GoalService } from './goal.service';
+import { ReconciliationService } from './reconciliation.service';
+import { AccountsService } from './accounts.service';
+import { TransactionsService } from './transactions.service';
+import { CategoriesService } from './categories.service';
+import { AssetClassesService } from './asset-classes.service';
 import type {
   FinancialGoal,
   Transaction,
@@ -25,8 +25,8 @@ import type {
   Category,
   AssetClass,
 } from '@repo/types';
-import { UsersService } from '@common/services/users.service';
-import type { RequestWithUser } from '@common/interfaces/request.interface';
+import { UsersService } from '../common/services/users.service';
+import type { RequestWithUser } from '../common/interfaces/request.interface';
 
 @ApiTags('Finance')
 @ApiBearerAuth('bearer')

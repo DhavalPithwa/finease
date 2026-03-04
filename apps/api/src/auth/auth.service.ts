@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { FirebaseAdminService } from '@common/services/firebase-admin.service';
-import { SignupDto, LoginDto, ResetPasswordDto } from '@auth/dto/auth.dto';
+import { FirebaseAdminService } from '../common/services/firebase-admin.service';
+import { SignupDto, LoginDto, ResetPasswordDto } from './dto/auth.dto';
 
 interface StoredUser {
   id: string;

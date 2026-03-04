@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { FinancialGoal } from '@repo/types';
-import { FirebaseAdminService } from '@common/services/firebase-admin.service';
+import { FirebaseAdminService } from '../common/services/firebase-admin.service';
 
 @Injectable()
 export class GoalService {

@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { Category } from '@repo/types';
-import { FirebaseAdminService } from '@common/services/firebase-admin.service';
+import { FirebaseAdminService } from '../common/services/firebase-admin.service';
 
 @Injectable()
 export class CategoriesService {

@@ -1,15 +1,4 @@
 import 'reflect-metadata';
-import * as tsConfigPaths from 'tsconfig-paths';
-import * as tsConfig from '../tsconfig.json';
-
-// Register paths for Vercel
-if (tsConfig && tsConfig.compilerOptions && tsConfig.compilerOptions.paths) {
-  tsConfigPaths.register({
-    baseUrl: tsConfig.compilerOptions.baseUrl || './src',
-    paths: tsConfig.compilerOptions.paths as Record<string, string[]>,
-  });
-}
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ExpressAdapter } from '@nestjs/platform-express';
