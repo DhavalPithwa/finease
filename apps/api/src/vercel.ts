@@ -1,27 +1,58 @@
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import express from 'express';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import express, { Request, Response } from 'express';
 
 const server = express();
 
-export const createServer = async (expressInstance: any) => {
+export const createServer = async (expressInstance: express.Express) => {
   const app = await NestFactory.create(
     AppModule,
     new ExpressAdapter(expressInstance),
   );
+
   app.enableCors();
+
+  const config = new DocumentBuilder()
+    .setTitle('FinEase Wealth Architect API')
+    .setDescription(
+      'Personal finance management API for tracking wealth, assets, and goals.',
+    )
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter Firebase ID token',
+        in: 'header',
+      },
+      'bearer',
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api-docs', app, document, {
+    explorer: true,
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
+
   await app.init();
   return app;
 };
 
 // Vercel entry point
-let cachedHandler: any;
+let cachedHandler: express.Express;
 
-export default async (req: any, res: any) => {
+export default async (req: Request, res: Response) => {
   if (!cachedHandler) {
     await createServer(server);
     cachedHandler = server;
   }
-  return cachedHandler(req, res);
+  cachedHandler(req, res);
 };

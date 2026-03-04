@@ -1,9 +1,12 @@
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '@app/app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.enableCors();
 
   const config = new DocumentBuilder()
     .setTitle('FinEase Wealth Architect API')
@@ -20,14 +23,18 @@ async function bootstrap() {
         description: 'Enter Firebase ID token',
         in: 'header',
       },
-      'bearer', // This name must match the one used in @ApiBearerAuth()
+      'bearer',
     )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api-docs', app, document, {
+    explorer: true,
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
 
-  app.enableCors();
   await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap().catch(console.error);
