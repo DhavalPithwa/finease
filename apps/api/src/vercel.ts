@@ -1,4 +1,15 @@
 import 'reflect-metadata';
+import * as tsConfigPaths from 'tsconfig-paths';
+import * as tsConfig from '../tsconfig.json';
+
+// Register paths for Vercel
+if (tsConfig && tsConfig.compilerOptions && tsConfig.compilerOptions.paths) {
+  tsConfigPaths.register({
+    baseUrl: tsConfig.compilerOptions.baseUrl || './src',
+    paths: tsConfig.compilerOptions.paths as Record<string, string[]>,
+  });
+}
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ExpressAdapter } from '@nestjs/platform-express';
@@ -8,42 +19,47 @@ import express, { Request, Response } from 'express';
 const server = express();
 
 export const createServer = async (expressInstance: express.Express) => {
-  const app = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(expressInstance),
-  );
+  try {
+    const app = await NestFactory.create(
+      AppModule,
+      new ExpressAdapter(expressInstance),
+    );
 
-  app.enableCors();
+    app.enableCors();
 
-  const config = new DocumentBuilder()
-    .setTitle('FinEase Wealth Architect API')
-    .setDescription(
-      'Personal finance management API for tracking wealth, assets, and goals.',
-    )
-    .setVersion('1.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter Firebase ID token',
-        in: 'header',
+    const config = new DocumentBuilder()
+      .setTitle('FinEase Wealth Architect API')
+      .setDescription(
+        'Personal finance management API for tracking wealth, assets, and goals.',
+      )
+      .setVersion('1.0')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          name: 'JWT',
+          description: 'Enter Firebase ID token',
+          in: 'header',
+        },
+        'bearer',
+      )
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api-docs', app, document, {
+      explorer: true,
+      swaggerOptions: {
+        persistAuthorization: true,
       },
-      'bearer',
-    )
-    .build();
+    });
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api-docs', app, document, {
-    explorer: true,
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
-
-  await app.init();
-  return app;
+    await app.init();
+    return app;
+  } catch (error) {
+    console.error('Error during app initialization:', error);
+    throw error;
+  }
 };
 
 // Vercel entry point

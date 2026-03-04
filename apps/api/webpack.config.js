@@ -6,7 +6,6 @@ module.exports = (options, webpack) => {
     externals: [
       ...(Array.isArray(options.externals) ? options.externals : []),
       // Native addons - cannot be bundled by webpack
-      { bcrypt: 'commonjs bcrypt' },
       { 'firebase-admin': 'commonjs firebase-admin' },
     ],
     plugins: [
