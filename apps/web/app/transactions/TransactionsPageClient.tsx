@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import Link from "next/link";
 import { TransactionModal } from "@/components/transactions/TransactionModal";
 import { TransactionDetailsModal } from "@/components/transactions/TransactionDetailsModal";
 import { AddAccountModal } from "@/components/accounts/AddAccountModal";
@@ -21,6 +20,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
+import Link from "next/link";
 
 const liquidTypes = ["bank", "cash", "card"];
 
