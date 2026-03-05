@@ -21,8 +21,19 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "FinEase",
     startupImage: [
-      "/icon-512x512.png"
-    ]
+      {
+        url: "/icon-512x512.png",
+        media: "(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)",
+      },
+      {
+        url: "/icon-512x512.png",
+        media: "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)",
+      },
+      {
+        url: "/icon-512x512.png",
+        media: "(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)",
+      },
+    ],
   },
   icons: {
     icon: "/favicon.svg",
@@ -49,6 +60,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
       </head>
       <body className={`${inter.variable} font-body bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased`}>

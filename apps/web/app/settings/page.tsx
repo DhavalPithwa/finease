@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useState, useEffect } from "react";
-import { User as UserIcon, Phone, Mail, Calendar, UserCog, Target, ChevronDown, Save, CheckCircle2, AlertTriangle } from "lucide-react";
+import { User as UserIcon, Phone, Mail, UserCog, Target, ChevronDown, Save, CheckCircle2, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -194,16 +194,57 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Biological Horizon</label>
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input 
-                  type="date" 
-                  value={formData.dob}
-                  onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                  className="w-full h-12 pl-11 pr-4 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all min-w-0"
-                />
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Biological Horizon (DOB)</label>
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <select 
+                    value={formData.dob.split('-')[2] || "01"}
+                    onChange={(e) => {
+                      const parts = formData.dob.split('-');
+                      parts[2] = e.target.value.padStart(2, '0');
+                      setFormData({ ...formData, dob: parts.join('-') });
+                    }}
+                    className="w-full h-12 px-4 appearance-none bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
+                  >
+                    {Array.from({ length: 31 }, (_, i) => (i + 1).toString().padStart(2, '0')).map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+                <div className="relative flex-[1.5]">
+                  <select 
+                    value={formData.dob.split('-')[1] || "01"}
+                    onChange={(e) => {
+                      const parts = formData.dob.split('-');
+                      parts[1] = e.target.value.padStart(2, '0');
+                      setFormData({ ...formData, dob: parts.join('-') });
+                    }}
+                    className="w-full h-12 px-4 appearance-none bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
+                  >
+                    {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => (
+                      <option key={m} value={(i + 1).toString().padStart(2, '0')}>{m}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+                <div className="relative flex-[1.2]">
+                  <select 
+                    value={formData.dob.split('-')[0] || "1990"}
+                    onChange={(e) => {
+                      const parts = formData.dob.split('-');
+                      parts[0] = e.target.value;
+                      setFormData({ ...formData, dob: parts.join('-') });
+                    }}
+                    className="w-full h-12 px-4 appearance-none bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
+                  >
+                    {Array.from({ length: 100 }, (_, i) => (new Date().getFullYear() - i).toString()).map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
               </div>
             </div>
           </div>

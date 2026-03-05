@@ -27,7 +27,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   const [enteredPin, setEnteredPin] = useState("");
 
   const authenticate = useCallback(async (): Promise<boolean> => {
-    if (lockType === "pin") return false; // Handled by PIN UI
+    if (lockType === "pin") return false;
 
     try {
       if (typeof window === "undefined" || !window.PublicKeyCredential) {
@@ -42,31 +42,34 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       }
 
       const credentialId = localStorage.getItem("finease_credential_id");
+      if (!credentialId) {
+        console.warn("No credential ID found even though biometric lock is active.");
+        // If enabled but no ID, we might need to prompt user to re-setup or just unlock
+        // For now, we don't auto-register to avoid the "Save Passkey" popup everywhere
+        return false;
+      }
+
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
-      if (credentialId) {
-        const uint8Id = Uint8Array.from(atob(credentialId), c => c.charCodeAt(0));
-        const options: CredentialRequestOptions = {
-          publicKey: {
-            challenge,
-            allowCredentials: [{
-              id: uint8Id,
-              type: 'public-key',
-              transports: ['internal'],
-            }],
-            userVerification: 'required',
-            timeout: 60000,
-          }
-        };
-
-        const assertion = await navigator.credentials.get(options);
-        if (assertion) {
-          setIsLocked(false);
-          return true;
+      const uint8Id = Uint8Array.from(atob(credentialId), c => c.charCodeAt(0));
+      const options: CredentialRequestOptions = {
+        publicKey: {
+          challenge,
+          allowCredentials: [{
+            id: uint8Id,
+            type: 'public-key',
+            transports: ['internal'],
+          }],
+          userVerification: 'required',
+          timeout: 60000,
         }
-      } else {
-        return await registerCredential();
+      };
+
+      const assertion = await navigator.credentials.get(options);
+      if (assertion) {
+        setIsLocked(false);
+        return true;
       }
       
       return false;
@@ -77,21 +80,30 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   }, [lockType]);
 
   useEffect(() => {
-    const enabled = localStorage.getItem("finease_app_lock") === "true";
-    const type = (localStorage.getItem("finease_lock_type") as LockType) || "biometric";
-    
-    setIsLockEnabled(enabled);
-    setLockType(type);
-    
-    if (enabled) {
-      setIsLocked(true);
-      if (type === "biometric") {
-        setTimeout(() => {
-          authenticate();
-        }, 500);
+    const initSecurity = async () => {
+      const enabled = localStorage.getItem("finease_app_lock") === "true";
+      const type = (localStorage.getItem("finease_lock_type") as LockType) || "biometric";
+      
+      setIsLockEnabled(enabled);
+      setLockType(type);
+      
+      if (enabled) {
+        setIsLocked(true);
+        // Ensure splash screen is visible while we wait for biometrics
+        if (type === "biometric") {
+          setTimeout(() => {
+            authenticate();
+          }, 800);
+        }
       }
-    }
-    setIsChecking(false);
+      
+      // Keep splash screen for at least 1.2s for brand impact
+      setTimeout(() => {
+        setIsChecking(false);
+      }, 1200);
+    };
+
+    initSecurity();
   }, [authenticate]);
 
   const registerCredential = async (): Promise<boolean> => {
@@ -113,7 +125,12 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
           authenticatorSelection: {
             authenticatorAttachment: "platform",
             userVerification: "required"
-          }
+          },
+          // Prevent multiple credentials for the same user on same device
+          excludeCredentials: localStorage.getItem("finease_credential_id") ? [{
+            id: Uint8Array.from(atob(localStorage.getItem("finease_credential_id")!), c => c.charCodeAt(0)),
+            type: 'public-key'
+          }] : []
         }
       };
 
