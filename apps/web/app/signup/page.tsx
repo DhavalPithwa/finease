@@ -49,7 +49,7 @@ export default function SignupPage() {
             </div>
           )}
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Full Name</label>
+            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 tracking-tight">Full Name</label>
             <input 
                type="text" 
                value={userName}
@@ -60,7 +60,7 @@ export default function SignupPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Email Address</label>
+            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 tracking-tight">Email Address</label>
             <input 
                type="email" 
                value={userEmail}
@@ -71,7 +71,7 @@ export default function SignupPage() {
           </div>
           
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Password</label>
+            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 tracking-tight">Password</label>
             <input 
                type="password" 
                value={password}
@@ -81,7 +81,7 @@ export default function SignupPage() {
             />
           </div>
 
-          <button type="submit" className="w-full mt-2 bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-primary/25 active:scale-[0.98]">
+          <button type="submit" className="w-full mt-2 bg-primary hover:bg-primary-dark text-white text-sm font-bold h-10 rounded-xl transition-all shadow-lg shadow-primary/25 active:scale-[0.98]">
             Create Account
           </button>
         </form>

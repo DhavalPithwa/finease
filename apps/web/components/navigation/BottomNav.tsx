@@ -4,17 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { Home, IndianRupee, Target, TrendingUp, FileText } from "lucide-react";
 
 export function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
 
   const links = [
-    { href: "/dashboard", label: "Dashboard", icon: "home" },
-    { href: "/transactions", label: "Transact", icon: "currency_rupee" },
-    { href: "/goals", label: "Goals", icon: "track_changes" },
-    { href: "/portfolio", label: "Portfolio", icon: "trending_up" },
-    { href: "/reports", label: "Reports", icon: "description" },
+    { href: "/dashboard", label: "Dashboard", Icon: Home },
+    { href: "/transactions", label: "Transact", Icon: IndianRupee },
+    { href: "/goals", label: "Goals", Icon: Target },
+    { href: "/portfolio", label: "Portfolio", Icon: TrendingUp },
+    { href: "/reports", label: "Reports", Icon: FileText },
   ];
 
   if (!user) return null;
@@ -32,7 +33,7 @@ export function BottomNav() {
               isActive ? "text-primary" : "text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white"
             )}
           >
-            <span className="material-symbols-outlined">{link.icon}</span>
+            <link.Icon className="w-5 h-5" />
             <span className="text-[10px] font-medium">{link.label}</span>
           </Link>
         );

@@ -33,7 +33,10 @@ export class GoalService {
     return { id: doc.id, ...(doc.data() as Omit<FinancialGoal, 'id'>) };
   }
 
-  async update(id: string, goal: Partial<FinancialGoal>): Promise<FinancialGoal> {
+  async update(
+    id: string,
+    goal: Partial<FinancialGoal>,
+  ): Promise<FinancialGoal> {
     await this.collection.doc(id).update(goal);
     const doc = await this.collection.doc(id).get();
     return { id: doc.id, ...(doc.data() as Omit<FinancialGoal, 'id'>) };

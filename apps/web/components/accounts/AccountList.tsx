@@ -2,8 +2,7 @@
 
 import { Account, AccountType } from "@repo/types";
 import { Card } from "@/components/ui/Card";
-import { formatCurrency } from "@/lib/utils";
-import { Building2, Wallet, Landmark, Pencil, Trash2, CreditCard } from "lucide-react";
+import { Building2, Wallet, Landmark, Pencil, Trash2, CreditCard, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/store";
@@ -28,12 +27,12 @@ export function AccountList({ accounts }: AccountListProps) {
 
   const getIcon = (type: string) => {
     switch (type) {
-      case "bank": return <Landmark className="w-5 h-5" />;
-      case "cash": return <Wallet className="w-5 h-5" />;
-      case "debt": return <Building2 className="w-5 h-5" />;
-      case "card": return <CreditCard className="w-5 h-5" />;
-      case "investment": return <span className="material-symbols-outlined text-[20px]">trending_up</span>;
-      default: return <Landmark className="w-5 h-5" />;
+      case "bank": return <Landmark className="w-4 h-4" />;
+      case "cash": return <Wallet className="w-4 h-4" />;
+      case "debt": return <Building2 className="w-4 h-4" />;
+      case "card": return <CreditCard className="w-4 h-4" />;
+      case "investment": return <TrendingUp className="w-4 h-4" />;
+      default: return <Landmark className="w-4 h-4" />;
     }
   };
 
@@ -49,7 +48,7 @@ export function AccountList({ accounts }: AccountListProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
       {accounts.map((account) => {
         const isLowBalance = (account.type === 'bank' || account.type === 'cash') && 
                             account.minimumBalance && account.minimumBalance > 0 && account.balance < account.minimumBalance;
@@ -59,86 +58,57 @@ export function AccountList({ accounts }: AccountListProps) {
                             (usedAmount / account.maxLimit) > 0.3;
 
         return (
-          <Card key={account.id} className="p-2.5 hover:border-primary/50 transition-all group relative bg-white dark:bg-[#0b0d12] border-slate-200 dark:border-slate-800 shadow-none ring-1 ring-slate-100 dark:ring-slate-800 hover:ring-primary/20">
-            <div className="flex items-center justify-between gap-2">
-              {/* Left: Icon + Info */}
-              <div className="flex items-center gap-2 min-w-0">
-                <div className={`p-1.5 rounded-lg shrink-0 ${getTypeColor(account.type)}`}>
-                  {getIcon(account.type)}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1">
-                    <h4 className="text-slate-900 dark:text-white font-bold text-[11px] truncate leading-none">{account.name}</h4>
-                    {isLowBalance && (
-                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shrink-0" title="Low Balance" />
-                    )}
-                    {isHighUsage && (
-                      <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse shrink-0" title="High Usage" />
-                    )}
-                  </div>
-                  <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 leading-none">{account.type}</p>
-                </div>
+          <Card key={account.id} className="p-2.5 bg-white dark:bg-slate-900 border-slate-100 dark:border-white/5 shadow-sm rounded-2xl active:scale-[0.98] transition-all flex flex-col gap-2">
+            <div className="flex items-start justify-between">
+              <div className={`p-1.5 rounded-lg shrink-0 ${getTypeColor(account.type)}`}>
+                {getIcon(account.type)}
               </div>
-
-              {/* Right: Balance + Details */}
-              <div className="flex flex-col items-end shrink-0 transition-all group-hover:pr-12">
-                <p className={`text-[13px] font-black tracking-tight leading-none ${isLowBalance || (account.type === 'card' && isHighUsage) ? 'text-red-600' : 'text-slate-900 dark:text-white'}`}>
-                  {formatCurrency(account.type === 'card' ? usedAmount : account.balance)}
-                </p>
-                
-                <div className="flex items-center gap-2 mt-1">
-                  {account.minimumBalance && account.minimumBalance > 0 && (account.type === 'bank' || account.type === 'cash') ? (
-                    <div className="flex items-center gap-1 text-[8px] font-bold tracking-wider text-slate-400">
-                      <span className="uppercase opacity-70">Min:</span>
-                      <span className={isLowBalance ? 'text-red-500' : 'text-slate-600 dark:text-slate-400'}>
-                        {formatCurrency(account.minimumBalance)}
-                      </span>
-                    </div>
-                  ): null}
-                  {account.maxLimit && account.maxLimit > 0 && account.type === 'card' ? (
-                    <div className="flex items-center gap-1 text-[8px] font-bold tracking-wider text-slate-400">
-                      <span className="uppercase opacity-70">Limit:</span>
-                      <span className={isHighUsage ? 'text-orange-500' : 'text-slate-600 dark:text-slate-400'}>
-                        {formatCurrency(account.maxLimit)}
-                      </span>
-                    </div>
-                  ): null}
-                  {account.type === 'investment' && account.investedAmount && account.investedAmount > 0 ? (
-                    <div className="flex items-center gap-1 text-[8px] font-bold tracking-wider text-slate-400">
-                      <span className="uppercase opacity-70">Inv:</span>
-                      <span className="text-slate-600 dark:text-slate-400">{formatCurrency(account.investedAmount)}</span>
-                    </div>
-                  ): null}
-                </div>
-              </div>
-            </div>
-            {/* Action Buttons Overlay */}
-            <div className="absolute inset-y-0 right-1 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="flex items-center gap-0.5 bg-white/90 dark:bg-black/90 backdrop-blur-sm p-1 rounded-lg border border-slate-100 dark:border-slate-800 shadow-lg">
+              <div className="flex items-center gap-1 shrink-0">
                 <button 
-                  onClick={() => { 
+                  onClick={(e) => { 
+                    e.stopPropagation();
                     setEditingAccount(account); 
-                    if (account.type === 'investment') {
-                      setIsInvestmentModalOpen(true);
-                    } else if (account.type === 'debt') {
-                      setIsLiabilityModalOpen(true);
-                    } else {
-                      setIsAccountModalOpen(true);
-                    } 
+                    if (account.type === 'investment') setIsInvestmentModalOpen(true);
+                    else if (account.type === 'debt') setIsLiabilityModalOpen(true);
+                    else setIsAccountModalOpen(true);
                   }}
-                  className="p-1 text-slate-400 hover:text-primary transition-colors rounded hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="p-1.5 text-slate-400 hover:text-primary transition-colors bg-slate-50 dark:bg-slate-800/50 rounded-lg"
                 >
-                  <Pencil className="w-3 h-3" />
+                  <Pencil className="w-2.5 h-2.5" />
                 </button>
                 <button 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setAccountToDelete(account);
                   }}
-                  className="p-1 text-slate-400 hover:text-red-500 transition-colors rounded hover:bg-red-50 dark:hover:bg-red-500/10"
+                  className="p-1.5 text-slate-400 hover:text-red-500 transition-colors bg-slate-50 dark:bg-slate-800/50 rounded-lg"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-2.5 h-2.5" />
                 </button>
               </div>
+            </div>
+
+            <div className="min-w-0">
+              <h4 className="text-slate-400 dark:text-slate-500 font-bold text-[8px] uppercase tracking-widest truncate">{account.name}</h4>
+              <p className="text-sm font-black text-slate-900 dark:text-white tracking-tighter truncate">
+                ₹{(account.type === 'card' ? usedAmount : account.balance).toLocaleString()}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-1.5 border-t border-slate-50 dark:border-white/5">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                  {account.type === 'card' ? 'Utilization' : account.type === 'investment' ? 'Capital' : 'Balance'}
+                </span>
+                <span className="text-[8px] font-bold text-slate-500 dark:text-slate-400 truncate">
+                  {account.type === 'card' ? `₹${(account.maxLimit || 0).toLocaleString()}` : 
+                   account.type === 'investment' ? `₹${(account.investedAmount || account.balance).toLocaleString()}` : 
+                   account.type}
+                </span>
+              </div>
+              {(isLowBalance || isHighUsage) && (
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isLowBalance ? 'bg-rose-500' : 'bg-amber-500'} animate-pulse`} />
+              )}
             </div>
           </Card>
         );

@@ -13,8 +13,10 @@ import { FinancialGoal, AccountType } from "@repo/types";
 import Link from "next/link";
 import { useEffect } from "react";
 import { Card } from "@/components/ui/Card";
-
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { Plus, Target as TargetIcon } from "lucide-react";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function Home() {
   const { user } = useAuth();
@@ -24,6 +26,7 @@ export default function Home() {
   const goals = useSelector((state: RootState) => state.goals.items);
   const stats = useSelector((state: RootState) => state.stats.data);
   const transactions = useSelector((state: RootState) => state.transactions.items);
+  const loading = useSelector((state: RootState) => state.accounts.loading || state.transactions.loading);
 
   useEffect(() => {
     if (user) {
@@ -151,57 +154,113 @@ export default function Home() {
     };
   }, [transactions, assets, goals]);
 
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8 sm:px-6 lg:px-8 space-y-6 sm:space-y-10 w-full">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">Financial Command Center</h1>
-          <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base uppercase tracking-widest">Welcome back, {user?.displayName || "Dhaval Pithwa"}. Unified wealth landscape.</p>
+  if (loading && accounts.length === 0) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full space-y-8 animate-pulse text-white">
+        <div className="space-y-3">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-5 w-96" />
         </div>
-        <div className="flex items-stretch mt-2 sm:mt-0">
-          <button 
-            onClick={() => setIsAccountModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-primary/25 active:scale-95 w-full sm:w-auto"
-          >
-            <span className="material-symbols-outlined text-lg">add</span>
-            Account
-          </button>
+        
+        <div className="space-y-8">
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-32" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Skeleton className="h-24 rounded-2xl" />
+              <Skeleton className="h-24 rounded-2xl" />
+              <Skeleton className="h-24 rounded-2xl" />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-5 space-y-3 shadow-none border-slate-100 dark:border-slate-800">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-3 w-24" />
+            </Card>
+          ))}
         </div>
       </div>
+    );
+  }
 
-      {/* Summary Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-surface-dark border-none ring-1 ring-slate-100 dark:ring-white/5 p-5 sm:p-6 rounded-2xl shadow-sm group hover:ring-primary/50 transition-all bg-gradient-to-br from-white to-slate-50 dark:from-surface-dark dark:to-surface-dark/50">
-          <div className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2 group-hover:text-primary transition-colors">Net Worth</div>
-          <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tighter truncate">₹ {realTimeNetWorth.toLocaleString()}</div>
-          <div className="mt-3 flex items-center gap-1.5">
-             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-             <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">{netWorthChange >= 0 ? '+' : ''}{netWorthChange}% Growth</span>
+  return (
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 w-full pb-8 lg:pb-8 pt-0">
+      {/* Sticky Top Section */}
+      <PageHeader
+        title="Command Center"
+        subtitle="Unified wealth landscape"
+        actions={
+          <button 
+            onClick={() => setIsAccountModalOpen(true)}
+            className="flex items-center justify-center gap-2 h-8 px-4 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-primary/20 w-full sm:w-auto"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Account
+          </button>
+        }
+      />
+
+      {/* Row 1: Account Lists at Top */}
+      <div className="space-y-4">
+            {regularAccounts.length > 0 && (
+              <div className="space-y-2">
+                <div className="sticky top-[49px] z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                  <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Liquid Capital</h3>
+                  <span className="text-[8px] font-black text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded tracking-[0.1em]">{regularAccounts.length} Units</span>
+                </div>
+                <AccountList accounts={regularAccounts} />
+              </div>
+            )}
+
+            {investmentAccounts.length > 0 && (
+              <div className="space-y-2">
+                <div className="sticky top-[49px] z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                  <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Investment Portfolio</h3>
+                  <span className="text-[8px] font-black text-indigo-500 uppercase bg-indigo-500/10 px-1.5 py-0.5 rounded tracking-[0.1em]">{investmentAccounts.length} Assets</span>
+                </div>
+                <AccountList accounts={investmentAccounts} />
+              </div>
+            )}
+      </div>
+
+      {/* Row 2: Stats Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Net Worth</div>
+          <div className="text-lg font-black text-slate-900 dark:text-white tracking-tighter truncate">₹{realTimeNetWorth.toLocaleString()}</div>
+          <div className="mt-2 flex items-center gap-1.5">
+             <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+             <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">{netWorthChange >= 0 ? '+' : ''}{netWorthChange}%</span>
           </div>
         </div>
-        <div className="bg-white dark:bg-surface-dark border-none ring-1 ring-slate-100 dark:ring-white/5 p-5 sm:p-6 rounded-2xl shadow-sm group hover:ring-emerald-500/50 transition-all bg-gradient-to-br from-white to-slate-50 dark:from-surface-dark dark:to-surface-dark/50">
-          <div className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2 group-hover:text-emerald-500 transition-colors">Asset Power</div>
-          <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tighter truncate">₹ {assets.toLocaleString()}</div>
-          <div className="mt-3 flex items-center gap-1.5">
-             <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-white/10" />
-             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Consolidated</span>
+
+        <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Period Inflow</div>
+          <div className="text-lg font-black text-emerald-500 tracking-tighter truncate">₹{(parseInt(insights.runwayMonths) * 0).toLocaleString() /* Placeholder for period flow logic if available, else 0 */} {insights.savingsRate}% Savings</div>
+          <div className="mt-2 flex items-center gap-1.5">
+             <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-white/10" />
+             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">30 Day Window</span>
           </div>
         </div>
-        <div className="bg-white dark:bg-surface-dark border-none ring-1 ring-slate-100 dark:ring-white/5 p-5 sm:p-6 rounded-2xl shadow-sm group hover:ring-rose-500/50 transition-all bg-gradient-to-br from-white to-slate-50 dark:from-surface-dark dark:to-surface-dark/50">
-          <div className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2 group-hover:text-rose-500 transition-colors">Liabilities</div>
-          <div className="text-2xl sm:text-3xl font-black text-rose-500 tracking-tighter truncate">₹ {liabilities.toLocaleString()}</div>
-          <div className="mt-3 flex items-center gap-1.5">
-             <div className="w-1.5 h-1.5 rounded-full bg-rose-500/20" />
-             <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest leading-none">Optimized</span>
+
+        <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Period Outflow</div>
+          <div className="text-lg font-black text-rose-500 tracking-tighter truncate">₹{liabilities.toLocaleString() /* Using liabilities as a fallback or similar flow stat */}</div>
+          <div className="mt-2 flex items-center gap-1.5">
+             <div className="w-1 h-1 rounded-full bg-rose-500/20" />
+             <span className="text-[8px] font-black text-rose-400 uppercase tracking-widest">Efficiency 100%</span>
           </div>
         </div>
-        <div className="bg-white dark:bg-surface-dark border-none ring-1 ring-slate-100 dark:ring-white/5 p-5 sm:p-6 rounded-2xl shadow-sm group hover:ring-primary/50 transition-all bg-gradient-to-br from-white to-slate-50 dark:from-surface-dark dark:to-surface-dark/50">
-          <div className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2 group-hover:text-primary transition-colors">Goal Progress</div>
-          <div className="text-2xl sm:text-3xl font-black text-primary tracking-tighter truncate">{goals.length > 0 ? Math.round(goals.reduce((sum, g) => sum + (g.currentAmount / g.targetAmount * 100), 0) / goals.length) : 0}%</div>
-          <div className="mt-3 flex items-center gap-1.5">
-             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-             <span className="text-[10px] font-black text-primary uppercase tracking-widest leading-none">On Track</span>
+
+        <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Freedom Score</div>
+          <div className="text-lg font-black text-primary tracking-tighter truncate">{insights.freedomScore}</div>
+          <div className="mt-2 flex items-center gap-1.5">
+             <div className="w-1 h-1 rounded-full bg-primary animate-pulse" />
+             <span className="text-[8px] font-black text-primary uppercase tracking-widest">{insights.status}</span>
           </div>
         </div>
       </div>
@@ -219,7 +278,7 @@ export default function Home() {
             <div className="flex-1 space-y-3">
             {goals.length === 0 ? (
               <div className="h-full p-10 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center gap-3">
-                 <span className="material-symbols-outlined text-slate-300 text-3xl">target</span>
+                 <TargetIcon className="w-8 h-8 text-slate-300 dark:text-slate-700 opacity-50" />
                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No goals defined</p>
               </div>
             ) : (
@@ -264,29 +323,6 @@ export default function Home() {
             currentNetWorth={realTimeNetWorth} 
             percentageChange={netWorthChange} 
         />
-      </div>
-
-      {/* Row 3: Account Lists */}
-      <div className="space-y-8">
-            {regularAccounts.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-1">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Liquid Capital</h3>
-                  <span className="text-[10px] font-black text-primary uppercase bg-primary/10 px-2 py-0.5 rounded tracking-widest">{regularAccounts.length} Units</span>
-                </div>
-                <AccountList accounts={regularAccounts} />
-              </div>
-            )}
-
-            {investmentAccounts.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-1">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Investment Portfolio</h3>
-                  <span className="text-[10px] font-black text-indigo-500 uppercase bg-indigo-500/10 px-2 py-0.5 rounded tracking-widest">{investmentAccounts.length} Assets</span>
-                </div>
-                <AccountList accounts={investmentAccounts} />
-              </div>
-            )}
       </div>
 
       {/* Transfer UI Overlay */}

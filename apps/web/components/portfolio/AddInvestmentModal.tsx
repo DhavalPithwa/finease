@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { X, ChevronDown, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -26,6 +26,7 @@ export function AddInvestmentModal({ isOpen, onClose, onSave, investment }: AddI
 
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = 'hidden';
       if (investment) {
         setFormData({
           assetName: investment.name,
@@ -42,8 +43,10 @@ export function AddInvestmentModal({ isOpen, onClose, onSave, investment }: AddI
         });
       }
     } else {
+      document.body.style.overflow = 'auto';
       setTimeout(() => setFormData({ assetName: "", assetType: assetTypes[0]?.id || "", investedAmount: "", currentAmount: "" }), 300);
     }
+    return () => { document.body.style.overflow = 'auto'; };
   }, [investment, isOpen, assetTypes]);
 
   const handleSave = () => {
@@ -70,88 +73,94 @@ export function AddInvestmentModal({ isOpen, onClose, onSave, investment }: AddI
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="w-full max-w-md bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-border-dark shadow-2xl overflow-hidden"
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-2xl border-t sm:border border-slate-200 dark:border-white/5 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
           >
-            <div className="p-6 border-b border-slate-100 dark:border-border-dark flex items-center justify-between">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                 {investment ? "Edit Investment" : "Add Investment"}
+            <div className="px-5 py-3.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between shrink-0">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                {investment ? "Asset Strategy" : "Capital Growth"}
               </h3>
-              <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-slate-500" />
+              <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-400">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Asset Name / Ticker</label>
+            <div className="p-5 space-y-4 overflow-y-auto">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Instrument / Ticker</label>
                 <input 
                   type="text" 
                   value={formData.assetName}
                   onChange={(e) => setFormData({ ...formData, assetName: e.target.value })}
-                  placeholder="e.g. NIFTY 50 Index"
-                  className="w-full p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
+                  placeholder="e.g. BTC-INR or NIFTY 50"
+                  className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-slate-400"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Asset Class</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Asset Category</label>
                 <div className="relative">
                   <select 
                     value={formData.assetType}
                     onChange={(e) => setFormData({ ...formData, assetType: e.target.value })}
-                    className="w-full p-3 pr-10 appearance-none bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
+                    className="w-full h-10 appearance-none bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all"
                   >
-                    <option value="" disabled>Select Asset Class</option>
+                    <option value="" disabled>Select Sector</option>
                     {assetTypes.map((type) => (
                       <option key={type.id} value={type.id}>{type.name}</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Capital Invested (₹)</label>
-                <input 
-                  type="number" 
-                  value={formData.investedAmount}
-                  onChange={(e) => setFormData({ ...formData, investedAmount: e.target.value })}
-                  placeholder="0.00"
-                  disabled={!!investment}
-                  className={`w-full p-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none ${
-                    investment 
-                      ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed border-slate-200 dark:border-border-dark/50" 
-                      : "bg-slate-50 dark:bg-[#0b0d12] text-slate-900 dark:text-white border-slate-200 dark:border-border-dark"
-                  }`}
-                />
-                {investment && (
-                   <p className="text-[10px] text-slate-400 uppercase font-bold ml-1 pt-1">
-                     Capital Invested cannot be edited manually once created. Use transactions to adjust.
-                   </p>
-                )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Basis (Capital)</label>
+                  <input 
+                    type="number" 
+                    value={formData.investedAmount}
+                    onChange={(e) => setFormData({ ...formData, investedAmount: e.target.value })}
+                    placeholder="0.00"
+                    disabled={!!investment}
+                    className={`w-full h-10 border-none rounded-xl px-3 text-xs font-black ring-1 outline-none transition-all ${
+                      investment 
+                        ? "bg-slate-100 dark:bg-slate-800 text-slate-500 ring-slate-200 dark:ring-white/5 cursor-not-allowed" 
+                        : "bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary"
+                    }`}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest pl-1">Valuation</label>
+                  <input 
+                    type="number" 
+                    value={formData.currentAmount}
+                    onChange={(e) => setFormData({ ...formData, currentAmount: e.target.value })}
+                    placeholder="0.00"
+                    className="w-full h-10 bg-emerald-50 dark:bg-emerald-500/10 border-none rounded-xl px-3 text-xs font-black text-emerald-500 ring-1 ring-emerald-500/20 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  />
+                </div>
               </div>
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Current Value (₹)</label>
-                <input 
-                  type="number" 
-                  value={formData.currentAmount}
-                  onChange={(e) => setFormData({ ...formData, currentAmount: e.target.value })}
-                  placeholder="0.00"
-                  className="w-full p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
-                />
-              </div>
-
+            <div className="p-4 bg-slate-50 dark:bg-slate-950/50 mt-auto border-t border-slate-100 dark:border-white/5 flex gap-3">
               <button 
-                onClick={handleSave}
-                className="w-full mt-4 py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
+                onClick={onClose}
+                className="flex-1 h-10 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-slate-200 dark:border-white/5 active:scale-95"
               >
-                {investment ? "Update Investment" : "Log Investment"}
+                Cancel
+              </button>
+                <button 
+                onClick={handleSave}
+                className="flex-[2] h-10 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-primary/20 active:scale-95 flex items-center justify-center gap-2"
+              >
+                <TrendingUp className="w-4 h-4" />
+                Commit Force
               </button>
             </div>
           </motion.div>

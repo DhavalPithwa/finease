@@ -48,11 +48,11 @@ export function UserMenu() {
         >
           <div className="w-full h-full rounded-full bg-white dark:bg-background-dark flex items-center justify-center text-primary">
             {user.gender === "Male" ? (
-              <span className="material-symbols-outlined !text-[20px]">face</span>
+              <UserIcon className="w-5 h-5" />
             ) : user.gender === "Female" ? (
-              <span className="material-symbols-outlined !text-[20px]">face_3</span>
+              <UserIcon className="w-5 h-5" />
             ) : (
-              <UserIcon className="w-4 h-4" />
+              <UserIcon className="w-5 h-5" />
             )}
           </div>
         </button>

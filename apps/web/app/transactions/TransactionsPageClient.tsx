@@ -12,7 +12,8 @@ import { fetchAccounts, createAccount } from "@/store/slices/accountsSlice";
 import { addCategoryAction, updateCategoryAction, removeCategoryAction } from "@/store/slices/categoriesSlice";
 import { AddCategoryModal } from "@/components/categories/AddCategoryModal";
 import { CategoryParentType, Transaction } from "@repo/types";
-import { Trash2, Edit2, Filter, X, ChevronDown, Calendar as CalendarIcon, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Trash2, Edit2, Filter, ArrowRight, CheckCircle2, Plus, Download } from "lucide-react";
+import { PageHeader } from "@/components/ui/PageHeader";
 import toast from "react-hot-toast";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { formatDate } from "@/lib/utils";
@@ -156,7 +157,7 @@ export default function TransactionsPageClient() {
     });
 
     return sortedResult;
-  }, [explodedTransactions, searchTerm, activeTab, filterCategory, filterAccount, filterType, filterDateFrom, filterDateTo, sortConfig, categories, accounts]);
+  }, [explodedTransactions, searchTerm, activeTab, filterCategory, filterAccount, filterType, filterDateFrom, filterDateTo, sortConfig]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedTransactions = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -179,214 +180,164 @@ export default function TransactionsPageClient() {
   ].filter(Boolean).length;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8 overflow-hidden">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-none">Transactions</h1>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-widest leading-none">Unified financial ledger</p>
-        </div>
-        <div className="grid grid-cols-2 sm:flex sm:flex-row items-stretch gap-3 w-full sm:w-auto">
-          <Link href="/transactions/import" className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all dark:border-white/5 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 shadow-sm">
-            <span className="material-symbols-outlined mr-2 text-lg">download</span>
-            Import
-          </Link>
-          <button 
-            type="button"
-            onClick={() => { setEditingCategory(null); setIsCategoryModalOpen(true); }} 
-            className="inline-flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 px-5 py-3 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
-          >
-            <span className="material-symbols-outlined mr-2 text-lg">add</span>
-            Category
-          </button>
-          <button 
-            type="button"
-            onClick={() => { setEditingData(null); setIsModalOpen(true); }} 
-            className="col-span-2 sm:col-span-1 inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 active:scale-95"
-          >
-            <span className="material-symbols-outlined mr-2 text-lg">add</span>
-            Transaction
-          </button>
-        </div>
-      </div>
-
-      {/* Tabs - No Scroll Mobile */}
-      <div className="border-b border-slate-200 dark:border-white/5">
-        <nav aria-label="Tabs" className="-mb-px flex w-full">
-          <button 
-            type="button"
-            onClick={() => { setActiveTab("actual"); setCurrentPage(1); }}
-            className={`flex-1 text-center border-b-2 py-4 px-1 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] inline-flex items-center justify-center gap-2 transition-colors ${activeTab === 'actual' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-          >
-            Actual
-          </button>
-          <button 
-            type="button"
-            onClick={() => { setActiveTab("automated"); setCurrentPage(1); }}
-            className={`flex-1 text-center border-b-2 py-4 px-1 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] inline-flex items-center justify-center gap-2 transition-colors ${activeTab === 'automated' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-          >
-            Automated
-            {pendingAutomatedCount > 0 && (
-              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[9px] font-bold animate-pulse">
-                {pendingAutomatedCount}
-              </span>
-            )}
-          </button>
-        </nav>
-      </div>
-
-      {/* Categories Section - Redesigned for Premium Look */}
-      <div className="space-y-5">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-3">
-            <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Expense Categories</h3>
-            <div className="h-px w-8 bg-slate-200 dark:bg-slate-800" />
-          </div>
-          <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden sm:block">Double-tap or click icon to manage</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3 py-2">
-          <button
-            onClick={() => { setFilterCategory("all"); setCurrentPage(1); }}
-            className={`group relative px-5 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all border ${filterCategory === 'all' ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-xl shadow-slate-200 dark:shadow-none' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-100 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20'}`}
-          >
-            All Ledger
-          </button>
-          {categories.map(c => (
-            <div key={c.id} className="relative group/chip">
-              <button 
-                onClick={() => { 
-                  setFilterCategory(c.id); 
-                  setCurrentPage(1); 
-                }}
-                onDoubleClick={() => { setEditingCategory(c); setIsCategoryModalOpen(true); }}
-                className={`pl-4 pr-10 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all border flex items-center gap-3 relative overflow-hidden backdrop-blur-sm ${filterCategory === c.id ? 'border-primary bg-primary/[0.03] text-primary dark:text-primary-light shadow-lg shadow-primary/5' : 'bg-white/50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20'}`}
-              >
-                <div className={`w-2 h-2 rounded-full shadow-sm ${c.color} ${filterCategory === c.id ? 'ring-4 ring-primary/20 scale-110' : ''} transition-all`} />
-                {c.name}
-              </button>
-              
-              <button 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  setEditingCategory(c); 
-                  setIsCategoryModalOpen(true); 
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-primary dark:hover:text-primary-light transition-all rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 opacity-100 sm:opacity-0 group-hover/chip:opacity-100 focus:opacity-100 z-10"
-                title="Edit category"
-              >
-                <Edit2 className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
-            <div className="relative flex-1 group">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-primary transition-colors">
-                    <span className="material-symbols-outlined">search</span>
-                </div>
-                <input 
-                    value={searchTerm}
-                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                    className="block w-full rounded-2xl border-none py-3.5 pl-12 pr-4 text-slate-900 ring-1 ring-inset ring-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary dark:bg-slate-900 dark:text-white dark:ring-white/5 shadow-sm transition-all text-sm font-medium" 
-                    placeholder="Search ledger..." 
-                    type="text"
-                />
-            </div>
-            
-            <button 
-                type="button"
-                onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all relative ${showFilters || activeFilterCount > 0 ? 'bg-primary text-white shadow-xl shadow-primary/30' : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-100 dark:border-white/5'}`}
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 pb-12 lg:pb-8 pt-0">
+      {/* Sticky Header Group */}
+      <PageHeader
+        title="Transactions"
+        subtitle="Unified financial ledger"
+        className="space-y-3"
+        actions={
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+            <Link 
+              href="/transactions/import"
+              className="inline-flex items-center justify-center h-8 rounded-xl border border-slate-200 bg-white px-3 text-[9px] font-bold text-slate-700 hover:bg-slate-50 dark:border-white/5 dark:bg-slate-900 dark:text-slate-200"
             >
-                <Filter className="w-4 h-4" />
-                <span>Filters Center</span>
-                {activeFilterCount > 0 && (
-                    <span className="bg-white/20 px-2 py-0.5 rounded-full text-[9px] font-black">{activeFilterCount}</span>
-                )}
+              <Download className="w-3.5 h-3.5 mr-1" />
+              Import
+            </Link>
+            <button 
+              onClick={() => { setEditingData(null); setIsModalOpen(true); }}
+              className="inline-flex items-center justify-center h-8 rounded-xl bg-primary px-3 text-[9px] font-bold text-white shadow-lg shadow-primary/20"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Record
             </button>
-
-            {activeFilterCount > 0 && (
+          </div>
+        }
+      >
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+           <button 
+             onClick={() => { setEditingCategory(null); setIsCategoryModalOpen(true); }}
+             className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-primary transition-all active:scale-90"
+           >
+             <Plus className="w-3.5 h-3.5" />
+           </button>
+           {categories.map(c => (
+              <div key={c.id} className="relative group/cat shrink-0">
                 <button 
-                    type="button"
-                    onClick={resetFilters}
-                    className="flex items-center justify-center gap-2 px-4 py-2 text-rose-500 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-2xl transition-all w-fit mx-auto md:mx-0"
+                  onClick={() => { setFilterCategory(filterCategory === c.id ? 'all' : c.id); setCurrentPage(1); }}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${filterCategory === c.id ? 'bg-primary/10 border-primary shadow-sm' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-white/5'}`}
                 >
-                    <X className="w-4 h-4" />
-                    Reset
+                  <div className={`w-1.5 h-1.5 rounded-full ${c.color}`} />
+                  <span className={`font-bold text-[9px] uppercase tracking-widest ${filterCategory === c.id ? 'text-primary' : 'text-slate-500'}`}>{c.name}</span>
                 </button>
-            )}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setEditingCategory(c); setIsCategoryModalOpen(true); }}
+                  className="absolute -top-1 -right-1 p-1 bg-white dark:bg-slate-800 rounded-full shadow-sm opacity-100 lg:opacity-0 lg:group-hover/cat:opacity-100 transition-opacity border border-slate-100 dark:border-white/5"
+                >
+                  <Edit2 className="w-1.5 h-1.5 text-slate-400" />
+                </button>
+              </div>
+           ))}
         </div>
 
-        {showFilters && (
-            <div className="p-6 md:p-8 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-2xl relative overflow-hidden transition-all">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                          <div className="w-1 h-1 bg-primary rounded-full" />
-                          Source
-                        </label>
-                        <div className="relative">
-                          <select 
-                              value={filterAccount}
-                              onChange={(e) => { setFilterAccount(e.target.value); setCurrentPage(1); }}
-                              className="w-full h-12 rounded-xl border-slate-100 dark:border-white/10 dark:bg-slate-950 text-sm font-bold focus:ring-2 focus:ring-primary appearance-none px-4 transition-all hover:border-primary/50"
-                          >
-                              <option value="all">Everything</option>
-                              {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                          </select>
-                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                          <div className="w-1 h-1 bg-primary rounded-full" />
-                          Type
-                        </label>
-                        <div className="relative">
-                          <select 
-                              value={filterType}
-                              onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }}
-                              className="w-full h-12 rounded-xl border-slate-100 dark:border-white/10 dark:bg-slate-950 text-sm font-bold focus:ring-2 focus:ring-primary appearance-none px-4 transition-all hover:border-primary/50"
-                          >
-                              <option value="all">Every type</option>
-                              <option value="expense">Outflow</option>
-                              <option value="income">Inflow</option>
-                              <option value="transfer">Transfer</option>
-                          </select>
-                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                        </div>
-                    </div>
-
-                    <div className="space-y-3 lg:col-span-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                          <CalendarIcon className="w-3 h-3 text-primary" />
-                          Period
-                        </label>
-                        <div className="grid grid-cols-2 gap-3">
-                            <input 
-                                type="date" 
-                                value={filterDateFrom}
-                                onChange={(e) => { setFilterDateFrom(e.target.value); setCurrentPage(1); }}
-                                className="w-full h-12 rounded-xl border-slate-100 dark:border-white/10 dark:bg-slate-950 text-[10px] font-black focus:ring-2 focus:ring-primary px-3 transition-all uppercase tracking-widest bg-transparent" 
-                            />
-                            <input 
-                                type="date" 
-                                value={filterDateTo}
-                                onChange={(e) => { setFilterDateTo(e.target.value); setCurrentPage(1); }}
-                                className="w-full h-12 rounded-xl border-slate-100 dark:border-white/10 dark:bg-slate-950 text-[10px] font-black focus:ring-2 focus:ring-primary px-3 transition-all uppercase tracking-widest bg-transparent" 
-                            />
-                        </div>
-                    </div>
-                </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex bg-slate-100 dark:bg-slate-900/50 p-0.5 rounded-xl w-full sm:w-64">
+            <button 
+              onClick={() => { setActiveTab('actual'); setCurrentPage(1); }}
+              className={`flex-1 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'actual' ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-500'}`}
+            >
+              Actual
+            </button>
+            <button 
+              onClick={() => { setActiveTab('automated'); setCurrentPage(1); }}
+              className={`flex-1 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${activeTab === 'automated' ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-500'}`}
+            >
+              Automated
+              {pendingAutomatedCount > 0 && (
+                <span className="bg-primary/10 text-primary px-1 py-0.5 rounded-full text-[7px] font-bold">
+                  {pendingAutomatedCount}
+                </span>
+              )}
+            </button>
+          </div>
+          <div className="flex-1 flex gap-2">
+            <div className="relative flex-1">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">search</span>
+              <input 
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full h-8 bg-white dark:bg-slate-900 border-none rounded-xl pl-9 text-[10px] ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none"
+                placeholder="Search ledger..."
+              />
             </div>
-        )}
-      </div>
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
+              className={`h-8 px-3 rounded-xl flex items-center gap-2 transition-all ${showFilters || activeFilterCount > 0 ? 'bg-primary text-white' : 'bg-white dark:bg-slate-900 text-slate-500 border border-slate-100 dark:border-white/5'}`}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              {activeFilterCount > 0 && <span className="text-[10px] font-black">{activeFilterCount}</span>}
+            </button>
+          </div>
+        </div>
+      </PageHeader>
 
+      {/* Expandable Filters */}
+        {showFilters && (
+          <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Source Account</label>
+                <select 
+                  value={filterAccount}
+                  onChange={(e) => { setFilterAccount(e.target.value); setCurrentPage(1); }}
+                  className="w-full h-9 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-2 text-xs font-bold"
+                >
+                  <option value="all">All Accounts</option>
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Flow Type</label>
+                <div className="flex gap-1">
+                  {[
+                    { id: 'all', label: 'All' },
+                    { id: 'expense', label: 'Out' },
+                    { id: 'income', label: 'In' },
+                    { id: 'transfer', label: 'Xfer' }
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => { setFilterType(t.id); setCurrentPage(1); }}
+                      className={`flex-1 h-8 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all ${filterType === t.id ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20' : 'bg-slate-50 dark:bg-slate-950 text-slate-500 border-transparent hover:bg-slate-100 dark:hover:bg-slate-900'}`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">From Date</label>
+                <input 
+                  type="date" 
+                  value={filterDateFrom}
+                  onChange={(e) => { setFilterDateFrom(e.target.value); setCurrentPage(1); }}
+                  className="w-full h-9 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-2 text-xs font-bold"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">To Date</label>
+                <input 
+                  type="date" 
+                  value={filterDateTo}
+                  onChange={(e) => { setFilterDateTo(e.target.value); setCurrentPage(1); }}
+                  className="w-full h-9 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-2 text-xs font-bold"
+                />
+              </div>
+            </div>
+            {activeFilterCount > 0 && (
+              <button 
+                onClick={resetFilters}
+                className="w-full py-2 text-[9px] font-black uppercase text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all"
+              >
+                Clear All Filters
+              </button>
+            )}
+          </div>
+        )}
+      
       {/* Mobile & Tablet Card List (Visible up to lg/1024px) */}
       <div className="block lg:hidden space-y-4">
         {paginatedTransactions.length === 0 ? (
@@ -401,73 +352,54 @@ export default function TransactionsPageClient() {
             <div 
               key={tx.id} 
               onClick={() => setViewingData(tx)}
-              className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-sm active:scale-95 transition-all"
+              className="bg-white dark:bg-slate-900 px-4 py-3 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm active:scale-95 transition-all flex flex-col gap-2"
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${categories.find(c => c.id === tx.category)?.color || 'bg-slate-400'}`} />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        {categories.find(c => c.id === tx.category)?.name || tx.category}
-                    </span>
-                  </div>
-                  <h4 className="text-sm font-black text-slate-900 dark:text-white tracking-tight">{tx.description}</h4>
+              <div className="flex justify-between items-start">
+                <div className="min-w-0 flex-1">
+                   <div className="flex items-center gap-1.5 mb-1">
+                     <div className={`w-1.5 h-1.5 rounded-full ${categories.find(c => c.id === tx.category)?.color || 'bg-slate-400'}`} />
+                     <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest truncate">
+                         {categories.find(c => c.id === tx.category)?.name || tx.category}
+                     </span>
+                   </div>
+                   <h4 className="text-[13px] font-black text-slate-900 dark:text-white tracking-tight truncate pr-4">{tx.description}</h4>
                 </div>
-                <div className={`text-right font-black text-base tracking-tighter ${tx.type === 'expense' || tx.type === 'transfer' ? 'text-rose-500' : 'text-emerald-500'}`}>
-                  {tx.type === 'expense' || tx.type === 'transfer' ? '-' : '+'} ₹{tx.amount.toLocaleString()}
+                <div className="text-right shrink-0">
+                  <div className={`text-sm font-black tracking-tighter ${tx.type === 'expense' || tx.type === 'transfer' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                    {tx.type === 'expense' || tx.type === 'transfer' ? '-' : '+'} ₹{tx.amount.toLocaleString()}
+                  </div>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{formatDate(tx.date)}</span>
                 </div>
               </div>
-              
-              <div className="flex justify-between items-center mb-4 px-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Balance After</span>
-                <span className="text-xs font-black text-slate-600 dark:text-slate-300 tracking-tight">₹{(tx.balanceAfter ?? 0).toLocaleString()}</span>
-              </div>
-              
-              <div className="flex justify-between items-end pt-4 border-t border-slate-50 dark:border-white/5">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Account</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-slate-900 dark:text-slate-200">{accounts.find(a => a.id === tx.accountId)?.name}</span>
-                    {tx.type === 'transfer' && tx.toAccountId && (
-                      <ArrowRight className="w-2.5 h-2.5 text-primary/50" />
-                    )}
-                    {tx.type === 'transfer' && tx.toAccountId && (
-                      <span className="text-[10px] font-bold text-primary">{accounts.find(a => a.id === tx.toAccountId)?.name || goals.find(g => g.id === tx.toAccountId)?.name}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">{formatDate(tx.date)}</span>
-                  {tx.status === 'pending_confirmation' && (
-                    <span className="text-[7px] font-black uppercase tracking-widest text-orange-500 bg-orange-500/5 px-1.5 py-0.5 rounded border border-orange-500/10">Pending Review</span>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-50 dark:border-white/5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-[9px] font-bold text-slate-500 truncate">{accounts.find(a => a.id === tx.accountId)?.name}</span>
+                  {tx.type === 'transfer' && tx.toAccountId && (
+                    <>
+                      <ArrowRight className="w-2 h-2 text-slate-300" />
+                      <span className="text-[9px] font-bold text-primary truncate">{accounts.find(a => a.id === tx.toAccountId)?.name || goals.find(g => g.id === tx.toAccountId)?.name}</span>
+                    </>
                   )}
-                  <div className="flex items-center gap-2">
-                      {tx.isAutomated && tx.status === 'pending_confirmation' && (String(tx.date).split('T')[0] || "") <= (new Date().toISOString().split('T')[0] || "") && (
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            dispatch(confirmTransaction(tx.id)).then(() => {
-                              dispatch(fetchAccounts());
-                              dispatch(fetchTransactions());
-                            });
-                            toast.success("Transaction Confirmed");
-                          }}
-                          className="px-4 py-1.5 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-primary/20 active:scale-95"
-                        >
-                          Confirm
-                        </button>
-                      )}
-                      <button onClick={(e) => { e.stopPropagation(); setEditingData(tx); setIsModalOpen(true); }} className="p-1.5 text-slate-400"><Edit2 className="w-3 h-3" /></button>
+                </div>
+                <div className="flex items-center gap-1">
+                   {tx.isAutomated && tx.status === 'pending_confirmation' && (String(tx.date).split('T')[0] || "") <= (new Date().toISOString().split('T')[0] || "") && (
                       <button 
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          setTransactionToDelete(tx);
-                        }} 
-                        className="p-1.5 text-rose-400"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          dispatch(confirmTransaction(tx.id)).then(() => {
+                            dispatch(fetchAccounts());
+                            dispatch(fetchTransactions());
+                          });
+                          toast.success("Confirmed");
+                        }}
+                        className="px-2 py-1 bg-primary text-white text-[8px] font-black uppercase tracking-widest rounded-lg shadow-sm"
                       >
-                        <Trash2 className="w-3 h-4" />
+                        OK
                       </button>
-                  </div>
+                   )}
+                   <button onClick={(e) => { e.stopPropagation(); setEditingData(tx); setIsModalOpen(true); }} className="p-1 px-2 text-slate-400 hover:text-primary transition-colors bg-slate-50 dark:bg-slate-800/50 rounded-lg"><Edit2 className="w-2.5 h-2.5" /></button>
+                   <button onClick={(e) => { e.stopPropagation(); setTransactionToDelete(tx); }} className="p-1 px-2 text-rose-400 hover:text-rose-500 transition-colors bg-slate-50 dark:bg-slate-800/50 rounded-lg"><Trash2 className="w-2.5 h-3" /></button>
                 </div>
               </div>
             </div>

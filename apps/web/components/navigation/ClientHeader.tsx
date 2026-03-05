@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/navigation/ThemeToggle";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { TopNav } from "@/components/navigation/TopNav";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { Wallet } from "lucide-react";
 
 
 export function ClientHeader() {
@@ -16,7 +17,7 @@ export function ClientHeader() {
         <div className="flex items-center gap-8">
           <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2 group transition-all active:scale-95">
             <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20 group-hover:rotate-6 transition-transform">
-              <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+              <Wallet className="w-5 h-5" />
             </div>
             <span className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">Fin<span className="text-primary">Ease</span></span>
           </Link>

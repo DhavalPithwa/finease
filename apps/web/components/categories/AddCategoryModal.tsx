@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { X, LayoutGrid } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface AddCategoryModalProps {
@@ -16,15 +16,21 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
   const [parentType, setParentType] = useState("needs");
 
   useEffect(() => {
-    if (category) {
-      setName(category.name);
-      setColor(category.color);
-      setParentType(category.parentType || "needs");
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      if (category) {
+        setName(category.name);
+        setColor(category.color);
+        setParentType(category.parentType || "needs");
+      } else {
+        setName("");
+        setColor("bg-indigo-500");
+        setParentType("needs");
+      }
     } else {
-      setName("");
-      setColor("bg-indigo-500");
-      setParentType("needs");
+      document.body.style.overflow = 'auto';
     }
+    return () => { document.body.style.overflow = 'auto'; };
   }, [category, isOpen]);
 
   const colors = [
@@ -42,91 +48,101 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] overflow-hidden"
-        >
-          <div className="px-8 pt-8 pb-4 flex items-center justify-between">
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              {category ? "Modify" : "New"} <span className="text-primary">Category</span>
-            </h3>
-            <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all active:scale-90">
-              <X className="w-5 h-5 text-slate-400" />
-            </button>
-          </div>
-
-          <div className="p-8 pt-4 space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Linguistic Label</label>
-              <input 
-                type="text" 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Subscriptions"
-                className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-white/5 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Parent Hierarchy</label>
-              <div className="relative">
-                <select 
-                  value={parentType}
-                  onChange={(e) => setParentType(e.target.value)}
-                  className="w-full p-4 pr-10 appearance-none bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-white/5 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-sm font-bold text-slate-900 dark:text-white"
-                >
-                  <option value="needs">Needs</option>
-                  <option value="wants">Wants</option>
-                  <option value="savings">Savings</option>
-                  <option value="income">Income</option>
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Visual Signature</label>
-              <div className="flex flex-wrap gap-4 mt-2">
-                {colors.map(c => (
-                  <button 
-                    key={c}
-                    onClick={() => setColor(c)}
-                    className={`w-10 h-10 rounded-2xl ${c} ${color === c ? 'ring-4 ring-offset-4 ring-primary dark:ring-offset-slate-900 scale-110 shadow-lg shadow-primary/20' : 'hover:scale-105 transition-all opacity-80 hover:opacity-100'}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 pt-4">
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-2xl border-t sm:border border-slate-200 dark:border-white/5 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+          >
+            <div className="px-5 py-3.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between shrink-0">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                {category ? "Taxonomy Refinement" : "New Category Node"}
+              </h3>
               <button 
-                onClick={() => {
-                  if(name.trim()) {
-                    onSave({ id: category?.id, name, color, parentType });
-                    setName("");
-                    setColor("bg-indigo-500");
-                    setParentType("needs");
-                  }
-                }}
-                className="w-full py-5 bg-primary hover:bg-primary-dark text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"
+                onClick={onClose} 
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-400"
               >
-                {category ? "Commit Changes" : "Create Entity"}
+                <X className="w-4 h-4" />
               </button>
-              
-              {category && onDelete && (
-                <button 
-                  onClick={() => onDelete(category.id)}
-                  className="w-full py-4 text-rose-500 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-2xl transition-all"
-                >
-                  Purge Category
-                </button>
-              )}
             </div>
-          </div>
-        </motion.div>
-      </div>
+
+            <div className="p-5 space-y-4 overflow-y-auto">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Label</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Grocery, SaaS..."
+                  className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-slate-400"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Spending Bucket</label>
+                <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl ring-1 ring-slate-100 dark:ring-white/5">
+                  {["needs", "wants", "unavoidable"].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setParentType(type)}
+                      className={`py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                        parentType === type 
+                        ? "bg-white dark:bg-slate-800 text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10" 
+                        : "text-slate-500"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Theme Color</label>
+                <div className="flex flex-wrap gap-2.5 px-1 py-1">
+                  {colors.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setColor(c)}
+                      className={`w-6 h-6 rounded-full ${c} transition-all active:scale-90 flex items-center justify-center ${
+                        color === c ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900 shadow-lg" : ""
+                      }`}
+                    >
+                      {color === c && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 dark:bg-slate-950/50 mt-auto border-t border-slate-100 dark:border-white/5 flex gap-3">
+                {category && onDelete && (
+                  <button
+                    onClick={() => onDelete(category.id)}
+                    className="flex-1 h-10 bg-rose-50 dark:bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-100 transition-all active:scale-95 border border-rose-100 dark:border-rose-500/20"
+                  >
+                    Scrap
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    if(name.trim()) {
+                      onSave({ id: category?.id, name, color, parentType });
+                      setName("");
+                    }
+                  }}
+                  className="flex-[2] h-10 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  {category ? "Commit" : "Create"}
+                </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   );
 }

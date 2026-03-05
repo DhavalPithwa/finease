@@ -109,7 +109,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <button type="submit" className="w-full mt-2 bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-primary/25 active:scale-[0.98]">
+          <button type="submit" className="w-full mt-2 bg-primary hover:bg-primary-dark text-white text-sm font-bold h-10 rounded-xl transition-all shadow-lg shadow-primary/25 active:scale-[0.98]">
             Sign In Securely
           </button>
         </form>
@@ -127,10 +127,9 @@ export default function LoginPage() {
 
             <form onSubmit={handleResetPassword} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Email</label>
+                <label className="text-xs font-bold text-slate-500 tracking-tight ml-1">Email</label>
                 <input 
                   type="email" 
-                  autoFocus
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
                   placeholder="you@example.com"
@@ -138,7 +137,7 @@ export default function LoginPage() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">New Password</label>
+                <label className="text-xs font-bold text-slate-500 tracking-tight ml-1">New Password</label>
                 <input 
                   type="password" 
                   value={newPassword}

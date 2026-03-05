@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, LayoutGrid } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface AddAssetTypeModalProps {
@@ -15,13 +15,19 @@ export function AddAssetTypeModal({ isOpen, onClose, onSave, onDelete, assetType
   const [color, setColor] = useState("bg-indigo-500");
 
   useEffect(() => {
-    if (assetType) {
-      setName(assetType.name);
-      setColor(assetType.color);
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      if (assetType) {
+        setName(assetType.name);
+        setColor(assetType.color);
+      } else {
+        setName("");
+        setColor("bg-indigo-500");
+      }
     } else {
-      setName("");
-      setColor("bg-indigo-500");
+      document.body.style.overflow = 'auto';
     }
+    return () => { document.body.style.overflow = 'auto'; };
   }, [assetType, isOpen]);
 
   const colors = [
@@ -39,73 +45,78 @@ export function AddAssetTypeModal({ isOpen, onClose, onSave, onDelete, assetType
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] overflow-hidden"
-        >
-          <div className="px-8 pt-8 pb-4 flex items-center justify-between">
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              {assetType ? "Modify" : "New"} <span className="text-primary">Class</span>
-            </h3>
-            <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all active:scale-90">
-              <X className="w-5 h-5 text-slate-400" />
-            </button>
-          </div>
-
-          <div className="p-8 pt-4 space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Linguistic Label</label>
-              <input 
-                type="text" 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Mutual Funds"
-                className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-white/5 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
-              />
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md">
+          <motion.div 
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] overflow-hidden max-h-[92vh] flex flex-col"
+          >
+            <div className="px-5 py-3.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between shrink-0">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                {assetType ? "Class Refinement" : "New Asset Class"}
+              </h3>
+              <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-400">
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Visual Signature</label>
-              <div className="flex flex-wrap gap-4 mt-2">
-                {colors.map(c => (
-                  <button 
-                    key={c}
-                    onClick={() => setColor(c)}
-                    className={`w-10 h-10 rounded-2xl ${c} ${color === c ? 'ring-4 ring-offset-4 ring-primary dark:ring-offset-slate-900 scale-110 shadow-lg shadow-primary/20' : 'hover:scale-105 transition-all opacity-80 hover:opacity-100'}`}
-                  />
-                ))}
+            <div className="p-5 space-y-4 overflow-y-auto">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Class Label</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Equity, Gold..."
+                  className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-slate-400"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Visual Identity</label>
+                <div className="flex flex-wrap gap-2.5 px-1 py-1">
+                  {colors.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setColor(c)}
+                      className={`w-6 h-6 rounded-full ${c} transition-all active:scale-90 flex items-center justify-center ${
+                        color === c ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900 shadow-lg" : ""
+                      }`}
+                    >
+                      {color === c && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 pt-4">
-              <button 
-                onClick={() => {
-                  if(name.trim()) {
-                    onSave({ id: assetType?.id, name, color });
-                    setName("");
-                    setColor("bg-indigo-500");
-                  }
-                }}
-                className="w-full py-5 bg-primary hover:bg-primary-dark text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"
-              >
-                {assetType ? "Commit Changes" : "Create Entity"}
-              </button>
-              
-              {assetType && onDelete && (
-                <button 
-                  onClick={() => onDelete(assetType.id)}
-                  className="w-full py-4 text-rose-500 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-2xl transition-all"
+            <div className="p-4 bg-slate-50 dark:bg-slate-950/50 mt-auto border-t border-slate-100 dark:border-white/5 flex gap-3">
+                {assetType && onDelete && (
+                  <button
+                    onClick={() => onDelete(assetType.id)}
+                    className="flex-1 h-10 bg-rose-50 dark:bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-100 transition-all active:scale-95 border border-rose-100 dark:border-rose-500/20"
+                  >
+                    Scrap
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    if(name.trim()) {
+                      onSave({ id: assetType?.id, name, color });
+                    }
+                  }}
+                  className="flex-[2] h-10 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2"
                 >
-                  Purge Asset Class
+                  <LayoutGrid className="w-4 h-4" />
+                  {assetType ? "Commit" : "Create"}
                 </button>
-              )}
-            </div>
-          </div>
+              </div>
         </motion.div>
       </div>
+     )}
     </AnimatePresence>
   );
 }
