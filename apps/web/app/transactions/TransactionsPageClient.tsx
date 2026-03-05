@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { TransactionModal } from "@/components/transactions/TransactionModal";
 import { TransactionDetailsModal } from "@/components/transactions/TransactionDetailsModal";
@@ -12,13 +12,15 @@ import { fetchAccounts, createAccount } from "@/store/slices/accountsSlice";
 import { addCategoryAction, updateCategoryAction, removeCategoryAction } from "@/store/slices/categoriesSlice";
 import { AddCategoryModal } from "@/components/categories/AddCategoryModal";
 import { CategoryParentType, Transaction } from "@repo/types";
-import { Trash2, Edit2, Filter, ArrowRight, CheckCircle2, Plus, Download, ChevronUp, ChevronDown } from "lucide-react";
+import { Trash2, Edit2, Filter, ArrowRight, CheckCircle2, Plus, Download, ChevronUp, ChevronDown, FileUp } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import toast from "react-hot-toast";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { formatDate } from "@/lib/utils";
-import { useEffect } from "react";
+import { formatDate, calculateRunningBalances } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import Papa from "papaparse";
 
 const liquidTypes = ["bank", "cash", "card"];
 
@@ -179,6 +181,91 @@ export default function TransactionsPageClient() {
     !!filterDateTo
   ].filter(Boolean).length;
 
+  const [showExportOptions, setShowExportOptions] = useState(false);
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target as Node)) {
+        setShowExportOptions(false);
+      }
+    }
+    // Use capture phase to ensure it runs even if propagation is stopped elsewhere
+    document.addEventListener("mousedown", handleClickOutside, true);
+    return () => document.removeEventListener("mousedown", handleClickOutside, true);
+  }, []);
+
+  const handleExportCSV = () => {
+    const enriched = calculateRunningBalances(filtered);
+    
+    const dataToExport = enriched.map(t => ({
+      Date: formatDate(t.date),
+      Description: t.description,
+      Amount: t.amount,
+      Type: t.type.toUpperCase(),
+      Category: categories.find(c => c.id === t.category)?.name || t.category,
+      Account: accounts.find(a => a.id === t.accountId)?.name || t.accountId,
+      "Balance Before": t.balanceBefore.toFixed(2),
+      "Balance After": t.balanceAfter.toFixed(2),
+      Status: t.status
+    }));
+
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `FinEase_Ledger_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setShowExportOptions(false);
+    toast.success("CSV Ledger Exported with Balances");
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF('landscape'); // Landscape for more columns
+    
+    // Add Branding
+    doc.setFontSize(22);
+    doc.setTextColor(19, 91, 236);
+    doc.text("FinEase", 14, 20);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text("Architectural Wealth Ledger (Omni-Channel Report)", 14, 27);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 33);
+
+    // Enrich with running balances
+    const enriched = calculateRunningBalances(filtered);
+    
+    const tableData = enriched.map(t => [
+      formatDate(t.date),
+      t.description,
+      categories.find(c => c.id === t.category)?.name || t.category,
+      accounts.find(a => a.id === t.accountId)?.name || 'N/A',
+      `${t.type === 'expense' ? '-' : '+'} ${t.amount.toLocaleString()}`,
+      t.balanceBefore.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+      t.balanceAfter.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+    ]);
+
+    autoTable(doc, {
+      startY: 40,
+      head: [['Execution Date', 'Description', 'Nexus Category', 'Source Entity', 'Quantum', 'Bal. Before', 'Bal. After']],
+      body: tableData,
+      headStyles: { fillColor: [19, 91, 236], textColor: [255, 255, 255], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      styles: { fontSize: 7, cellPadding: 3 },
+      columnStyles: {
+        5: { halign: 'right', fontStyle: 'bold' },
+        6: { halign: 'right', fontStyle: 'bold', textColor: [19, 91, 236] }
+      }
+    });
+
+    doc.save(`FinEase_Ledger_${new Date().toISOString().split('T')[0]}.pdf`);
+    setShowExportOptions(false);
+    toast.success("PDF Ledger Exported with Balances");
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 pb-12 lg:pb-8 pt-0">
       {/* Sticky Header Group */}
@@ -188,16 +275,38 @@ export default function TransactionsPageClient() {
         className="space-y-3"
         actions={
           <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative" ref={exportDropdownRef}>
+              <button 
+                onClick={() => setShowExportOptions(!showExportOptions)}
+                className={`inline-flex items-center justify-center h-8 w-full sm:w-auto rounded-xl border px-3 text-[9px] font-black uppercase tracking-widest transition-all duration-200 group/export ${showExportOptions ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm dark:border-white/5 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-white/10'}`}
+              >
+                <Download className={`w-3.5 h-3.5 mr-1.5 transition-transform duration-300 ${showExportOptions ? 'rotate-180' : ''}`} />
+                Export
+              </button>
+              {showExportOptions && (
+                <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-900 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 dark:border-white/5 z-[110] p-1.5 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
+                   <button onClick={handleExportCSV} className="w-full text-left px-3.5 py-2.5 text-[9px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg flex items-center justify-between group transition-colors">
+                     CSV Sheet
+                     <div className="size-1.5 rounded-full bg-emerald-500 opacity-0 group-hover:opacity-100 transition-all scale-0 group-hover:scale-100" />
+                   </button>
+                   <button onClick={handleExportPDF} className="w-full text-left px-3.5 py-2.5 text-[9px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg flex items-center justify-between group transition-colors">
+                     PDF Report
+                     <div className="size-1.5 rounded-full bg-rose-500 opacity-0 group-hover:opacity-100 transition-all scale-0 group-hover:scale-100" />
+                   </button>
+                </div>
+              )}
+            </div>
             <Link 
-              href="/transactions/import"
-              className="inline-flex items-center justify-center h-8 rounded-xl border border-slate-200 bg-white px-3 text-[9px] font-bold text-slate-700 hover:bg-slate-50 dark:border-white/5 dark:bg-slate-900 dark:text-slate-200"
+              // href="/transactions/import"
+              href=""
+              className="inline-flex items-center justify-center h-8 rounded-xl border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm dark:border-white/5 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-white/10 transition-all duration-200"
             >
-              <Download className="w-3.5 h-3.5 mr-1" />
+              <FileUp className="w-3.5 h-3.5 mr-1.5" />
               Import
             </Link>
             <button 
               onClick={() => { setEditingData(null); setIsModalOpen(true); }}
-              className="inline-flex items-center justify-center h-8 rounded-xl bg-primary px-3 text-[9px] font-bold text-white shadow-lg shadow-primary/20"
+              className="col-span-2 sm:col-auto inline-flex items-center justify-center h-8 rounded-xl bg-primary px-3 text-[9px] font-bold text-white shadow-lg shadow-primary/20"
             >
               <Plus className="w-3.5 h-3.5 mr-1" />
               Record

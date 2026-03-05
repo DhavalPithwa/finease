@@ -44,8 +44,6 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       const credentialId = localStorage.getItem("finease_credential_id");
       if (!credentialId) {
         console.warn("No credential ID found even though biometric lock is active.");
-        // If enabled but no ID, we might need to prompt user to re-setup or just unlock
-        // For now, we don't auto-register to avoid the "Save Passkey" popup everywhere
         return false;
       }
 
@@ -69,6 +67,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       const assertion = await navigator.credentials.get(options);
       if (assertion) {
         setIsLocked(false);
+        sessionStorage.setItem("finease_session_authenticated", "true");
         return true;
       }
       
@@ -83,21 +82,22 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
     const initSecurity = async () => {
       const enabled = localStorage.getItem("finease_app_lock") === "true";
       const type = (localStorage.getItem("finease_lock_type") as LockType) || "biometric";
+      const sessionAuthenticated = sessionStorage.getItem("finease_session_authenticated") === "true";
       
       setIsLockEnabled(enabled);
       setLockType(type);
       
-      if (enabled) {
+      if (enabled && !sessionAuthenticated) {
         setIsLocked(true);
-        // Ensure splash screen is visible while we wait for biometrics
         if (type === "biometric") {
           setTimeout(() => {
             authenticate();
           }, 800);
         }
+      } else {
+        setIsLocked(false);
       }
       
-      // Keep splash screen for at least 1.2s for brand impact
       setTimeout(() => {
         setIsChecking(false);
       }, 1200);
@@ -139,6 +139,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
         const idBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
         localStorage.setItem("finease_credential_id", idBase64);
         setIsLocked(false);
+        sessionStorage.setItem("finease_session_authenticated", "true");
         return true;
       }
       return false;
@@ -178,6 +179,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("finease_credential_id");
       localStorage.removeItem("finease_lock_type");
       localStorage.removeItem("finease_pin");
+      sessionStorage.removeItem("finease_session_authenticated");
       toast.success("App Lock Deactivated");
       return true;
     }
@@ -192,6 +194,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
         const storedPin = localStorage.getItem("finease_pin");
         if (newPin === storedPin) {
           setIsLocked(false);
+          sessionStorage.setItem("finease_session_authenticated", "true");
           setEnteredPin("");
         } else {
           toast.error("Invalid PIN");
@@ -288,6 +291,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
                  localStorage.removeItem("finease_app_lock");
                  localStorage.removeItem("finease_lock_type");
                  localStorage.removeItem("finease_pin");
+                 sessionStorage.removeItem("finease_session_authenticated");
                  window.location.href = "/login"; 
                }}
                className="text-[9px] font-black text-rose-500/60 uppercase tracking-widest hover:text-rose-500 transition-colors"

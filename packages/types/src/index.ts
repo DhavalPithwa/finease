@@ -106,3 +106,18 @@ export interface DashboardStats {
     status: "ahead" | "behind" | "ontrack";
   }[];
 }
+export interface TransactionImportMapping {
+  date: string;
+  description: string;
+  amount_single?: string;
+  amount_debit?: string;
+  amount_credit?: string;
+  category?: string;
+  type?: string;
+}
+
+export type TransactionImportStage = "upload" | "password" | "mapping" | "review";
+
+export interface RawTransactionData {
+  [key: string]: string;
+}
