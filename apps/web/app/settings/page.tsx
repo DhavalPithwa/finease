@@ -8,11 +8,12 @@ import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 
 import { useSecurity } from "@/components/providers/SecurityProvider";
-import { Shield, Fingerprint } from "lucide-react";
+import { Shield, Fingerprint, Key, X, Delete } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuth();
-  const { isLockEnabled, toggleLock } = useSecurity();
+  const { isLockEnabled, toggleLock, lockType } = useSecurity();
   const router = useRouter();
   
   const [formData, setFormData] = useState({
@@ -25,6 +26,11 @@ export default function SettingsPage() {
     gender: "Not Specified",
     dob: "",
   });
+
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [tempPin, setTempPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [pinStep, setPinStep] = useState(1); // 1 = entry, 2 = confirmation
 
   useEffect(() => {
     if (user) {
@@ -64,10 +70,41 @@ export default function SettingsPage() {
     }, 1000);
   };
 
+  const handlePinAction = (num: string) => {
+    if (pinStep === 1) {
+      if (tempPin.length < 4) {
+        const next = tempPin + num;
+        setTempPin(next);
+        if (next.length === 4) setPinStep(2);
+      }
+    } else {
+      if (confirmPin.length < 4) {
+        const next = confirmPin + num;
+        setConfirmPin(next);
+        if (next.length === 4) {
+          if (next === tempPin) {
+            toggleLock(true, "pin", next);
+            setShowPinModal(false);
+            resetPinModal();
+          } else {
+            toast.error("PINs do not match");
+            setConfirmPin("");
+          }
+        }
+      }
+    }
+  };
+
+  const resetPinModal = () => {
+    setTempPin("");
+    setConfirmPin("");
+    setPinStep(1);
+  };
+
   if (!user) return null;
 
   return (
-    <div className="mx-auto max-w-3xl w-full px-4 sm:px-6 w-full space-y-4 sm:space-y-6 pb-12 lg:pb-12 pt-0">
+    <div className="mx-auto max-w-3xl w-full px-4 sm:px-6 space-y-4 sm:space-y-6 pb-12 lg:pb-12 pt-0">
       {/* Sticky Header */}
       <PageHeader
         title="Architect Settings"
@@ -146,7 +183,7 @@ export default function SettingsPage() {
                 <select 
                   value={formData.gender}
                   onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                  className="w-full h-12 px-4 pr-10 appearance-none bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
+                  className="w-full h-12 px-4 pr-10 appearance-none bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all min-w-0"
                 >
                   <option>Not Specified</option>
                   <option>Male</option>
@@ -165,7 +202,7 @@ export default function SettingsPage() {
                   type="date" 
                   value={formData.dob}
                   onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                  className="w-full h-12 pl-11 pr-4 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
+                  className="w-full h-12 pl-11 pr-4 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all min-w-0"
                 />
               </div>
             </div>
@@ -177,25 +214,127 @@ export default function SettingsPage() {
               <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">Security & Privacy</h3>
             </div>
             
-            <div className="bg-slate-50 dark:bg-white/5 p-4 rounded-2xl flex items-center justify-between group hover:ring-1 hover:ring-primary/20 transition-all">
-               <div className="flex items-center gap-4">
-                  <div className="size-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-primary shadow-sm">
-                     <Fingerprint className="w-5 h-5" />
-                  </div>
-                  <div>
-                     <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">App Lock</p>
-                     <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Biometrics or Face Unlock</p>
-                  </div>
-               </div>
-               
-               <button 
-                onClick={() => toggleLock(!isLockEnabled)}
-                className={`relative w-12 h-6 flex items-center rounded-full px-1 transition-colors duration-300 ${isLockEnabled ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-800'}`}
-               >
-                  <div className={`size-4 bg-white rounded-full shadow-sm transition-transform duration-300 ${isLockEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
-               </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Biometrics Toggle */}
+              <div className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${isLockEnabled && lockType === 'biometric' ? 'border-primary bg-primary/5' : 'border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50'}`}
+                onClick={() => {
+                  if (isLockEnabled && lockType === 'biometric') {
+                    toggleLock(false);
+                  } else {
+                    toggleLock(true, 'biometric');
+                  }
+                }}
+              >
+                 <div className="flex items-center justify-between mb-4">
+                    <div className="size-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-primary shadow-sm">
+                       <Fingerprint className="w-5 h-5" />
+                    </div>
+                    <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-colors ${isLockEnabled && lockType === 'biometric' ? 'border-primary bg-primary' : 'border-slate-300 dark:border-slate-600'}`}>
+                      {isLockEnabled && lockType === 'biometric' && <div className="size-1.5 rounded-full bg-white" />}
+                    </div>
+                 </div>
+                 <div>
+                    <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Biometric Lock</p>
+                    <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">FaceID or Fingerprint</p>
+                 </div>
+              </div>
+
+              {/* PIN Toggle */}
+              <div className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${isLockEnabled && lockType === 'pin' ? 'border-primary bg-primary/5' : 'border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50'}`}
+                onClick={() => {
+                  if (isLockEnabled && lockType === 'pin') {
+                    toggleLock(false);
+                  } else {
+                    setShowPinModal(true);
+                  }
+                }}
+              >
+                 <div className="flex items-center justify-between mb-4">
+                    <div className="size-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-indigo-500 shadow-sm">
+                       <Key className="w-5 h-5" />
+                    </div>
+                    <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-colors ${isLockEnabled && lockType === 'pin' ? 'border-primary bg-primary' : 'border-slate-300 dark:border-slate-600'}`}>
+                      {isLockEnabled && lockType === 'pin' && <div className="size-1.5 rounded-full bg-white" />}
+                    </div>
+                 </div>
+                 <div>
+                    <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">PIN Lock</p>
+                    <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">4-Digit Security Code</p>
+                 </div>
+              </div>
             </div>
           </div>
+
+          {/* PIN Modal */}
+          <AnimatePresence>
+            {showPinModal && (
+              <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 backdrop-blur-md bg-black/40">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                  className="bg-white dark:bg-[#0f1115] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl overflow-hidden relative"
+                >
+                  <button onClick={() => { setShowPinModal(false); resetPinModal(); }} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  <div className="flex flex-col items-center">
+                    <div className="size-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-6">
+                      <Key className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">
+                      {pinStep === 1 ? 'Set Security PIN' : 'Confirm Security PIN'}
+                    </h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-10">
+                      {pinStep === 1 ? 'Enter a 4-digit code' : 'Re-enter your 4-digit code'}
+                    </p>
+
+                    <div className="flex gap-4 mb-12">
+                      {[0, 1, 2, 3].map((idx) => (
+                        <div 
+                          key={idx} 
+                          className={`size-3 rounded-full border-2 transition-all ${
+                            (pinStep === 1 ? tempPin : confirmPin).length > idx 
+                            ? 'bg-indigo-500 border-indigo-500 scale-125' 
+                            : 'border-slate-200 dark:border-white/10'
+                          }`} 
+                        />
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 w-full">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                        <button
+                          key={num}
+                          onClick={() => handlePinAction(num.toString())}
+                          className="h-14 rounded-2xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white font-black text-lg hover:bg-slate-100 dark:hover:bg-white/10 active:scale-90 transition-all"
+                        >
+                          {num}
+                        </button>
+                      ))}
+                      <div />
+                      <button
+                        onClick={() => handlePinAction("0")}
+                        className="h-14 rounded-2xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white font-black text-lg hover:bg-slate-100 dark:hover:bg-white/10 active:scale-90 transition-all"
+                      >
+                        0
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (pinStep === 1) setTempPin(tempPin.slice(0, -1));
+                          else setConfirmPin(confirmPin.slice(0, -1));
+                        }}
+                        className="h-14 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors"
+                      >
+                        <Delete className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
 
           <div className="pt-8 border-t border-slate-100 dark:border-white/5 mt-8">
             <div className="flex items-center gap-2 mb-6">
