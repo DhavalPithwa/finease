@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
-import { fetchGoals, addGoalAction, updateGoalAction } from "@/store/slices/goalsSlice";
+import { fetchGoals, addGoalAction, updateGoalAction, deleteGoalAction } from "@/store/slices/goalsSlice";
 import { fetchReminders, createReminder, Reminder } from "@/store/slices/remindersSlice";
 import { EditGoalModal } from "@/components/goals/EditGoalModal";
 import { ReminderCountdown } from "@/components/reminders/ReminderCountdown";
@@ -13,9 +13,10 @@ import { formatDate } from "@/lib/utils";
 import { TopUpModal } from "@/components/goals/TopUpModal";
 import toast from "react-hot-toast";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Plus, Flag, Target, TrendingUp, Wallet, Pencil, Bell } from "lucide-react";
+import { Edit2, Trash2, Plus, Wallet, Pencil, Target } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 export default function GoalsPageClient() {
   const dispatch = useDispatch<AppDispatch>();
@@ -27,6 +28,8 @@ export default function GoalsPageClient() {
   const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null);
   const [editingGoal, setEditingGoal] = useState<FinancialGoal | null>(null);
   const [topUpGoal, setTopUpGoal] = useState<FinancialGoal | null>(null);
+  const [goalToDelete, setGoalToDelete] = useState<FinancialGoal | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const goals = useSelector((state: RootState) => state.goals.items);
   const loading = useSelector((state: RootState) => state.goals.loading);
@@ -79,7 +82,7 @@ export default function GoalsPageClient() {
               size="sm"
               onClick={() => setIsReminderModalOpen(true)}
               className="flex-1 sm:flex-initial"
-              leftIcon={<Bell className="w-3.5 h-3.5 text-primary" />}
+              leftIcon={<Edit2 className="w-3.5 h-3.5 text-primary" />}
             >
               Expiries
             </Button>
@@ -104,10 +107,10 @@ export default function GoalsPageClient() {
           }} 
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-6">
           {goals.length === 0 ? (
             <div className="lg:col-span-2 text-center py-20 bg-white dark:bg-slate-900/50 rounded-3xl border border-dashed border-slate-200 dark:border-white/5">
-              <Flag className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-4 opacity-50" />
+              <Target className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-4 opacity-50" />
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">No Goals Set</h3>
               <p className="text-slate-500">Define your first milestone to start tracking progress.</p>
             </div>
@@ -117,68 +120,44 @@ export default function GoalsPageClient() {
               const percent = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100).toFixed(1);
 
               return (
-                <div key={goal.id} className="bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-white/5 p-6 sm:p-8 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
-                  <div className="flex flex-col gap-6 relative z-10">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex gap-4">
-                        <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                          <Target className="w-8 h-8 text-primary" />
-                        </div>
-                        <div className="flex flex-col">
-                          <h3 className="text-slate-900 dark:text-white font-black text-xl tracking-tight">{goal.name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Target:</span>
-                            <span className="text-slate-900 dark:text-slate-200 text-xs font-black">{formatDate(goal.targetDate)}</span>
-                          </div>
-                          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[10px] font-black uppercase tracking-widest border border-orange-100 dark:border-orange-500/20">
-                            <TrendingUp className="w-3.5 h-3.5" />
-                            <span>₹{reqMonthly.toLocaleString(undefined, {maximumFractionDigits:0})}/mo req.</span>
-                          </div>
-                        </div>
+                <div key={goal.id} className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-white/5 p-4 rounded-3xl shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between h-full">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between min-w-0">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-slate-900 dark:text-white font-black text-sm tracking-tight truncate leading-none uppercase">{goal.name}</h3>
+                        <p className="text-slate-400 text-[8px] font-bold uppercase tracking-widest mt-1.5">{formatDate(goal.targetDate)}</p>
                       </div>
-                      <div className="text-primary font-black text-2xl tracking-tighter">{percent}%</div>
+                      <div className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10 tracking-widest">{percent}%</div>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-end px-1">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-1">Position</span>
-                          <span className="text-slate-900 dark:text-white font-black text-2xl tracking-tighter">
-                            ₹{goal.currentAmount.toLocaleString()} 
-                            <span className="text-sm text-slate-400 font-normal tracking-tight ml-2">/ ₹{goal.targetAmount.toLocaleString()}</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="relative h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className="absolute h-full bg-primary rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(59,130,246,0.3)]" style={{ width: `${percent}%` }} />
-                      </div>
-                      
-                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-                        <span>Started {formatDate(goal.startDate)}</span>
-                        <span>{Math.round(goal.targetAmount - goal.currentAmount).toLocaleString()} Left</span>
-                      </div>
+                  <div className="mt-2 space-y-2">
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-slate-900 dark:text-white font-black text-sm tracking-tighter">₹{goal.currentAmount.toLocaleString()}</span>
+                      <span className="text-[8px] font-bold text-slate-400">Target ₹{goal.targetAmount.toLocaleString()}</span>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-50 dark:border-white/5">
-                      <Button 
-                        size="sm"
-                        onClick={() => { setTopUpGoal(goal); setIsTopUpModalOpen(true); }}
-                        leftIcon={<Wallet className="w-4 h-4" />}
-                      >
-                        Top Up
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => { setEditingGoal(goal); setIsGoalModalOpen(true); }}
-                        leftIcon={<Pencil className="w-4 h-4" />}
-                      >
-                        Edit
-                      </Button>
+                    <div className="relative h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className="absolute h-full bg-primary rounded-full" style={{ width: `${percent}%` }} />
+                    </div>
+                    <div className="flex justify-between items-center text-[7px] font-black uppercase tracking-widest text-slate-400">
+                      <span>Gap: ₹{Math.round(goal.targetAmount - goal.currentAmount).toLocaleString()}</span>
+                      <span className="text-orange-500">₹{reqMonthly.toLocaleString(undefined, {maximumFractionDigits:0})}/mo</span>
                     </div>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-50 dark:border-white/5">
+                  <button onClick={() => { setTopUpGoal(goal); setIsTopUpModalOpen(true); }} className="px-3 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors active:bg-primary/20">
+                    <Wallet className="w-3 h-3" />
+                  </button>
+                  <div className="flex gap-3">
+                    <button onClick={() => { setEditingGoal(goal); setIsGoalModalOpen(true); }} className="flex-1 p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center transition-colors active:bg-slate-200 dark:active:bg-slate-700">
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    <button onClick={() => { setGoalToDelete(goal); setIsDeleteModalOpen(true); }} className="flex-1 p-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 flex items-center justify-center transition-colors active:bg-rose-100 dark:active:bg-rose-500/20">
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
                 </div>
               );
             })
@@ -237,6 +216,21 @@ export default function GoalsPageClient() {
           toast.success("Signal established.");
         }}
         reminder={selectedReminder}
+      />
+
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onCancel={() => { setIsDeleteModalOpen(false); setGoalToDelete(null); }}
+        onConfirm={async () => {
+          if (!goalToDelete) return;
+          await dispatch(deleteGoalAction(goalToDelete.id)).unwrap();
+          toast.success("Milestone decommissioned");
+          setIsDeleteModalOpen(false);
+          setGoalToDelete(null);
+        }}
+        title="Sanitize Milestone"
+        message="This operation will permanently remove this financial goal from your roadmap. All historical tracking for this target will be lost."
+        confirmText="Confirm Purge"
       />
     </div>
   );

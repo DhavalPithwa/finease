@@ -39,7 +39,7 @@ export function Modal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end items-center p-4 sm:p-6 bg-slate-900/80">
           {/* Backdrop Click-to-Close */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -50,24 +50,26 @@ export function Modal({
           />
 
           <motion.div
-            initial={{ opacity: 0, y: 100 }}
+            initial={{ opacity: 0, y: "100%" }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className={`relative w-full ${maxWidth} bg-white dark:bg-surface-dark rounded-t-[2rem] sm:rounded-2xl border border-slate-200 dark:border-border-dark shadow-2xl overflow-hidden ${maxHeight} flex flex-col ${className}`}
+            exit={{ opacity: 0, y: "100%" }}
+            transition={{ duration: 0.2 }}
+            className={`relative w-full ${maxWidth} bg-white dark:bg-surface-dark rounded-[2.5rem] sm:rounded-[2.5rem] border border-slate-200 dark:border-border-dark shadow-[0_20px_70px_rgba(0,0,0,0.4)] overflow-hidden ${maxHeight} flex flex-col ${className} mb-4 sm:mb-8`}
           >
             {/* Header */}
-            <div className="p-4 border-b border-slate-100 dark:border-border-dark flex items-center justify-between shrink-0">
-              <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">
-                {title}
-              </h3>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
-              >
-                <X className="w-4 h-4 text-slate-500" />
-              </button>
-            </div>
+            {title && (
+              <div className="p-4 border-b border-slate-100 dark:border-border-dark flex items-center justify-between shrink-0">
+                <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">
+                  {title}
+                </h3>
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
+                  <X className="w-4 h-4 text-slate-500" />
+                </button>
+              </div>
+            )}
 
             {/* Content Swiper / Scrollable Body */}
             <div className={`p-4 overflow-y-auto flex-1 ${!footer ? 'pb-10 sm:pb-4' : ''}`}>

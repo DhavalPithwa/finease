@@ -16,6 +16,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 export default function PortfolioPageClient() {
   const { user } = useAuth();
@@ -35,6 +36,10 @@ export default function PortfolioPageClient() {
   const [editingLiability, setEditingLiability] = useState<Account | null>(null);
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Account | null>(null);
+  
+  // Delete confirmation state
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'account' | 'assetClass' } | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
   const accounts = useSelector((state: RootState) => state.accounts.items);
   const assetTypes = useSelector((state: RootState) => state.assetClasses.items);
@@ -140,16 +145,15 @@ export default function PortfolioPageClient() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden">
             {paginatedInvestments.length === 0 ? (
                 <div className="p-10 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No growth assets</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No growth assets traced</p>
                 </div>
             ) : (
                 paginatedInvestments.map(inv => (
                     <div 
                       key={inv.id} 
-                      onClick={() => { setEditingInvestment(inv); setIsAddInvestmentOpen(true); }}
                       className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm active:scale-[0.98] transition-all flex flex-col gap-3"
                     >
-                        <div className="flex justify-between items-start">
+                        <div className="flex justify-between items-start" onClick={() => { setEditingInvestment(inv); setIsAddInvestmentOpen(true); }}>
                             <div className="space-y-0.5 min-w-0">
                                 <span className={`text-[8px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5`}>
                                     <div className={`w-1 h-1 rounded-full ${assetTypes.find(a => a.id === inv.assetType)?.color || 'bg-slate-400'}`} />
@@ -162,17 +166,25 @@ export default function PortfolioPageClient() {
                                 <span className="text-sm font-black text-emerald-500 tracking-tighter">₹{inv.balance.toLocaleString()}</span>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-50 dark:border-white/5">
-                            <div className="flex flex-col">
-                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Capital</span>
-                                <span className="text-[10px] font-bold text-slate-900 dark:text-slate-200">₹{(inv.investedAmount || inv.balance).toLocaleString()}</span>
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-50 dark:border-white/5">
+                            <div className="grid grid-cols-2 gap-4 flex-1">
+                                <div className="flex flex-col">
+                                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Capital</span>
+                                    <span className="text-[10px] font-bold text-slate-900 dark:text-slate-200">₹{(inv.investedAmount || inv.balance).toLocaleString()}</span>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Yield</span>
+                                    <span className={`text-[10px] font-black ${inv.balance >= (inv.investedAmount || inv.balance) ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                        {((((inv.balance - (inv.investedAmount || inv.balance)) / (inv.investedAmount || inv.balance)) * 100) || 0).toFixed(1)}%
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex flex-col items-end">
-                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Yield</span>
-                                <span className={`text-[10px] font-black ${inv.balance >= (inv.investedAmount || inv.balance) ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                    {((((inv.balance - (inv.investedAmount || inv.balance)) / (inv.investedAmount || inv.balance)) * 100) || 0).toFixed(1)}%
-                                </span>
-                            </div>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: inv.id, type: 'account' }); setIsDeleteModalOpen(true); }}
+                                className="ml-4 p-2 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20"
+                            >
+                                <Trash2 className="w-3 h-3" />
+                            </button>
                         </div>
                     </div>
                 ))
@@ -223,7 +235,7 @@ export default function PortfolioPageClient() {
                            <button onClick={() => { setEditingInvestment(inv); setIsAddInvestmentOpen(true); }} className="p-2.5 rounded-xl hover:bg-primary/10 text-slate-400 hover:text-primary transition-all border border-transparent hover:border-primary/20">
                              <Edit2 className="w-3.5 h-3.5" />
                            </button>
-                           <button onClick={() => dispatch(deleteAccount(inv.id))} className="p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-all border border-transparent hover:border-rose-500/20">
+                           <button onClick={() => { setItemToDelete({ id: inv.id, type: 'account' }); setIsDeleteModalOpen(true); }} className="p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-all border border-transparent hover:border-rose-500/20">
                              <Trash2 className="w-3.5 h-3.5" />
                            </button>
                         </div>
@@ -248,20 +260,19 @@ export default function PortfolioPageClient() {
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Debt Burn-down</h3>
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Liability Pulse</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden">
             {paginatedDebts.length === 0 ? (
                 <div className="p-10 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No debt nodes</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No exposure clusters</p>
                 </div>
             ) : (
                 paginatedDebts.map(debt => (
                     <div 
                       key={debt.id} 
-                      onClick={() => { setEditingLiability(debt); setIsAddLiabilityOpen(true); }}
                       className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm active:scale-[0.98] transition-all flex flex-col gap-3"
                     >
-                         <div className="flex justify-between items-start">
+                         <div className="flex justify-between items-start" onClick={() => { setEditingLiability(debt); setIsAddLiabilityOpen(true); }}>
                              <div className="space-y-0.5 min-w-0">
                                  <span className="text-[8px] font-black uppercase tracking-widest text-rose-400">{debt.type}</span>
                                  <h4 className="text-[13px] font-black text-slate-900 dark:text-white tracking-tight truncate">{debt.name}</h4>
@@ -271,19 +282,27 @@ export default function PortfolioPageClient() {
                                  <span className="text-sm font-black text-rose-500 tracking-tighter">₹{Math.abs(debt.balance).toLocaleString()}</span>
                              </div>
                          </div>
-                         <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-50 dark:border-white/5">
-                             <div className="flex flex-col">
-                                 <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Limit</span>
-                                 <span className="text-[9px] font-bold text-slate-900 dark:text-slate-200">₹{(debt.initialAmount || (Math.abs(debt.balance) + (debt.paidAmount || 0))).toLocaleString()}</span>
+                         <div className="flex items-center justify-between pt-2 border-t border-slate-50 dark:border-white/5">
+                             <div className="grid grid-cols-3 gap-2 flex-1">
+                                 <div className="flex flex-col">
+                                     <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Limit</span>
+                                     <span className="text-[9px] font-bold text-slate-900 dark:text-slate-200">₹{(debt.initialAmount || (Math.abs(debt.balance) + (debt.paidAmount || 0))).toLocaleString()}</span>
+                                 </div>
+                                 <div className="flex flex-col items-center">
+                                     <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Paid</span>
+                                     <span className="text-[9px] font-bold text-emerald-500">₹{(debt.paidAmount || 0).toLocaleString()}</span>
+                                 </div>
+                                 <div className="flex flex-col items-end">
+                                     <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Cost</span>
+                                     <span className="text-[9px] font-bold text-orange-500">₹{(debt.interestPaid || 0).toLocaleString()}</span>
+                                 </div>
                              </div>
-                             <div className="flex flex-col items-center">
-                                 <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Paid</span>
-                                 <span className="text-[9px] font-bold text-emerald-500">₹{(debt.paidAmount || 0).toLocaleString()}</span>
-                             </div>
-                             <div className="flex flex-col items-end">
-                                 <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Cost</span>
-                                 <span className="text-[9px] font-bold text-orange-500">₹{(debt.interestPaid || 0).toLocaleString()}</span>
-                             </div>
+                             <button 
+                                onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: debt.id, type: 'account' }); setIsDeleteModalOpen(true); }}
+                                className="ml-4 p-2 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20"
+                            >
+                                <Trash2 className="w-3 h-3" />
+                            </button>
                          </div>
                     </div>
                 ))
@@ -343,7 +362,7 @@ export default function PortfolioPageClient() {
                            <button onClick={() => { setEditingLiability(debt); setIsAddLiabilityOpen(true); }} className="p-2.5 rounded-xl hover:bg-primary/10 text-slate-400 hover:text-primary transition-all border border-transparent hover:border-primary/20">
                              <Edit2 className="w-3.5 h-3.5" />
                            </button>
-                           <button onClick={() => dispatch(deleteAccount(debt.id))} className="p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-all border border-transparent hover:border-rose-500/20">
+                           <button onClick={() => { setItemToDelete({ id: debt.id, type: 'account' }); setIsDeleteModalOpen(true); }} className="p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-all border border-transparent hover:border-rose-500/20">
                              <Trash2 className="w-3.5 h-3.5" />
                            </button>
                         </div>
@@ -367,9 +386,9 @@ export default function PortfolioPageClient() {
         )}
       </div>
 
-      <div className="space-y-6">
-        <h3 className="text-xs font-bold text-slate-400 px-1">Misc Asset Storage</h3>
-        <div className="grid grid-cols-1 gap-4 lg:hidden">
+      <div className="space-y-3">
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Auxiliary Assets</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden">
             {otherAssets.length === 0 ? (
                 <div className="p-10 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No auxiliary wealth clusters</p>
@@ -378,18 +397,26 @@ export default function PortfolioPageClient() {
                 otherAssets.map(asset => (
                     <div 
                       key={asset.id} 
-                      onClick={() => { setEditingAsset(asset); setIsAddAssetOpen(true); }}
                       className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm active:scale-[0.98] transition-all flex flex-col gap-3"
                     >
-                        <div className="flex justify-between items-start">
+                        <div className="flex justify-between items-start" onClick={() => { setEditingAsset(asset); setIsAddAssetOpen(true); }}>
                             <div className="space-y-0.5 min-w-0">
-                                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Fixed Asset</span>
+                                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Fixed Asset Identity</span>
                                 <h4 className="text-[13px] font-black text-slate-900 dark:text-white tracking-tight truncate">{asset.name}</h4>
                             </div>
                             <div className="flex flex-col items-end shrink-0">
                                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Valuation</span>
                                 <span className="text-sm font-black text-emerald-500 tracking-tighter">₹{asset.balance.toLocaleString()}</span>
                             </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-50 dark:border-white/5">
+                            <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Auxiliary Node</span>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: asset.id, type: 'account' }); setIsDeleteModalOpen(true); }}
+                                className="p-2 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20"
+                            >
+                                <Trash2 className="w-3 h-3" />
+                            </button>
                         </div>
                     </div>
                 ))
@@ -427,7 +454,7 @@ export default function PortfolioPageClient() {
                            <button onClick={() => { setEditingAsset(asset); setIsAddAssetOpen(true); }} className="p-2.5 rounded-xl hover:bg-primary/10 text-slate-400 hover:text-primary transition-all border border-transparent hover:border-primary/20">
                              <Edit2 className="w-3.5 h-3.5" />
                            </button>
-                           <button onClick={() => dispatch(deleteAccount(asset.id))} className="p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-all border border-transparent hover:border-rose-500/20">
+                           <button onClick={() => { setItemToDelete({ id: asset.id, type: 'account' }); setIsDeleteModalOpen(true); }} className="p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-all border border-transparent hover:border-rose-500/20">
                              <Trash2 className="w-3.5 h-3.5" />
                            </button>
                         </div>
@@ -574,9 +601,28 @@ export default function PortfolioPageClient() {
           }
         }}
         onDelete={async (id) => {
-          await dispatch(removeAssetClassAction(id)).unwrap();
-          toast.success("Asset Class deleted");
+          setItemToDelete({ id, type: 'assetClass' });
+          setIsDeleteModalOpen(true);
         }}
+      />
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onCancel={() => { setIsDeleteModalOpen(false); setItemToDelete(null); }}
+        onConfirm={async () => {
+          if (!itemToDelete) return;
+          if (itemToDelete.type === 'account') {
+            await dispatch(deleteAccount(itemToDelete.id)).unwrap();
+            toast.success("Identity purged from ledger");
+          } else {
+            await dispatch(removeAssetClassAction(itemToDelete.id)).unwrap();
+            toast.success("Asset class decommissioned");
+          }
+          setIsDeleteModalOpen(false);
+          setItemToDelete(null);
+        }}
+        title="Sanitize Identity"
+        message="This operation will remove the data node from the synchronized ledger. This cannot be undone."
+        confirmText="Execute Purge"
       />
     </div>
   );

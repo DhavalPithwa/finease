@@ -396,7 +396,7 @@ export default function ReportsPageClient() {
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-1.5 overflow-hidden">
                 <div 
-                  className={`bg-indigo-500 h-full rounded-full transition-all duration-1000 group-hover:opacity-80`} 
+                  className={`bg-indigo-500 h-full rounded-full`} 
                   style={{ width: `${Math.min(fiftyThirtyTwenty.needs.percent, 100)}%` }}
                 />
               </div>
@@ -412,7 +412,7 @@ export default function ReportsPageClient() {
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-1.5 overflow-hidden">
                 <div 
-                  className={`bg-pink-500 h-full rounded-full transition-all duration-1000 group-hover:opacity-80`} 
+                  className={`bg-pink-500 h-full rounded-full`} 
                   style={{ width: `${Math.min(fiftyThirtyTwenty.wants.percent, 100)}%` }}
                 />
               </div>
@@ -428,7 +428,7 @@ export default function ReportsPageClient() {
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-1.5 overflow-hidden">
                 <div 
-                  className={`bg-emerald-500 h-full rounded-full transition-all duration-1000 group-hover:opacity-80`} 
+                  className={`bg-emerald-500 h-full rounded-full`} 
                   style={{ width: `${Math.min(fiftyThirtyTwenty.savings.percent, 100)}%` }}
                 />
               </div>
@@ -452,7 +452,7 @@ export default function ReportsPageClient() {
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-1.5 overflow-hidden">
                   <div 
-                    className={`${e.color} h-full rounded-full transition-all duration-1000 group-hover:opacity-80`} 
+                    className={`${e.color} h-full rounded-full`} 
                     style={{ width: `${e.percent}%` }}
                   />
                 </div>

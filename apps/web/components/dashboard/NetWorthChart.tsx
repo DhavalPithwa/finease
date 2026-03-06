@@ -25,7 +25,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{label}</p>
         <p className="text-xl font-black text-white">{formatCurrency(payload[0]?.value || 0)}</p>
         <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-white/5">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span className="text-[10px] font-bold text-emerald-400">Stable Growth Pattern</span>
         </div>
       </div>
@@ -113,8 +113,6 @@ export function NetWorthChart({ data, currentNetWorth, percentageChange }: NetWo
               strokeLinecap="round"
               fillOpacity={1}
               fill="url(#wealthGradient)"
-              animationDuration={2500}
-              filter="url(#glow)"
               activeDot={{ r: 8, fill: '#135bec', stroke: '#fff', strokeWidth: 3 }}
             />
           </AreaChart>
