@@ -2,8 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { Fingerprint, MonitorSmartphone, Lock, Delete } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Loading from "@/app/loading";
 import toast from "react-hot-toast";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 type LockType = "biometric" | "pin";
 
@@ -18,12 +22,27 @@ interface SecurityContextType {
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
 
 export function SecurityProvider({ children }: { children: React.ReactNode }) {
-  const [isLocked, setIsLocked] = useState(false);
-  const [isLockEnabled, setIsLockEnabled] = useState(false);
-  const [lockType, setLockType] = useState<LockType>("biometric");
+  const [isLockEnabled, setIsLockEnabled] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("finease_app_lock") === "true";
+    }
+    return false;
+  });
+  const [lockType, setLockType] = useState<LockType>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("finease_lock_type") as LockType) || "biometric";
+    }
+    return "biometric";
+  });
+  const [isLocked, setIsLocked] = useState(() => {
+    if (typeof window !== "undefined") {
+      const enabled = localStorage.getItem("finease_app_lock") === "true";
+      const sessionAuthenticated = sessionStorage.getItem("finease_session_authenticated") === "true";
+      return enabled && !sessionAuthenticated;
+    }
+    return false;
+  });
   const [isChecking, setIsChecking] = useState(true);
-  
-  // PIN state for lock screen
   const [enteredPin, setEnteredPin] = useState("");
 
   const authenticate = useCallback(async (): Promise<boolean> => {
@@ -43,7 +62,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
 
       const credentialId = localStorage.getItem("finease_credential_id");
       if (!credentialId) {
-        console.warn("No credential ID found even though biometric lock is active.");
+        // No stored biometric credentials found. User must re-enroll.
         return false;
       }
 
@@ -72,39 +91,39 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       }
       
       return false;
-    } catch (error) {
-      console.error("Auth failed", error);
+    } catch {
+      // Authentication failure. Handled via false return.
       return false;
     }
   }, [lockType]);
 
+  const { user, loading: authLoading } = useAuth();
+  const accountsLoading = useSelector((state: RootState) => state.accounts.loading);
+  const accountsCount = useSelector((state: RootState) => state.accounts.items.length);
+
   useEffect(() => {
     const initSecurity = async () => {
-      const enabled = localStorage.getItem("finease_app_lock") === "true";
-      const type = (localStorage.getItem("finease_lock_type") as LockType) || "biometric";
-      const sessionAuthenticated = sessionStorage.getItem("finease_session_authenticated") === "true";
-      
-      setIsLockEnabled(enabled);
-      setLockType(type);
-      
-      if (enabled && !sessionAuthenticated) {
-        setIsLocked(true);
-        if (type === "biometric") {
-          setTimeout(() => {
-            authenticate();
-          }, 800);
-        }
-      } else {
-        setIsLocked(false);
+      if (isLocked && lockType === "biometric") {
+        const timer = setTimeout(() => {
+          authenticate();
+        }, 50);
+        return () => clearTimeout(timer);
       }
       
-      setTimeout(() => {
-        setIsChecking(false);
-      }, 1200);
+      // Wait for Auth AND Data (if logged in) to prevent "blink"
+      const isAuthReady = !authLoading;
+      const isDataReady = user ? (accountsCount > 0 || !accountsLoading) : true;
+      
+      if (isAuthReady && isDataReady) {
+        const timer = setTimeout(() => {
+          setIsChecking(false);
+        }, 600); // Buffer for animations
+        return () => clearTimeout(timer);
+      }
     };
 
     initSecurity();
-  }, [authenticate]);
+  }, [authenticate, isLocked, lockType, authLoading, user, accountsLoading, accountsCount]);
 
   const registerCredential = async (): Promise<boolean> => {
     try {
@@ -126,7 +145,6 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
             authenticatorAttachment: "platform",
             userVerification: "required"
           },
-          // Prevent multiple credentials for the same user on same device
           excludeCredentials: localStorage.getItem("finease_credential_id") ? [{
             id: Uint8Array.from(atob(localStorage.getItem("finease_credential_id")!), c => c.charCodeAt(0)),
             type: 'public-key'
@@ -143,8 +161,8 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
         return true;
       }
       return false;
-    } catch (error) {
-      console.error("Registration failed", error);
+    } catch {
+      // Local registration failure. Handled via false return.
       return false;
     }
   };
@@ -161,7 +179,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
           toast.success("Security Shield Activated");
           return true;
         }
-        toast.error("Failed to enable biometric lock");
+        toast.error("Biometric registration failed");
         return false;
       } else if (type === "pin" && pin) {
         setIsLockEnabled(true);
@@ -199,114 +217,128 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
         } else {
           toast.error("Invalid PIN");
           setEnteredPin("");
-          // Vibration feedback if available
-          if (window.navigator?.vibrate) {
-            window.navigator.vibrate(200);
-          }
+          if (window.navigator?.vibrate) window.navigator.vibrate(200);
         }
       }
     }
   };
 
-  if (isChecking) return <Loading />;
-
-  if (isLocked) {
-    return (
-      <div className="fixed inset-0 z-[200] bg-white dark:bg-[#0f1115] flex flex-col items-center justify-center p-6 select-none">
-        <div className="w-full max-w-sm flex flex-col items-center">
-          <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
-            <Lock className="w-8 h-8" />
-          </div>
-          
-          <h1 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">Vault Locked</h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-10">
-            {lockType === 'biometric' ? 'Biometric verification required' : 'Enter security PIN'}
-          </p>
-          
-          {lockType === "pin" ? (
-            <div className="w-full space-y-12">
-               {/* PIN Indicators */}
-               <div className="flex justify-center gap-6">
-                 {[0, 1, 2, 3].map((idx) => (
-                   <div 
-                    key={idx} 
-                    className={`size-4 rounded-full border-2 transition-all duration-200 ${
-                      enteredPin.length > idx 
-                      ? 'bg-primary border-primary scale-110 shadow-lg shadow-primary/20' 
-                      : 'border-slate-200 dark:border-white/10'
-                    }`} 
-                   />
-                 ))}
-               </div>
-
-               {/* Keypad */}
-               <div className="grid grid-cols-3 gap-4">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => handlePinInput(num.toString())}
-                      className="aspect-square rounded-full flex items-center justify-center text-xl font-black text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 active:bg-primary/10 active:text-primary transition-all"
-                    >
-                      {num}
-                    </button>
-                  ))}
-                  <div />
-                  <button
-                    onClick={() => handlePinInput("0")}
-                    className="aspect-square rounded-full flex items-center justify-center text-xl font-black text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 active:bg-primary/10 active:text-primary transition-all"
-                  >
-                    0
-                  </button>
-                  <button
-                    onClick={() => setEnteredPin(enteredPin.slice(0, -1))}
-                    className="aspect-square rounded-full flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all"
-                  >
-                    <Delete className="w-6 h-6" />
-                  </button>
-               </div>
-            </div>
-          ) : (
-            <button 
-              onClick={async () => {
-                const success = await authenticate();
-                if (!success) {
-                  toast.error("Authentication Failed");
-                }
-              }}
-              className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all"
-            >
-              <Fingerprint className="w-5 h-5" />
-              Authenticate
-            </button>
-          )}
-          
-          <div className="mt-12 flex flex-col items-center gap-6">
-             <div className="flex items-center gap-2 text-slate-400">
-                <MonitorSmartphone className="w-4 h-4" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-center">Protected via Sovereign AES-256</span>
-             </div>
-             
-             <button 
-               onClick={() => {
-                 localStorage.removeItem("finease_app_lock");
-                 localStorage.removeItem("finease_lock_type");
-                 localStorage.removeItem("finease_pin");
-                 sessionStorage.removeItem("finease_session_authenticated");
-                 window.location.href = "/login"; 
-               }}
-               className="text-[9px] font-black text-rose-500/60 uppercase tracking-widest hover:text-rose-500 transition-colors"
-             >
-               Sign out of device
-             </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <SecurityContext.Provider value={{ isLocked, isLockEnabled, lockType, toggleLock, authenticate }}>
-      {children}
+      <AnimatePresence mode="wait">
+        {isChecking ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[9999]"
+          >
+            <Loading />
+          </motion.div>
+        ) : isLocked ? (
+          <motion.div
+            key="locked"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-white dark:bg-[#050505] flex flex-col items-center justify-center p-6 select-none"
+          >
+            <div className="w-full max-w-sm flex flex-col items-center">
+              <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+                <Lock className="w-8 h-8" />
+              </div>
+              
+              <h1 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">Vault Locked</h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-10">
+                {lockType === 'biometric' ? 'Biometric verification required' : 'Enter security PIN'}
+              </p>
+              
+              {lockType === "pin" ? (
+                <div className="w-full space-y-12">
+                  <div className="flex justify-center gap-6">
+                    {[0, 1, 2, 3].map((idx) => (
+                      <div 
+                        key={idx} 
+                        className={`size-4 rounded-full border-2 transition-all duration-200 ${
+                          enteredPin.length > idx 
+                          ? 'bg-primary border-primary scale-110 shadow-lg shadow-primary/20' 
+                          : 'border-slate-200 dark:border-white/10'
+                        }`} 
+                      />
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => handlePinInput(num.toString())}
+                        className="aspect-square rounded-full flex items-center justify-center text-xl font-black text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 active:bg-primary/10 active:text-primary transition-all"
+                      >
+                        {num}
+                      </button>
+                    ))}
+                    <div />
+                    <button
+                      onClick={() => handlePinInput("0")}
+                      className="aspect-square rounded-full flex items-center justify-center text-xl font-black text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 active:bg-primary/10 active:text-primary transition-all"
+                    >
+                      0
+                    </button>
+                    <button
+                      onClick={() => setEnteredPin(enteredPin.slice(0, -1))}
+                      className="aspect-square rounded-full flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all"
+                    >
+                      <Delete className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button 
+                  onClick={async () => {
+                    const success = await authenticate();
+                    if (!success) toast.error("Authentication Failed");
+                  }}
+                  className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all"
+                >
+                  <Fingerprint className="w-5 h-5" />
+                  Authenticate
+                </button>
+              )}
+              
+              <div className="mt-12 flex flex-col items-center gap-6">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <MonitorSmartphone className="w-4 h-4" />
+                  <span className="text-[8px] font-black uppercase tracking-widest text-center">Protected via Sovereign AES-256</span>
+                </div>
+                
+                <button 
+                  onClick={() => {
+                    localStorage.removeItem("finease_app_lock");
+                    localStorage.removeItem("finease_lock_type");
+                    localStorage.removeItem("finease_pin");
+                    sessionStorage.removeItem("finease_session_authenticated");
+                    window.location.href = "/login"; 
+                  }}
+                  className="text-[9px] font-black text-rose-500/60 uppercase tracking-widest hover:text-rose-500 transition-colors"
+                >
+                  Sign out of device
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex-1 flex flex-col"
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </SecurityContext.Provider>
   );
 }

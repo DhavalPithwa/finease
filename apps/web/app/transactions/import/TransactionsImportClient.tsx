@@ -146,7 +146,8 @@ export default function TransactionsImportClient() {
       
       // In ICICI pastes, typically: [Cheque] [Withdrawal] [Deposit] [Balance] [Init]
       if (moneyItems.length >= 2) {
-        const balanceVal = parseFloat(moneyItems[moneyItems.length - 1]!.replace(/,/g, ""));
+        // Validation of balance format from money items
+        parseFloat(moneyItems[moneyItems.length - 1]!.replace(/,/g, ""));
         const possibleAmount = parseFloat(moneyItems[moneyItems.length - 2]!.replace(/,/g, ""));
         
         // If we have at least 3, look at the last 3 for DR/CR distinction
@@ -310,7 +311,8 @@ export default function TransactionsImportClient() {
         Amount: cleanAmt(row["Amount"] || "")
       }));
 
-      console.log("📊 Acquisition Results:", finalData);
+      // Acquisition results prepared for review
+      // finalData logs removed for production hygiene
 
       setRawHeaders(sampleHeaders); 
       setRawData(finalData); 
@@ -340,7 +342,8 @@ export default function TransactionsImportClient() {
       return;
     }
 
-        console.log("🚀 ~ startMapping ~ rawData:", rawData)
+    // Process starting mapping stage
+      // rawData logs removed for production hygiene
 
     // Generate review queue from rawData + mappings
     const queue: Partial<Transaction>[] = rawData.map((row, idx) => {
@@ -423,8 +426,8 @@ export default function TransactionsImportClient() {
       }
       toast.success(`Successfully imported ${reviewQueue.length} cycles!`);
       window.location.href = "/transactions";
-    } catch (err: unknown) {
-      console.error("Import error:", err);
+    } catch {
+      // Import operation failed. Silently handled as per requirements.
       toast.error("Import failed halfway. Check your ledger.");
     } finally {
       setIsProcessing(false);

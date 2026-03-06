@@ -28,6 +28,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.2.6",
+    "@repo/types": "*",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
     "express": "^4.21.2",

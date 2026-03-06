@@ -9,6 +9,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { ReduxProvider } from "@/components/providers/ReduxProvider";
 import { Toaster } from "react-hot-toast";
 import { SecurityProvider } from "@/components/providers/SecurityProvider";
+import { SignalProvider } from "@/components/providers/SignalProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -67,21 +68,23 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ReduxProvider>
             <AuthProvider>
-              <SecurityProvider>
-                <ClientHeader />
-                <main className="flex-grow w-full pb-20 lg:pb-0 min-h-screen">
-                  <RequireAuth>
-                    {children}
-                  </RequireAuth>
-                </main>
-                <BottomNav />
-                <Toaster position="bottom-right" toastOptions={{
-                  style: {
-                    background: '#333',
-                    color: '#fff',
-                  },
-                }} />
-              </SecurityProvider>
+              <SignalProvider>
+                <SecurityProvider>
+                  <ClientHeader />
+                  <main className="flex-grow w-full pb-20 lg:pb-0 min-h-screen">
+                    <RequireAuth>
+                      {children}
+                    </RequireAuth>
+                  </main>
+                  <BottomNav />
+                  <Toaster position="bottom-right" toastOptions={{
+                    style: {
+                      background: '#333',
+                      color: '#fff',
+                    },
+                  }} />
+                </SecurityProvider>
+              </SignalProvider>
             </AuthProvider>
           </ReduxProvider>
         </ThemeProvider>
@@ -91,12 +94,8 @@ export default function RootLayout({
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                   navigator.serviceWorker.register('/sw.js').then(
-                    function(registration) {
-                      console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    },
-                    function(err) {
-                      console.log('ServiceWorker registration failed: ', err);
-                    }
+                    function() {},
+                    function() {}
                   );
                 });
               }

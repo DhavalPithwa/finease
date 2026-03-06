@@ -121,3 +121,30 @@ export type TransactionImportStage = "upload" | "password" | "mapping" | "review
 export interface RawTransactionData {
   [key: string]: string;
 }
+
+export interface AdminStats {
+  totalUsers: number;
+  activeUsers24h: number;
+  totalAssetsTracked: number;
+  systemHealth: string;
+  recentActivities: {
+    id: number;
+    type: string;
+    user: string;
+    time: string;
+  }[];
+  userGrowth: {
+    day: string;
+    count: number;
+  }[];
+}
+export interface Reminder {
+  id: string;
+  userId: string;
+  name: string;
+  type: "policy" | "document" | "other";
+  expiryDate: string;
+  renewalAmount: number;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}

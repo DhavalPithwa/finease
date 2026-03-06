@@ -10,8 +10,8 @@ import { fetchTransactions, createTransaction, deleteTransaction, updateTransact
 import { fetchAccounts, createAccount } from "@/store/slices/accountsSlice";
 import { addCategoryAction, updateCategoryAction, removeCategoryAction } from "@/store/slices/categoriesSlice";
 import { AddCategoryModal } from "@/components/categories/AddCategoryModal";
-import { CategoryParentType, Transaction } from "@repo/types";
-import { Trash2, Edit2, Filter, ArrowRight, CheckCircle2, Plus, Download, ChevronUp, ChevronDown, FileUp } from "lucide-react";
+import { Transaction } from "@repo/types";
+import { Trash2, Edit2, Filter, ArrowRight, CheckCircle2, Plus, Download, ChevronUp, ChevronDown, FileUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import toast from "react-hot-toast";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -21,6 +21,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 
 const liquidTypes = ["bank", "cash", "card"];
 
@@ -190,7 +191,6 @@ export default function TransactionsPageClient() {
         setShowExportOptions(false);
       }
     }
-    // Use capture phase to ensure it runs even if propagation is stopped elsewhere
     document.addEventListener("mousedown", handleClickOutside, true);
     return () => document.removeEventListener("mousedown", handleClickOutside, true);
   }, []);
@@ -224,9 +224,8 @@ export default function TransactionsPageClient() {
   };
 
   const handleExportPDF = () => {
-    const doc = new jsPDF('landscape'); // Landscape for more columns
+    const doc = new jsPDF('landscape');
     
-    // Add Branding
     doc.setFontSize(22);
     doc.setTextColor(19, 91, 236);
     doc.text("FinEase", 14, 20);
@@ -235,7 +234,6 @@ export default function TransactionsPageClient() {
     doc.text("Architectural Wealth Ledger (Omni-Channel Report)", 14, 27);
     doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 33);
 
-    // Enrich with running balances
     const enriched = calculateRunningBalances(filtered);
     
     const tableData = enriched.map(t => [
@@ -268,7 +266,6 @@ export default function TransactionsPageClient() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 pb-12 lg:pb-8 pt-0">
-      {/* Sticky Header Group */}
       <PageHeader
         title="Transactions"
         subtitle="Unified financial ledger"
@@ -276,13 +273,15 @@ export default function TransactionsPageClient() {
         actions={
           <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
             <div className="relative" ref={exportDropdownRef}>
-              <button 
+              <Button 
+                variant={showExportOptions ? "primary" : "secondary"}
+                size="sm"
                 onClick={() => setShowExportOptions(!showExportOptions)}
-                className={`inline-flex items-center justify-center h-8 w-full sm:w-auto rounded-xl border px-3 text-[9px] font-black uppercase tracking-widest transition-all duration-200 group/export ${showExportOptions ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm dark:border-white/5 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-white/10'}`}
+                className="w-full sm:w-auto"
+                leftIcon={<Download className={`w-3.5 h-3.5 mr-1.5 transition-transform duration-300 ${showExportOptions ? 'rotate-180' : ''}`} />}
               >
-                <Download className={`w-3.5 h-3.5 mr-1.5 transition-transform duration-300 ${showExportOptions ? 'rotate-180' : ''}`} />
                 Export
-              </button>
+              </Button>
               {showExportOptions && (
                 <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-900 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 dark:border-white/5 z-[110] p-1.5 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
                    <button onClick={handleExportCSV} className="w-full text-left px-3.5 py-2.5 text-[9px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg flex items-center justify-between group transition-colors">
@@ -297,20 +296,20 @@ export default function TransactionsPageClient() {
               )}
             </div>
             <Link 
-              // href="/transactions/import"
               href=""
               className="inline-flex items-center justify-center h-8 rounded-xl border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm dark:border-white/5 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-white/10 transition-all duration-200"
             >
               <FileUp className="w-3.5 h-3.5 mr-1.5" />
               Import
             </Link>
-            <button 
+            <Button 
+              size="sm"
               onClick={() => { setEditingData(null); setIsModalOpen(true); }}
-              className="col-span-2 sm:col-auto inline-flex items-center justify-center h-8 rounded-xl bg-primary px-3 text-[9px] font-bold text-white shadow-lg shadow-primary/20"
+              className="col-span-2 sm:col-auto"
+              leftIcon={<Plus className="w-3.5 h-3.5" />}
             >
-              <Plus className="w-3.5 h-3.5 mr-1" />
               Record
-            </button>
+            </Button>
           </div>
         }
       >
@@ -380,7 +379,6 @@ export default function TransactionsPageClient() {
           </div>
         </div>
 
-        {/* Expandable Filters - Moved inside PageHeader for sticky behavior */}
         {showFilters && (
           <div className="mt-2 p-3 bg-white dark:bg-slate-950/80 backdrop-blur-sm rounded-2xl border border-slate-100 dark:border-white/10 shadow-xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="grid grid-cols-2 gap-3">
@@ -449,8 +447,6 @@ export default function TransactionsPageClient() {
         )}
       </PageHeader>
 
-      
-      {/* Mobile & Tablet Card List (Visible up to lg/1024px) */}
       <div className="block lg:hidden space-y-4">
         {paginatedTransactions.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-slate-100 dark:border-white/5 shadow-sm">
@@ -519,7 +515,6 @@ export default function TransactionsPageClient() {
         )}
       </div>
 
-      {/* Desktop Table (Visible only on lg screens 1024px+) */}
       <div className="hidden lg:block overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-xl shadow-slate-200/50 dark:border-white/5 dark:bg-slate-900 dark:shadow-none">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
@@ -574,9 +569,6 @@ export default function TransactionsPageClient() {
                           <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">No matching activities</p>
                           <p className="text-xs font-medium text-slate-400">Expand your filters to view more results</p>
                         </div>
-                        {activeFilterCount > 0 && (
-                          <button onClick={resetFilters} className="text-primary text-[10px] font-black uppercase tracking-[0.2em] bg-primary/10 px-6 py-2 rounded-full hover:bg-primary/20 transition-all">Clear filters</button>
-                        )}
                     </div>
                   </td>
                 </tr>
@@ -628,21 +620,19 @@ export default function TransactionsPageClient() {
                   <td className="px-8 py-5 text-right">
                     <div className="flex items-center justify-end gap-2 transition-opacity">
                       {tx.isAutomated && tx.status === 'pending_confirmation' && (String(tx.date).split('T')[0] || "") <= (new Date().toISOString().split('T')[0] || "") && (
-                        <button 
-                          type="button"
-                          onClick={(e) => {
+                        <Button 
+                          size="sm"
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            dispatch(confirmTransaction(tx.id)).then(() => {
-                              dispatch(fetchAccounts());
-                              dispatch(fetchTransactions());
-                            });
+                            await dispatch(confirmTransaction(tx.id)).unwrap();
+                            dispatch(fetchAccounts());
+                            dispatch(fetchTransactions());
                             toast.success("Transaction Confirmed");
                           }}
-                          className="px-4 py-2 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 active:scale-95 flex items-center gap-2"
+                          leftIcon={<CheckCircle2 className="w-3 h-3" />}
                         >
-                          <CheckCircle2 className="w-3 h-3" />
                           Confirm
-                        </button>
+                        </Button>
                       )}
                       {!(tx as Transaction & { isVirtual?: boolean }).isVirtual && (
                         <>
@@ -676,7 +666,6 @@ export default function TransactionsPageClient() {
         </div>
       </div>
       
-      {/* Universal Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-2 pt-4">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -688,30 +677,29 @@ export default function TransactionsPageClient() {
                     disabled={currentPage === 1}
                     className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 text-slate-600 disabled:opacity-30 shadow-sm"
                 >
-                    <span className="material-symbols-outlined">chevron_left</span>
+                    <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
                     className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 text-slate-600 disabled:opacity-30 shadow-sm"
                 >
-                    <span className="material-symbols-outlined">chevron_right</span>
+                    <ChevronRight className="w-4 h-4" />
                 </button>
             </div>
         </div>
       )}
       
-      {/* Modals */}
       <TransactionModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        transaction={editingData || undefined}
-        onSave={(data) => {
+        transaction={editingData}
+        onSave={async (data) => {
           const amountVar = data.amount || 0;
           const interestVar = data.interestAmount;
           
           if (editingData) {
-            dispatch(updateTransaction({
+            await dispatch(updateTransaction({
               id: editingData.id,
               data: {
                 accountId: data.accountId,
@@ -726,13 +714,9 @@ export default function TransactionsPageClient() {
                 frequency: data.frequency,
                 recurringCount: data.recurringCount
               }
-            })).then(() => {
-              dispatch(fetchAccounts());
-              dispatch(fetchTransactions());
-              setIsModalOpen(false);
-            });
+            })).unwrap();
           } else {
-            dispatch(createTransaction({
+            await dispatch(createTransaction({
               accountId: data.accountId,
               toAccountId: data.toAccountId || undefined,
               amount: amountVar,
@@ -744,12 +728,10 @@ export default function TransactionsPageClient() {
               isAutomated: data.isAutomated,
               frequency: data.frequency,
               recurringCount: data.recurringCount
-            })).then(() => {
-              dispatch(fetchAccounts());
-              dispatch(fetchTransactions());
-              setIsModalOpen(false);
-            });
+            })).unwrap();
           }
+          dispatch(fetchAccounts());
+          dispatch(fetchTransactions());
         }} 
       />
       
@@ -765,14 +747,13 @@ export default function TransactionsPageClient() {
       <AddAccountModal 
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
-        onSave={(data) => {
-          dispatch(createAccount({
+        onSave={async (data) => {
+          await dispatch(createAccount({
             name: data.name,
             type: data.type as "bank" | "cash" | "debt" | "investment" | "card",
             balance: parseFloat(data.balance) || 0,
             currency: "INR",
-          }));
-          setIsAccountModalOpen(false);
+          })).unwrap();
         }}
       />
 
@@ -780,55 +761,55 @@ export default function TransactionsPageClient() {
         isOpen={isCategoryModalOpen}
         category={editingCategory}
         onClose={() => setIsCategoryModalOpen(false)}
-        onSave={(data) => {
+        onSave={async (data) => {
           const isNameDuplicate = categories.some(c => c.name.toLowerCase() === data.name.trim().toLowerCase() && c.id !== data.id);
           const isColorDuplicate = categories.some(c => c.color === data.color && c.id !== data.id);
           
           if (isNameDuplicate) {
             toast.error("Category name already exists");
-            return;
+            throw new Error("Duplicate");
           }
           if (isColorDuplicate) {
-            toast.error("Color theme is already used by another category");
-            return;
+            toast.error("Color theme is already used");
+            throw new Error("Duplicate");
           }
           if (data.id) {
-            dispatch(updateCategoryAction({
+            await dispatch(updateCategoryAction({
               id: data.id,
               data: {
                 name: data.name,
                 color: data.color,
-                parentType: data.parentType as CategoryParentType
+                parentType: data.parentType as "needs" | "wants" | "savings" | "income"
               }
-            }));
+            })).unwrap();
+            toast.success("Category updated");
           } else {
-            dispatch(addCategoryAction({
+            await dispatch(addCategoryAction({
               name: data.name,
               color: data.color,
-              parentType: data.parentType as CategoryParentType
-            }));
+              parentType: data.parentType as "needs" | "wants" | "savings" | "income"
+            })).unwrap();
+            toast.success("Category created");
           }
-          setIsCategoryModalOpen(false);
-          toast.success(data.id ? "Category updated" : "Category added");
         }}
-        onDelete={(id) => {
-          dispatch(removeCategoryAction(id));
-          setIsCategoryModalOpen(false);
+        onDelete={async (id) => {
+          await dispatch(removeCategoryAction(id)).unwrap();
           toast.success("Category deleted");
         }}
       />
-      
+
       <ConfirmModal 
         isOpen={!!transactionToDelete}
-        title="Delete Activity"
-        message={`Are you sure you want to permanently delete this ${transactionToDelete?.isAutomated ? "automated " : ""}activity? This action cannot be undone.`}
-        confirmText="Delete"
-        onConfirm={() => {
+        title="Destroy Transaction?"
+        message="This will retroactively update all running balances. This action is irreversible."
+        onConfirm={async () => {
           if (transactionToDelete) {
-            dispatch(deleteTransaction(transactionToDelete.id));
-            toast.success("Activity Deleted");
+            await dispatch(deleteTransaction(transactionToDelete.id)).unwrap();
+            dispatch(fetchAccounts());
+            dispatch(fetchTransactions());
+            toast.success("Record destroyed");
+            setTransactionToDelete(null);
           }
-          setTransactionToDelete(null);
         }}
         onCancel={() => setTransactionToDelete(null)}
       />

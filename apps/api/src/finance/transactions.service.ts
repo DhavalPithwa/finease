@@ -40,23 +40,16 @@ export class TransactionsService {
   }
 
   async findAll(userId: string): Promise<Transaction[]> {
-    try {
-      const snapshot = await this.collection
-        .where('userId', '==', userId)
-        .get();
-      const transactions = snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() }) as Transaction,
-      );
-      // Sort in-memory to bypass index requirement
-      return transactions.sort((a, b) => {
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        return dateB - dateA;
-      });
-    } catch (error) {
-      console.error('CRITICAL: Error in findAll:', error);
-      throw error;
-    }
+    const snapshot = await this.collection.where('userId', '==', userId).get();
+    const transactions = snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as Transaction,
+    );
+    // Sort in-memory to bypass index requirement
+    return transactions.sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      return dateB - dateA;
+    });
   }
 
   async create(transaction: Partial<Transaction>): Promise<Transaction> {

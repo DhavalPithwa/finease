@@ -17,6 +17,7 @@ import { AccountsService } from './accounts.service';
 import { TransactionsService } from './transactions.service';
 import { CategoriesService } from './categories.service';
 import { AssetClassesService } from './asset-classes.service';
+import { RemindersService } from './reminders.service';
 import type {
   FinancialGoal,
   Transaction,
@@ -24,6 +25,7 @@ import type {
   User,
   Category,
   AssetClass,
+  Reminder,
 } from '@repo/types';
 import { UsersService } from '../common/services/users.service';
 import type { RequestWithUser } from '../common/interfaces/request.interface';
@@ -41,6 +43,7 @@ export class FinanceController {
     private readonly categoriesService: CategoriesService,
     private readonly assetClassesService: AssetClassesService,
     private readonly usersService: UsersService,
+    private readonly remindersService: RemindersService,
   ) {}
 
   // --- Profile ---
@@ -244,5 +247,35 @@ export class FinanceController {
   @Post('reconcile/pending')
   getPendingReconciliations(@Body('transactions') transactions: Transaction[]) {
     return this.reconciliationService.findUnreconciledWithdrawals(transactions);
+  }
+
+  // --- Reminders ---
+
+  @ApiOperation({ summary: 'List all reminders for user' })
+  @Get('reminders')
+  findAllReminders(@Req() req: RequestWithUser) {
+    return this.remindersService.getReminders(req.user.uid);
+  }
+
+  @ApiOperation({ summary: 'Create a new reminder' })
+  @Post('reminders')
+  createReminder(@Req() req: RequestWithUser, @Body() data: Partial<Reminder>) {
+    return this.remindersService.createReminder(req.user.uid, data);
+  }
+
+  @ApiOperation({ summary: 'Update an existing reminder' })
+  @Put('reminders/:id')
+  updateReminder(
+    @Req() req: RequestWithUser,
+    @Param('id') id: string,
+    @Body() data: Partial<Reminder>,
+  ) {
+    return this.remindersService.updateReminder(req.user.uid, id, data);
+  }
+
+  @ApiOperation({ summary: 'Delete a reminder' })
+  @Delete('reminders/:id')
+  removeReminder(@Req() req: RequestWithUser, @Param('id') id: string) {
+    return this.remindersService.deleteReminder(req.user.uid, id);
   }
 }

@@ -1,12 +1,15 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { X, LayoutGrid } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { LayoutGrid } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 
 interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { id?: string; name: string; color: string; parentType?: string }) => void;
-  onDelete?: (id: string) => void;
+  onSave: (data: { id?: string; name: string; color: string; parentType?: string }) => Promise<void> | void;
+  onDelete?: (id: string) => Promise<void> | void;
   category?: { id: string; name: string; color: string; parentType?: string } | null;
 }
 
@@ -14,10 +17,11 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
   const [name, setName] = useState("");
   const [color, setColor] = useState("bg-indigo-500");
   const [parentType, setParentType] = useState("needs");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
       if (category) {
         setName(category.name);
         setColor(category.color);
@@ -27,10 +31,7 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
         setColor("bg-indigo-500");
         setParentType("needs");
       }
-    } else {
-      document.body.style.overflow = 'auto';
     }
-    return () => { document.body.style.overflow = 'auto'; };
   }, [category, isOpen]);
 
   const colors = [
@@ -44,105 +45,114 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
     "bg-amber-500"
   ];
 
-  if (!isOpen) return null;
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    setIsSaving(true);
+    try {
+      await onSave({ id: category?.id, name, color, parentType });
+      onClose();
+    } catch {
+      // Error handled by parent
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!category || !onDelete) return;
+    setIsDeleting(true);
+    try {
+      await onDelete(category.id);
+      onClose();
+    } catch {
+      // Error handled by parent
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
-          <motion.div 
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-2xl border-t sm:border border-slate-200 dark:border-white/5 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={category ? "Taxonomy Refinement" : "New Category Node"}
+      maxWidth="max-w-sm"
+      footer={
+        <div className="flex gap-3 w-full">
+          {category && onDelete && (
+            <Button
+              variant="danger"
+              onClick={handleDelete}
+              isLoading={isDeleting}
+              disabled={isSaving}
+              className="flex-1"
+            >
+              Scrap
+            </Button>
+          )}
+          <Button
+            onClick={handleSave}
+            isLoading={isSaving}
+            disabled={isDeleting || !name.trim()}
+            className="flex-[2]"
+            leftIcon={<LayoutGrid className="w-4 h-4" />}
           >
-            <div className="px-5 py-3.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between shrink-0">
-              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
-                {category ? "Taxonomy Refinement" : "New Category Node"}
-              </h3>
-              <button 
-                onClick={onClose} 
-                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-400"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4 overflow-y-auto">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Label</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Grocery, SaaS..."
-                  className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-slate-400"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Spending Bucket</label>
-                <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl ring-1 ring-slate-100 dark:ring-white/5">
-                  {["needs", "wants", "unavoidable"].map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setParentType(type)}
-                      className={`py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
-                        parentType === type 
-                        ? "bg-white dark:bg-slate-800 text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10" 
-                        : "text-slate-500"
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Theme Color</label>
-                <div className="flex flex-wrap gap-2.5 px-1 py-1">
-                  {colors.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setColor(c)}
-                      className={`w-6 h-6 rounded-full ${c} transition-all active:scale-90 flex items-center justify-center ${
-                        color === c ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900 shadow-lg" : ""
-                      }`}
-                    >
-                      {color === c && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-slate-50 dark:bg-slate-950/50 mt-auto border-t border-slate-100 dark:border-white/5 flex gap-3">
-                {category && onDelete && (
-                  <button
-                    onClick={() => onDelete(category.id)}
-                    className="flex-1 h-10 bg-rose-50 dark:bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-100 transition-all active:scale-95 border border-rose-100 dark:border-rose-500/20"
-                  >
-                    Scrap
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    if(name.trim()) {
-                      onSave({ id: category?.id, name, color, parentType });
-                      setName("");
-                    }
-                  }}
-                  className="flex-[2] h-10 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2"
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                  {category ? "Commit" : "Create"}
-                </button>
-            </div>
-          </motion.div>
+            {category ? "Commit" : "Create"}
+          </Button>
         </div>
-      )}
-    </AnimatePresence>
+      }
+    >
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Label</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={isSaving || isDeleting}
+            placeholder="e.g. Grocery, SaaS..."
+            className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-slate-400 disabled:opacity-50"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Spending Bucket</label>
+          <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl ring-1 ring-slate-100 dark:ring-white/5">
+            {["needs", "wants", "savings"].map((type) => (
+              <button
+                key={type}
+                disabled={isSaving || isDeleting}
+                onClick={() => setParentType(type)}
+                className={`py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                  parentType === type 
+                  ? "bg-white dark:bg-slate-800 text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10" 
+                  : "text-slate-500"
+                } disabled:opacity-50`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Theme Color</label>
+          <div className="flex flex-wrap gap-2.5 px-1 py-1">
+            {colors.map((c) => (
+              <button
+                key={c}
+                disabled={isSaving || isDeleting}
+                onClick={() => setColor(c)}
+                className={`w-6 h-6 rounded-full ${c} transition-all active:scale-90 flex items-center justify-center ${
+                  color === c ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900 shadow-lg" : ""
+                } disabled:opacity-50`}
+              >
+                {color === c && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }

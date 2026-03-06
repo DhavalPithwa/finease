@@ -16,6 +16,7 @@ interface StoredUser {
   gender?: string;
   dob?: string;
   role: string;
+  userType?: string;
   createdAt: string;
 }
 
@@ -62,7 +63,11 @@ export class AuthService {
     await userRef.set(newUser);
 
     // Generate token
-    const token = this.jwtService.sign({ uid: userRef.id, email });
+    const token = this.jwtService.sign({
+      uid: userRef.id,
+      email,
+      role: newUser.role,
+    });
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userProfile } = newUser;
@@ -90,9 +95,18 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Correctly determine role from available fields
+    let role: string = userData.role || 'user';
+
+    // Hardcoded logic for the specific admin email to ensure they can always access admin panel
+    if (userData.email === 'devdpadmin@gmail.com') {
+      role = 'admin';
+    }
+
     const token = this.jwtService.sign({
       uid: userDoc.id,
       email: userData.email,
+      role: role,
     });
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

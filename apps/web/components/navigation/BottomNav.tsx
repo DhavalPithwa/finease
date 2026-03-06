@@ -4,13 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Home, IndianRupee, Target, TrendingUp, FileText } from "lucide-react";
+import { Home, IndianRupee, Target, TrendingUp, FileText, Users, BarChart3 } from "lucide-react";
 
 export function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const links = [
+  if (!user) return null;
+
+  const isAdmin = user.role === 'admin';
+
+  const userLinks = [
     { href: "/dashboard", label: "Dashboard", Icon: Home },
     { href: "/transactions", label: "Transact", Icon: IndianRupee },
     { href: "/goals", label: "Goals", Icon: Target },
@@ -18,7 +22,13 @@ export function BottomNav() {
     { href: "/reports", label: "Reports", Icon: FileText },
   ];
 
-  if (!user) return null;
+  const adminLinks = [
+    { href: "/admin/dashboard", label: "Admin", Icon: BarChart3 },
+    { href: "/admin/users", label: "Users", Icon: Users },
+    { href: "/admin/reports", label: "Reports", Icon: FileText },
+  ];
+
+  const links = isAdmin ? adminLinks : userLinks;
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-border-dark px-6 py-3 flex justify-between items-center z-50">

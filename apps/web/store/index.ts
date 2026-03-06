@@ -6,6 +6,7 @@ import statsReducer from './slices/statsSlice';
 import userReducer from './slices/userSlice';
 import categoriesReducer from './slices/categoriesSlice';
 import assetClassesReducer from './slices/assetClassesSlice';
+import remindersReducer from './slices/remindersSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     user: userReducer,
     categories: categoriesReducer,
     assetClasses: assetClassesReducer,
+    reminders: remindersReducer,
   },
 });
 

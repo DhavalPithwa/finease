@@ -9,7 +9,6 @@ import { fetchAssetClasses } from "@/store/slices/assetClassesSlice";
 import { fetchGoals } from "@/store/slices/goalsSlice";
 import { RootState } from "@/store";
 import api from "@/lib/api";
-import type { AxiosError } from "axios";
 
 interface AuthUser {
   uid: string;
@@ -19,6 +18,7 @@ interface AuthUser {
   gender?: string;
   dob?: string;
   phone?: string;
+  role?: string;
   budgetTargets?: {
     needs: number;
     wants: number;
@@ -31,6 +31,7 @@ interface ApiUserResponse {
   uid?: string;
   email: string;
   displayName: string;
+  role?: string;
   photoURL?: string;
   gender?: string;
   dob?: string;
@@ -62,6 +63,7 @@ function buildUser(userData: ApiUserResponse): AuthUser {
     uid: userData.id ?? userData.uid ?? "",
     email: userData.email,
     displayName: userData.displayName,
+    role: userData.role,
     photoURL:
       userData.photoURL ??
       `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userData.displayName || "User")}`,
@@ -87,7 +89,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           void dispatch(fetchAssetClasses());
           void dispatch(fetchGoals());
         } catch {
-          console.error("Failed to restore session");
           localStorage.removeItem("finease_token");
         }
       }
@@ -98,27 +99,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [dispatch]);
 
   const loginWithGoogle = async (email?: string, name?: string, password?: string) => {
-    try {
-      const endpoint = name ? "/auth/signup" : "/auth/login";
-      const payload = name
-        ? { email, name, password: password ?? "password123" }
-        : { email, password: password ?? "password123" };
+    const endpoint = name ? "/auth/signup" : "/auth/login";
+    const payload = name
+      ? { email, name, password: password ?? "password123" }
+      : { email, password: password ?? "password123" };
 
-      const res = await api.post<ApiAuthResponse>(endpoint, payload);
-      const { user: userData, token } = res.data;
+    const res = await api.post<ApiAuthResponse>(endpoint, payload);
+    const { user: userData, token } = res.data;
 
-      localStorage.setItem("finease_token", token);
-      dispatch(setUser(buildUser(userData)));
+    localStorage.setItem("finease_token", token);
+    dispatch(setUser(buildUser(userData)));
 
-      void dispatch(fetchCategories());
-      void dispatch(fetchAssetClasses());
-      void dispatch(fetchGoals());
-    } catch (error) {
-      const axiosError = error as AxiosError<{ message: string }>;
-      const message = axiosError.response?.data?.message ?? axiosError.message;
-      console.error("Auth error:", message);
-      throw error;
-    }
+    void dispatch(fetchCategories());
+    void dispatch(fetchAssetClasses());
+    void dispatch(fetchGoals());
   };
 
   const logout = async () => {
@@ -131,20 +125,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.put("/finance/profile", updates);
       dispatch(reduxUpdateUserProfile(updates));
-    } catch (error) {
-      console.error("Failed to update profile:", error);
+    } catch {
+      // Failed to update profile
     }
   };
 
   const resetPassword = async (email: string, newPassword: string) => {
-    try {
-      await api.post("/auth/reset-password", { email, newPassword });
-    } catch (error) {
-      const axiosError = error as AxiosError<{ message: string }>;
-      const message = axiosError.response?.data?.message ?? axiosError.message;
-      console.error("Reset password error:", message);
-      throw error;
-    }
+    await api.post("/auth/reset-password", { email, newPassword });
   };
 
   return (

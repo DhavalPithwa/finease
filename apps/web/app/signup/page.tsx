@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import type { AxiosError } from "axios";
+import { Button } from "@/components/ui/Button";
 
 export default function SignupPage() {
   const { loginWithGoogle, user } = useAuth();
@@ -13,6 +14,7 @@ export default function SignupPage() {
   const [userEmail, setUserEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -24,12 +26,15 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setIsLoading(true);
     try {
       await loginWithGoogle(userEmail, userName, password);
       router.push("/dashboard");
     } catch (err) {
       const axiosErr = err as AxiosError<{ message: string }>;
       setError(axiosErr.response?.data?.message ?? axiosErr.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -81,9 +86,9 @@ export default function SignupPage() {
             />
           </div>
 
-          <button type="submit" className="w-full mt-2 bg-primary hover:bg-primary-dark text-white text-sm font-bold h-10 rounded-xl transition-all shadow-lg shadow-primary/25 active:scale-[0.98]">
+          <Button type="submit" isLoading={isLoading} className="w-full mt-2 h-10">
             Create Account
-          </button>
+          </Button>
         </form>
 
         <p className="text-center text-sm font-medium text-slate-500 dark:text-slate-400">

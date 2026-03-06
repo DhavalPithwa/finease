@@ -8,6 +8,7 @@ import { AssetClassesService } from './asset-classes.service';
 import { FinanceController } from './finance.controller';
 import { FirebaseAdminService } from '../common/services/firebase-admin.service';
 import { UsersService } from '../common/services/users.service';
+import { RemindersService } from './reminders.service';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { AuthModule } from '../auth/auth.module';
     CategoriesService,
     AssetClassesService,
     UsersService,
+    RemindersService,
   ],
   exports: [
     GoalService,
@@ -32,6 +34,7 @@ import { AuthModule } from '../auth/auth.module';
     CategoriesService,
     AssetClassesService,
     UsersService,
+    RemindersService,
   ],
 })
 export class FinanceModule {}

@@ -118,9 +118,9 @@ export function AccountList({ accounts }: AccountListProps) {
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
         account={editingAccount}
-        onSave={(data) => {
+        onSave={async (data) => {
           if (editingAccount) {
-            dispatch(updateAccount({
+            await dispatch(updateAccount({
               id: editingAccount.id,
               data: {
                 name: data.name,
@@ -130,9 +130,8 @@ export function AccountList({ accounts }: AccountListProps) {
                 minimumBalance: parseFloat(data.minimumBalance || "0") || 0,
                 maxLimit: parseFloat(data.maxLimit || "0") || 0,
               }
-            }));
+            })).unwrap();
           }
-          setIsAccountModalOpen(false);
         }}
       />
       
@@ -140,9 +139,9 @@ export function AccountList({ accounts }: AccountListProps) {
         isOpen={isInvestmentModalOpen}
         onClose={() => setIsInvestmentModalOpen(false)}
         investment={editingAccount}
-        onSave={(data) => {
+        onSave={async (data) => {
           if (editingAccount) {
-            dispatch(updateAccount({
+            await dispatch(updateAccount({
               id: editingAccount.id,
               data: {
                 name: data.assetName,
@@ -150,9 +149,8 @@ export function AccountList({ accounts }: AccountListProps) {
                 investedAmount: parseFloat(data.investedAmount) || editingAccount.investedAmount || editingAccount.balance,
                 balance: parseFloat(data.currentAmount) || editingAccount.balance
               }
-            }));
+            })).unwrap();
           }
-          setIsInvestmentModalOpen(false);
         }}
       />
       
@@ -160,13 +158,13 @@ export function AccountList({ accounts }: AccountListProps) {
         isOpen={isLiabilityModalOpen}
         onClose={() => setIsLiabilityModalOpen(false)}
         liability={editingAccount || undefined}
-        onSave={(data) => {
+        onSave={async (data) => {
           if (editingAccount) {
             const totalLoan = parseFloat(data.initialAmount) || 0;
             const paidAmt = parseFloat(data.paidAmount) || 0;
             const remainingBalance = totalLoan - paidAmt;
             
-            dispatch(updateAccount({
+            await dispatch(updateAccount({
               id: editingAccount.id,
               data: {
                 name: data.name,
@@ -175,22 +173,22 @@ export function AccountList({ accounts }: AccountListProps) {
                 paidAmount: paidAmt,
                 balance: -remainingBalance
               }
-            }));
+            })).unwrap();
           }
-          setIsLiabilityModalOpen(false);
         }}
       />
+
     <ConfirmModal 
         isOpen={!!accountToDelete}
         title="Delete Account"
         message={`Are you sure you want to permanently delete "${accountToDelete?.name}"? All associated transactions will also be deleted. This action cannot be undone.`}
         confirmText="Delete"
-        onConfirm={() => {
+        onConfirm={async () => {
           if (accountToDelete) {
-            dispatch(deleteAccount(accountToDelete.id));
+            await dispatch(deleteAccount(accountToDelete.id)).unwrap();
             toast.success("Account deleted");
+            setAccountToDelete(null);
           }
-          setAccountToDelete(null);
         }}
         onCancel={() => setAccountToDelete(null)}
       />

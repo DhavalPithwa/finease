@@ -15,6 +15,7 @@ import { Edit2, Trash2, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 
 export default function PortfolioPageClient() {
   const { user } = useAuth();
@@ -59,45 +60,46 @@ export default function PortfolioPageClient() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 pb-12 lg:pb-8 pt-0">
-      {/* Sticky Top Section */}
       <PageHeader
         title="Portfolio"
         subtitle="Unified wealth command"
         className="space-y-3"
         actions={
           <div className="grid grid-cols-2 lg:flex items-center gap-2 w-full lg:w-auto">
-            <button 
+            <Button 
+              size="sm"
+              variant="secondary"
               onClick={() => { setEditingAssetType(null); setIsAssetTypeModalOpen(true); }}
-              className="flex items-center justify-center h-8 px-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
             >
-              <Plus className="w-3.5 h-3.5 mr-1 text-primary" />
+              <Plus className="w-3.5 h-3.5 mr-1" />
               Class
-            </button>
-            <button 
+            </Button>
+            <Button 
+              size="sm"
               onClick={() => setIsAddInvestmentOpen(true)}
-              className="flex items-center justify-center h-8 px-3 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-primary/20"
             >
               <Plus className="w-3.5 h-3.5 mr-1" />
               Invest
-            </button>
-            <button 
+            </Button>
+            <Button 
+              size="sm"
+              variant="danger"
               onClick={() => setIsAddLiabilityOpen(true)}
-              className="flex items-center justify-center h-8 px-3 bg-rose-500 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-rose-500/20"
             >
               <Plus className="w-3.5 h-3.5 mr-1" />
               Debt
-            </button>
-            <button 
+            </Button>
+            <Button 
+              size="sm"
+              variant="success"
               onClick={() => setIsAddAssetOpen(true)}
-              className="flex items-center justify-center h-8 px-3 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/20"
             >
               <Plus className="w-3.5 h-3.5 mr-1" />
               Asset
-            </button>
+            </Button>
           </div>
         }
       >
-        {/* Sticky Asset Classes Scroller */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
           {assetTypes.map(c => (
             <div key={c.id} className="relative group/asset shrink-0">
@@ -119,31 +121,22 @@ export default function PortfolioPageClient() {
         </div>
       </PageHeader>
 
-      {/* Snapshot Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-2xl shadow-sm relative overflow-hidden">
-          <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Net Worth</div>
-          <div className="text-base font-black text-slate-900 dark:text-white mt-1 tracking-tighter">₹{netWorth.toLocaleString()}</div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-2xl shadow-sm relative overflow-hidden">
-          <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Capital</div>
-          <div className="text-base font-black text-slate-900 dark:text-white mt-1 tracking-tighter">₹{totalCapitalInvested.toLocaleString()}</div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-2xl shadow-sm relative overflow-hidden">
-          <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Valuation</div>
-          <div className="text-base font-black text-emerald-500 mt-1 tracking-tighter">₹{investments.reduce((sum, item) => sum + item.balance, 0).toLocaleString()}</div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-2xl shadow-sm relative overflow-hidden">
-          <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Liabilities</div>
-          <div className="text-base font-black text-rose-500 mt-1 tracking-tighter">₹{liabilities.toLocaleString()}</div>
-        </div>
+        {[
+          { label: "Net Worth", value: netWorth, color: "text-slate-900 dark:text-white" },
+          { label: "Capital", value: totalCapitalInvested, color: "text-slate-900 dark:text-white" },
+          { label: "Valuation", value: investments.reduce((sum, item) => sum + item.balance, 0), color: "text-emerald-500" },
+          { label: "Liabilities", value: liabilities, color: "text-rose-500" }
+        ].map((stat, i) => (
+          <div key={i} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-2xl shadow-sm">
+            <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{stat.label}</div>
+            <div className={`text-base font-black ${stat.color} mt-1 tracking-tighter`}>₹{stat.value.toLocaleString()}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Investments Section */}
       <div className="space-y-3">
         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Growth Index</h3>
-        
-        {/* Mobile & Tablet: Card View */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden">
             {paginatedInvestments.length === 0 ? (
                 <div className="p-10 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm">
@@ -186,7 +179,6 @@ export default function PortfolioPageClient() {
             )}
         </div>
 
-        {/* Desktop: Table View (1024px+) */}
         <div className="hidden lg:block overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-xl shadow-slate-200/50 dark:border-white/5 dark:bg-slate-900 dark:shadow-none">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
@@ -255,11 +247,8 @@ export default function PortfolioPageClient() {
         )}
       </div>
 
-      {/* Liabilities Section */}
       <div className="space-y-3">
         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Debt Burn-down</h3>
-        
-        {/* Mobile & Tablet: Card View */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden">
             {paginatedDebts.length === 0 ? (
                 <div className="p-10 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm">
@@ -301,7 +290,6 @@ export default function PortfolioPageClient() {
             )}
         </div>
 
-        {/* Desktop: Table View (1024px+) */}
         <div className="hidden lg:block overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-xl shadow-slate-200/50 dark:border-white/5 dark:bg-slate-900 dark:shadow-none">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
@@ -379,11 +367,8 @@ export default function PortfolioPageClient() {
         )}
       </div>
 
-      {/* Other Assets Section */}
       <div className="space-y-6">
         <h3 className="text-xs font-bold text-slate-400 px-1">Misc Asset Storage</h3>
-        
-        {/* Mobile & Tablet: Card View */}
         <div className="grid grid-cols-1 gap-4 lg:hidden">
             {otherAssets.length === 0 ? (
                 <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-sm">
@@ -403,7 +388,6 @@ export default function PortfolioPageClient() {
             )}
         </div>
 
-        {/* Desktop: Table View (1024px+) */}
         <div className="hidden lg:block overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-xl shadow-slate-200/50 dark:border-white/5 dark:bg-slate-900 dark:shadow-none">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
@@ -456,9 +440,9 @@ export default function PortfolioPageClient() {
           setIsAddInvestmentOpen(false);
           setEditingInvestment(null);
         }}
-        onSave={(data) => {
+        onSave={async (data) => {
           if (editingInvestment) {
-             dispatch(updateAccount({
+             await dispatch(updateAccount({
                 id: editingInvestment.id,
                 data: {
                   name: data.assetName,
@@ -466,19 +450,17 @@ export default function PortfolioPageClient() {
                   balance: parseFloat(data.currentAmount) || editingInvestment.balance,
                   investedAmount: parseFloat(data.investedAmount) || editingInvestment.investedAmount || editingInvestment.balance
                 }
-             }));
+             })).unwrap();
           } else {
-             dispatch(createAccount({
+             await dispatch(createAccount({
               name: data.assetName,
               type: "investment",
-              assetType: data.assetType ??"",
+              assetType: data.assetType ?? "",
               balance: parseFloat(data.currentAmount) || 0,
               investedAmount: parseFloat(data.investedAmount) || 0,
               currency: "INR",
-            }));
+            })).unwrap();
           }
-          setIsAddInvestmentOpen(false);
-          setEditingInvestment(null);
         }}
       />
       
@@ -489,14 +471,14 @@ export default function PortfolioPageClient() {
           setIsAddLiabilityOpen(false);
           setEditingLiability(null);
         }}
-        onSave={(data) => {
+        onSave={async (data) => {
           const totalLoan = parseFloat(data.initialAmount) || 0;
           const paidAmt = parseFloat(data.paidAmount) || 0;
           const interestPaidVal = parseFloat(data.interestPaid) || 0;
           const remainingBalance = totalLoan - paidAmt;
           
           if (editingLiability) {
-             dispatch(updateAccount({
+             await dispatch(updateAccount({
                 id: editingLiability.id,
                 data: {
                   name: data.name,
@@ -506,9 +488,9 @@ export default function PortfolioPageClient() {
                   interestPaid: interestPaidVal,
                   balance: -remainingBalance
                 }
-             }));
+             })).unwrap();
           } else {
-             dispatch(createAccount({
+             await dispatch(createAccount({
               name: data.name,
               type: "debt",
               assetType: "",
@@ -517,10 +499,8 @@ export default function PortfolioPageClient() {
               interestPaid: interestPaidVal,
               balance: -remainingBalance,
               currency: "INR",
-            }));
+            })).unwrap();
           }
-          setIsAddLiabilityOpen(false);
-          setEditingLiability(null);
         }}
       />
 
@@ -531,26 +511,24 @@ export default function PortfolioPageClient() {
           setIsAddAssetOpen(false);
           setEditingAsset(null);
         }}
-        onSave={(data) => {
+        onSave={async (data) => {
           if (editingAsset) {
-             dispatch(updateAccount({
+             await dispatch(updateAccount({
                 id: editingAsset.id,
                 data: {
                   name: data.name,
                   balance: parseFloat(data.balance) || editingAsset.balance
                 }
-             }));
+             })).unwrap();
           } else {
-             dispatch(createAccount({
+             await dispatch(createAccount({
               name: data.name,
               type: "asset",
               assetType: "",
               balance: parseFloat(data.balance) || 0,
               currency: "INR",
-            }));
+            })).unwrap();
           }
-          setIsAddAssetOpen(false);
-          setEditingAsset(null);
         }}
       />
       
@@ -558,38 +536,37 @@ export default function PortfolioPageClient() {
         isOpen={isAssetTypeModalOpen}
         assetType={editingAssetType}
         onClose={() => setIsAssetTypeModalOpen(false)}
-        onSave={(data) => {
+        onSave={async (data) => {
           const isNameDuplicate = assetTypes.some(a => a.name.toLowerCase() === data.name.trim().toLowerCase() && a.id !== data.id);
           const isColorDuplicate = assetTypes.some(a => a.color === data.color && a.id !== data.id);
           
           if (isNameDuplicate) {
             toast.error("Asset Class name already exists");
-            return;
+            throw new Error("Duplicate");
           }
           if (isColorDuplicate) {
-            toast.error("Color theme is already used by another asset class");
-            return;
+            toast.error("Color theme is already used");
+            throw new Error("Duplicate");
           }
           if (data.id) {
-            dispatch(updateAssetClassAction({
+            await dispatch(updateAssetClassAction({
               id: data.id,
               data: {
                 name: data.name,
                 color: data.color
               }
-            }));
+            })).unwrap();
+            toast.success("Asset Class updated");
           } else {
-            dispatch(addAssetClassAction({
+            await dispatch(addAssetClassAction({
               name: data.name,
               color: data.color
-            }));
+            })).unwrap();
+            toast.success("Asset Class added");
           }
-          setIsAssetTypeModalOpen(false);
-          toast.success(data.id ? "Asset Class updated" : "Asset Class added");
         }}
-        onDelete={(id) => {
-          dispatch(removeAssetClassAction(id));
-          setIsAssetTypeModalOpen(false);
+        onDelete={async (id) => {
+          await dispatch(removeAssetClassAction(id)).unwrap();
           toast.success("Asset Class deleted");
         }}
       />

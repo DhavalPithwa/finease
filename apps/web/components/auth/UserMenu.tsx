@@ -64,14 +64,16 @@ export function UserMenu() {
               <p className="text-[10px] text-slate-500 font-medium mt-1 uppercase tracking-wider truncate">{user.email}</p>
             </div>
             
-            <Link 
-              href="/settings"
-              onClick={() => setIsOpen(false)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              Account Settings
-            </Link>
+            {user.role !== "admin" && (
+              <Link 
+                href="/settings"
+                onClick={() => setIsOpen(false)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                Account Settings
+              </Link>
+            )}
             
             <button 
               onClick={() => {

@@ -21,6 +21,11 @@ export class UsersService {
     return { id: doc.id, ...doc.data() } as User;
   }
 
+  async findAll(): Promise<User[]> {
+    const snapshot = await this.collection.get();
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as User);
+  }
+
   async update(uid: string, data: Partial<User>): Promise<User> {
     await this.collection.doc(uid).set(
       {

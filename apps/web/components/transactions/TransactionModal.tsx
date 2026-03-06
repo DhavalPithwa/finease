@@ -1,25 +1,27 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, ChevronDown } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import toast from "react-hot-toast";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 
 import { Transaction, TransactionFrequency, FinancialGoal, Category } from "@repo/types";
 
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: Partial<Transaction>) => void;
-  transaction?: Transaction | null; // The initial transaction to edit
+  onSave: (data: Partial<Transaction>) => Promise<void> | void;
+  transaction?: Transaction | null;
 }
 
 export function TransactionModal({ isOpen, onClose, onSave, transaction }: TransactionModalProps) {
   const accounts = useSelector((state: RootState) => state.accounts.items);
   const categories = useSelector((state: RootState) => state.categories.items);
   const goals = useSelector((state: RootState) => state.goals.items);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<{
     description: string;
     amount: string;
@@ -48,7 +50,6 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
       if (transaction) {
         setFormData({
           description: transaction.description,
@@ -78,13 +79,10 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
           recurringCount: "12",
         });
       }
-    } else {
-      document.body.style.overflow = 'auto';
     }
-    return () => { document.body.style.overflow = 'auto'; };
   }, [transaction, isOpen, accounts]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.description || !formData.amount) {
       toast.error("Please fill required fields (description & amount)");
       return;
@@ -93,244 +91,252 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction }: Trans
       toast.error("Please select a primary account");
       return;
     }
-    const payload: Partial<Transaction> = {
-      ...formData,
-      amount: parseFloat(formData.amount),
-      interestAmount: formData.interestAmount ? parseFloat(formData.interestAmount) : undefined,
-      recurringCount: formData.recurringCount,
-    };
-    onSave(payload);
-    toast.success(transaction ? "Transaction updated" : "Transaction added");
+
+    setIsSaving(true);
+    try {
+      const payload: Partial<Transaction> = {
+        ...formData,
+        amount: parseFloat(formData.amount),
+        interestAmount: formData.interestAmount ? parseFloat(formData.interestAmount) : undefined,
+        recurringCount: formData.recurringCount,
+      };
+      await onSave(payload);
+      toast.success(transaction ? "Transaction updated" : "Transaction added");
+      onClose();
+    } catch {
+      // Error handled by parent
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/80 backdrop-blur-sm">
-          <motion.div 
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="w-full max-w-md bg-white dark:bg-surface-dark rounded-t-[2rem] sm:rounded-2xl border border-slate-200 dark:border-border-dark shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
-          >
-            <div className="p-4 border-b border-slate-100 dark:border-border-dark flex items-center justify-between shrink-0">
-              <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">
-                {transaction ? "Edit Record" : "New Record"}
-              </h3>
-              <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
-                <X className="w-4 h-4 text-slate-500" />
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={transaction ? "Edit Record" : "New Record"}
+      footer={
+        <Button 
+          onClick={handleSave}
+          isLoading={isSaving}
+          className="w-full"
+        >
+          {transaction ? "Update Entry" : "Commit Record"}
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Merchant / Narration</label>
+          <input 
+            type="text" 
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            disabled={isSaving}
+            placeholder="e.g. Grocery, Salary..."
+            className="w-full p-2.5 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs text-slate-900 dark:text-white font-medium disabled:opacity-50"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Flow Type</label>
+            <div className="flex gap-1 bg-slate-100 dark:bg-slate-900/50 p-1 rounded-xl">
+              <button
+                disabled={isSaving}
+                onClick={() => setFormData({ ...formData, type: "expense" })}
+                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.type === "expense" ? "bg-white dark:bg-slate-800 text-rose-500 shadow-sm" : "text-slate-500"} disabled:opacity-50`}
+              >
+                Out
+              </button>
+              <button
+                disabled={isSaving}
+                onClick={() => setFormData({ ...formData, type: "income" })}
+                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.type === "income" ? "bg-white dark:bg-slate-800 text-emerald-500 shadow-sm" : "text-slate-500"} disabled:opacity-50`}
+              >
+                In
               </button>
             </div>
+          </div>
 
-            <div className="p-4 space-y-3.5 overflow-y-auto">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Execution</label>
+            <div className="flex gap-1 bg-slate-100 dark:bg-slate-900/50 p-1 rounded-xl">
+              <button
+                disabled={isSaving}
+                onClick={() => setFormData({ ...formData, isAutomated: false })}
+                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${!formData.isAutomated ? "bg-white dark:bg-slate-800 text-primary shadow-sm" : "text-slate-500"} disabled:opacity-50`}
+              >
+                One
+              </button>
+              <button
+                disabled={isSaving}
+                onClick={() => setFormData({ ...formData, isAutomated: true })}
+                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.isAutomated ? "bg-white dark:bg-slate-800 text-purple-500 shadow-sm" : "text-slate-500"} disabled:opacity-50`}
+              >
+                Recur
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Amount (₹)</label>
+          <input 
+            type="number" 
+            value={formData.amount}
+            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+            disabled={isSaving}
+            placeholder="0.00"
+            className="w-full p-2.5 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs font-bold text-slate-900 dark:text-white disabled:opacity-50"
+          />
+        </div>
+        
+        <div className="space-y-4">
+          {formData.type === "expense" ? (
+            <div className="flex flex-col gap-3.5">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Merchant / Narration</label>
-                <input 
-                  type="text" 
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="e.g. Grocery, Salary..."
-                  className="w-full p-2.5 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs text-slate-900 dark:text-white font-medium"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Flow Type</label>
-                  <div className="flex gap-1 bg-slate-100 dark:bg-slate-900/50 p-1 rounded-xl">
-                    <button
-                      onClick={() => setFormData({ ...formData, type: "expense" })}
-                      className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.type === "expense" ? "bg-white dark:bg-slate-800 text-rose-500 shadow-sm" : "text-slate-500"}`}
-                    >
-                      Out
-                    </button>
-                    <button
-                      onClick={() => setFormData({ ...formData, type: "income" })}
-                      className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.type === "income" ? "bg-white dark:bg-slate-800 text-emerald-500 shadow-sm" : "text-slate-500"}`}
-                    >
-                      In
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Execution</label>
-                  <div className="flex gap-1 bg-slate-100 dark:bg-slate-900/50 p-1 rounded-xl">
-                    <button
-                      onClick={() => setFormData({ ...formData, isAutomated: false })}
-                      className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${!formData.isAutomated ? "bg-white dark:bg-slate-800 text-primary shadow-sm" : "text-slate-500"}`}
-                    >
-                      One
-                    </button>
-                    <button
-                      onClick={() => setFormData({ ...formData, isAutomated: true })}
-                      className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.isAutomated ? "bg-white dark:bg-slate-800 text-purple-500 shadow-sm" : "text-slate-500"}`}
-                    >
-                      Recur
-                    </button>
-                  </div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Deduct From</label>
+                <div className="relative">
+                  <select 
+                    value={formData.accountId}
+                    onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                    disabled={isSaving}
+                    className="w-full p-2.5 pr-10 appearance-none bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs text-slate-900 dark:text-white font-medium disabled:opacity-50"
+                  >
+                    <option value="" disabled>Select Source</option>
+                    {accounts.filter(a => ["bank", "cash", "card", "investment"].includes(a.type)).map(acc => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} (₹{acc.balance.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 </div>
               </div>
-
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Amount (₹)</label>
-                <input 
-                  type="number" 
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  placeholder="0.00"
-                  className="w-full p-2.5 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs font-bold text-slate-900 dark:text-white"
-                />
-              </div>
-              
-              <div className="space-y-4">
-                {formData.type === "expense" ? (
-                  <div className="flex flex-col gap-3.5">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Deduct From</label>
-                      <div className="relative">
-                        <select 
-                          value={formData.accountId}
-                          onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
-                          className="w-full p-2.5 pr-10 appearance-none bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs text-slate-900 dark:text-white font-medium"
-                        >
-                          <option value="" disabled>Select Source</option>
-                          {accounts.filter(a => ["bank", "cash", "card"].includes(a.type)).map(acc => (
-                            <option key={acc.id} value={acc.id}>
-                              {acc.name} (₹{acc.balance.toLocaleString()})
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Credit / Invest To (Optional)</label>
-                      <div className="relative">
-                        <select 
-                          value={formData.toAccountId}
-                          onChange={(e) => setFormData({ ...formData, toAccountId: e.target.value })}
-                          className="w-full p-2.5 pr-10 appearance-none bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs text-slate-900 dark:text-white font-medium"
-                        >
-                          <option value="">(None)</option>
-                          <optgroup label="Assets & Accounts">
-                            {accounts.filter(acc => acc.id !== formData.accountId && acc.type !== 'asset').map(acc => (
-                              <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
-                            ))}
-                          </optgroup>
-                          {goals && goals.length > 0 && (
-                            <optgroup label="Goals">
-                              {goals.map((g: FinancialGoal) => (
-                                <option key={g.id} value={g.id}>{g.name} (₹{g.currentAmount.toLocaleString()})</option>
-                              ))}
-                            </optgroup>
-                          )}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                      </div>
-                      {accounts.find(a => a.id === formData.toAccountId)?.type === "debt" && (
-                        <div className="pt-2">
-                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Interest Portion (₹)</label>
-                          <input 
-                            type="number" 
-                            value={formData.interestAmount}
-                            onChange={(e) => setFormData({ ...formData, interestAmount: e.target.value })}
-                            placeholder="0.00"
-                            className="w-full p-2.5 mt-1 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs font-medium text-slate-900 dark:text-white"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Deposit To</label>
-                    <div className="relative">
-                      <select 
-                        value={formData.accountId}
-                        onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
-                        className="w-full p-2.5 pr-10 appearance-none bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs text-slate-900 dark:text-white font-medium"
-                      >
-                        <option value="" disabled>Select Destination</option>
-                        {accounts.filter(a => ["bank", "cash", "card"].includes(a.type)).map(acc => (
-                          <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Credit / Invest To (Optional)</label>
+                <div className="relative">
+                  <select 
+                    value={formData.toAccountId}
+                    onChange={(e) => setFormData({ ...formData, toAccountId: e.target.value })}
+                    disabled={isSaving}
+                    className="w-full p-2.5 pr-10 appearance-none bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs text-slate-900 dark:text-white font-medium disabled:opacity-50"
+                  >
+                    <option value="">(None)</option>
+                    <optgroup label="Assets & Accounts">
+                      {accounts.filter(acc => acc.id !== formData.accountId && acc.type !== 'asset').map(acc => (
+                        <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
+                      ))}
+                    </optgroup>
+                    {goals && goals.length > 0 && (
+                      <optgroup label="Goals">
+                        {goals.map((g: FinancialGoal) => (
+                          <option key={g.id} value={g.id}>{g.name} (₹{g.currentAmount.toLocaleString()})</option>
                         ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                    </div>
+                      </optgroup>
+                    )}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+                {accounts.find(a => a.id === formData.toAccountId)?.type === "debt" && (
+                  <div className="pt-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Interest Portion (₹)</label>
+                    <input 
+                      type="number" 
+                      value={formData.interestAmount}
+                      onChange={(e) => setFormData({ ...formData, interestAmount: e.target.value })}
+                      disabled={isSaving}
+                      placeholder="0.00"
+                      className="w-full p-2.5 mt-1 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs font-medium text-slate-900 dark:text-white disabled:opacity-50"
+                    />
                   </div>
                 )}
               </div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Deposit To</label>
+              <div className="relative">
+                <select 
+                  value={formData.accountId}
+                  onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                  disabled={isSaving}
+                  className="w-full p-2.5 pr-10 appearance-none bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs text-slate-900 dark:text-white font-medium disabled:opacity-50"
+                >
+                  <option value="" disabled>Select Destination</option>
+                  {accounts.filter(a => ["bank", "cash", "card"].includes(a.type)).map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
+          )}
+        </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Date</label>
-                  <input 
-                    type="date" 
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full p-2.5 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs font-medium text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category</label>
-                  <div className="relative">
-                    <select 
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full p-2.5 pr-8 appearance-none bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs text-slate-900 dark:text-white font-medium"
-                    >
-                      {categories.map((cat: Category) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                  </div>
+        <div className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Date</label>
+            <input 
+              type="date" 
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              disabled={isSaving}
+              className="w-full h-12 p-3 bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-sm font-medium text-slate-900 dark:text-white disabled:opacity-50"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category</label>
+            <div className="relative">
+              <select 
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                disabled={isSaving}
+                className="w-full h-12 p-3 pr-10 appearance-none bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50"
+              >
+                {categories.map((cat: Category) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+        </div>
+
+        {formData.isAutomated && (
+          <div className="p-3 bg-purple-500/5 dark:bg-purple-500/10 rounded-2xl border border-purple-500/10 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-purple-500 uppercase tracking-widest ml-1">Frequency</label>
+                <div className="relative">
+                  <select 
+                    value={formData.frequency}
+                    onChange={(e) => setFormData({ ...formData, frequency: e.target.value as TransactionFrequency })}
+                    disabled={isSaving}
+                    className="w-full p-2 bg-white dark:bg-[#0b0d12] border border-purple-500/20 rounded-xl focus:ring-2 focus:ring-purple-500 transition-all outline-none text-[10px] font-bold text-purple-600 dark:text-purple-400 disabled:opacity-50"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
                 </div>
               </div>
-
-              {formData.isAutomated && (
-                <div className="p-3 bg-purple-500/5 dark:bg-purple-500/10 rounded-2xl border border-purple-500/10 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-purple-500 uppercase tracking-widest ml-1">Frequency</label>
-                      <div className="relative">
-                        <select 
-                          value={formData.frequency}
-                          onChange={(e) => setFormData({ ...formData, frequency: e.target.value as TransactionFrequency })}
-                          className="w-full p-2 bg-white dark:bg-[#0b0d12] border border-purple-500/20 rounded-xl focus:ring-2 focus:ring-purple-500 transition-all outline-none text-[10px] font-bold text-purple-600 dark:text-purple-400"
-                        >
-                          <option value="daily">Daily</option>
-                          <option value="weekly">Weekly</option>
-                          <option value="monthly">Monthly</option>
-                          <option value="yearly">Yearly</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-purple-500 uppercase tracking-widest ml-1">Occurrences</label>
-                      <input 
-                        type="number" 
-                        value={formData.recurringCount}
-                        onChange={(e) => setFormData({ ...formData, recurringCount: e.target.value })}
-                        className="w-full p-2 bg-white dark:bg-[#0b0d12] border border-purple-500/20 rounded-xl focus:ring-2 focus:ring-purple-500 transition-all outline-none text-[10px] font-bold text-purple-600 dark:text-purple-400"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <button 
-                onClick={handleSave}
-                className="w-full mt-2 py-3.5 bg-primary hover:bg-primary-dark text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
-              >
-                {transaction ? "Update Entry" : "Commit Record"}
-              </button>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-purple-500 uppercase tracking-widest ml-1">Occurrences</label>
+                <input 
+                  type="number" 
+                  value={formData.recurringCount}
+                  onChange={(e) => setFormData({ ...formData, recurringCount: e.target.value })}
+                  disabled={isSaving}
+                  className="w-full p-2 bg-white dark:bg-[#0b0d12] border border-purple-500/20 rounded-xl focus:ring-2 focus:ring-purple-500 transition-all outline-none text-[10px] font-bold text-purple-600 dark:text-purple-400 disabled:opacity-50"
+                />
+              </div>
             </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }

@@ -7,12 +7,14 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import type { AxiosError } from "axios";
 import { toast } from "react-hot-toast";
+import { Button } from "@/components/ui/Button";
 
 export default function LoginPage() {
   const { loginWithGoogle, user, resetPassword } = useAuth();
   const [userEmail, setUserEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Forgot password state
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
@@ -31,12 +33,15 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setIsLoading(true);
     try {
       await loginWithGoogle(userEmail, undefined, password);
       router.push("/dashboard");
     } catch (err) {
       const axiosErr = err as AxiosError<{ message: string }>;
       setError(axiosErr.response?.data?.message ?? axiosErr.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -109,9 +114,9 @@ export default function LoginPage() {
             />
           </div>
 
-          <button type="submit" className="w-full mt-2 bg-primary hover:bg-primary-dark text-white text-sm font-bold h-10 rounded-xl transition-all shadow-lg shadow-primary/25 active:scale-[0.98]">
+          <Button type="submit" isLoading={isLoading} className="w-full mt-2 h-10">
             Sign In Securely
-          </button>
+          </Button>
         </form>
 
         <p className="text-center text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -155,13 +160,13 @@ export default function LoginPage() {
                 >
                   Cancel
                 </button>
-                <button 
+                <Button 
                   type="submit"
-                  disabled={isResetting}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold bg-primary hover:bg-primary-dark text-white transition-all shadow-lg shadow-primary/25 active:scale-[0.98] disabled:opacity-75 disabled:active:scale-100"
+                  isLoading={isResetting}
+                  className="flex-1 py-3 px-4 h-auto"
                 >
-                  {isResetting ? "Resetting..." : "Reset"}
-                </button>
+                  Reset
+                </Button>
               </div>
             </form>
           </div>

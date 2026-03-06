@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { NetWorthChart } from "@/components/dashboard/NetWorthChart";
 import { AssetAllocationDonut } from "@/components/dashboard/AssetLiabilityDonut";
 import { GoalProgressCard } from "@/components/dashboard/GoalProgressCard";
@@ -11,17 +11,21 @@ import { createAccount, fetchAccounts } from "@/store/slices/accountsSlice";
 import { AddAccountModal } from "@/components/accounts/AddAccountModal";
 import { FinancialGoal, AccountType } from "@repo/types";
 import Link from "next/link";
-import { useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Plus, Target as TargetIcon } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useSignals } from "@/components/providers/SignalProvider";
+import { Button } from "@/components/ui/Button";
 
 export default function Home() {
   const { user } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
+  const { permission, requestPermission } = useSignals();
+  
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+
   const accounts = useSelector((state: RootState) => state.accounts.items);
   const goals = useSelector((state: RootState) => state.goals.items);
   const stats = useSelector((state: RootState) => state.stats.data);
@@ -31,8 +35,12 @@ export default function Home() {
   useEffect(() => {
     if (user) {
       dispatch(fetchAccounts());
+      
+      if (permission === "default") {
+        requestPermission();
+      }
     }
-  }, [dispatch, user]);
+  }, [dispatch, user, permission, requestPermission]);
 
   const regularAccounts = accounts.filter(acc => acc.type === 'bank' || acc.type === 'cash' || acc.type === 'card');
   const investmentAccounts = accounts.filter(acc => acc.type === 'investment');
@@ -42,7 +50,6 @@ export default function Home() {
   const liabilities = Math.abs(debts.reduce((sum, item) => sum + item.balance, 0));
   const realTimeNetWorth = assets - liabilities;
 
-  // Real-time asset allocation from investments
   const allocationMap: Record<string, number> = {};
   investmentAccounts.forEach(inv => {
     allocationMap[inv.assetType || 'Other'] = (allocationMap[inv.assetType || 'Other'] || 0) + inv.balance;
@@ -55,13 +62,11 @@ export default function Home() {
     color: colors[idx % colors.length] || '#000000'
   }));
 
-  // Computed Net Worth History (Last 6 Months)
   const computedNetWorthHistory = useMemo(() => {
     const history: { month: string; value: number; dateObj: Date }[] = [];
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
     
-    // Create an initial array of the last 6 months (including current)
     for (let i = 0; i < 6; i++) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         history.unshift({
@@ -71,35 +76,30 @@ export default function Home() {
         });
     }
 
-    // Work backwards from the realTimeNetWorth to compute historical values
     let runningNW = realTimeNetWorth;
-    // Set current month's calculated value
-    history[5]!.value = runningNW;
+    if (history[5]) history[5].value = runningNW;
     
     for (let i = 4; i >= 0; i--) {
         const nextMonthData = history[i+1]!;
         const nextMonth = nextMonthData.dateObj;
         
-        // Find transactions that happened in nextMonth to reverse them
         const txInNextMonth = transactions.filter(tx => {
             if (tx.status === 'pending_confirmation') return false;
             const txDate = new Date(tx.date);
             return txDate.getMonth() === nextMonth.getMonth() && txDate.getFullYear() === nextMonth.getFullYear();
         });
 
-        // Reversing: if we earned income, the past NW was LOWER. If we spent, the past NW was HIGHER.
         const netFlowNextMonth = txInNextMonth.reduce((acc, tx) => {
             return acc + (tx.type === 'income' ? tx.amount : -tx.amount);
         }, 0);
 
         runningNW = runningNW - netFlowNextMonth;
-        history[i]!.value = runningNW;
+        if (history[i]) history[i].value = runningNW;
     }
 
     return history.map(h => ({ month: h.month, value: h.value > 0 ? h.value : 0 }));
   }, [transactions, realTimeNetWorth]);
 
-  // Net Worth Change percentage
   const netWorthChange = useMemo(() => {
     if (computedNetWorthHistory.length < 2) return 0;
     const last = computedNetWorthHistory[computedNetWorthHistory.length - 1]?.value || 0;
@@ -108,13 +108,11 @@ export default function Home() {
     return parseFloat(((last - prev) / prev * 100).toFixed(1));
   }, [computedNetWorthHistory]);
 
-  // Dynamic Insights Calculation
   const insights = useMemo(() => {
-    const now = new Date();
     const last30Days = transactions.filter(tx => {
       if (tx.status === 'pending_confirmation') return false;
       const d = new Date(tx.date);
-      const diffTime = Math.abs(now.getTime() - d.getTime());
+      const diffTime = Math.abs(new Date().getTime() - d.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays <= 30;
     });
@@ -122,11 +120,9 @@ export default function Home() {
     const monthlyIncome = last30Days.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
     const monthlyExpense = last30Days.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
     
-    // Average monthly expense baseline (fallback to 1 if 0 to avoid Infinity)
     const avgExpense = monthlyExpense || (assets * 0.05) || 1;
     const runwayMonths = (assets / avgExpense).toFixed(1);
     
-    // Freedom Score Logic
     const runwayScore = Math.min(50, (parseFloat(runwayMonths) / 24) * 50);
     const savingsRate = monthlyIncome > 0 ? (monthlyIncome - monthlyExpense) / monthlyIncome : 0;
     const savingsScore = Math.min(25, savingsRate * 100);
@@ -135,15 +131,15 @@ export default function Home() {
     const freedomScore = (runwayScore + savingsScore + goalScore).toFixed(1);
     
     let status = "Stabilizing";
-    if (parseFloat(freedomScore) > 80) status = "Excellent";
-    else if (parseFloat(freedomScore) > 60) status = "Strong";
-    else if (parseFloat(freedomScore) > 40) status = "Moderate";
+    const scoreVal = parseFloat(freedomScore);
+    if (scoreVal > 80) status = "Excellent";
+    else if (scoreVal > 60) status = "Strong";
+    else if (scoreVal > 40) status = "Moderate";
 
-    // Dynamic Suggestion
     const incompleteGoal = goals.find(g => g.currentAmount < g.targetAmount);
     const suggestion = incompleteGoal 
       ? `Increasing saving rate by 5% reaches "${incompleteGoal.name}" approx. ${Math.ceil((incompleteGoal.targetAmount - incompleteGoal.currentAmount) / (avgExpense * 0.05))} days faster.`
-      : "You've reached all your primary goals! Time to set a new milestone.";
+      : "You've reached all your primary goals!";
 
     return {
       runwayMonths,
@@ -156,29 +152,16 @@ export default function Home() {
 
   if (loading && accounts.length === 0) {
     return (
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full space-y-8 animate-pulse text-white">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full space-y-8 animate-pulse">
         <div className="space-y-3">
           <Skeleton className="h-10 w-64" />
           <Skeleton className="h-5 w-96" />
         </div>
-        
-        <div className="space-y-8">
-          <div className="space-y-4">
-            <Skeleton className="h-4 w-32" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Skeleton className="h-24 rounded-2xl" />
-              <Skeleton className="h-24 rounded-2xl" />
-              <Skeleton className="h-24 rounded-2xl" />
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="p-5 space-y-3 shadow-none border-slate-100 dark:border-slate-800">
               <Skeleton className="h-3 w-20" />
               <Skeleton className="h-8 w-32" />
-              <Skeleton className="h-3 w-24" />
             </Card>
           ))}
         </div>
@@ -187,46 +170,45 @@ export default function Home() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 w-full pb-8 lg:pb-8 pt-0">
-      {/* Sticky Top Section */}
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 w-full pb-8 pt-0">
       <PageHeader
         title="Command Center"
         subtitle="Unified wealth landscape"
         actions={
-          <button 
-            onClick={() => setIsAccountModalOpen(true)}
-            className="flex items-center justify-center gap-2 h-8 px-4 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-primary/20 w-full sm:w-auto"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Account
-          </button>
+          <div className="flex gap-2">
+            <Button 
+              size="sm"
+              onClick={() => setIsAccountModalOpen(true)}
+              leftIcon={<Plus className="w-3.5 h-3.5" />}
+            >
+              Account
+            </Button>
+          </div>
         }
       />
 
-      {/* Row 1: Account Lists at Top */}
       <div className="space-y-4">
-            {regularAccounts.length > 0 && (
-              <div className="space-y-2">
-                <div className="bg-slate-50 dark:bg-white/5 -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-                  <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Liquid Capital</h3>
-                  <span className="text-[8px] font-black text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded tracking-[0.1em]">{regularAccounts.length} Units</span>
-                </div>
-                <AccountList accounts={regularAccounts} />
-              </div>
-            )}
+        {regularAccounts.length > 0 && (
+          <div className="space-y-2">
+            <div className="bg-slate-50 dark:bg-white/5 -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+              <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Liquid Capital</h3>
+              <span className="text-[8px] font-black text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded tracking-[0.1em]">{regularAccounts.length} Units</span>
+            </div>
+            <AccountList accounts={regularAccounts} />
+          </div>
+        )}
 
-            {investmentAccounts.length > 0 && (
-              <div className="space-y-2">
-                <div className="bg-slate-50 dark:bg-white/5 -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-                  <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Investment Portfolio</h3>
-                  <span className="text-[8px] font-black text-indigo-500 uppercase bg-indigo-500/10 px-1.5 py-0.5 rounded tracking-[0.1em]">{investmentAccounts.length} Assets</span>
-                </div>
-                <AccountList accounts={investmentAccounts} />
-              </div>
-            )}
+        {investmentAccounts.length > 0 && (
+          <div className="space-y-2">
+            <div className="bg-slate-50 dark:bg-white/5 -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+              <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Investment Portfolio</h3>
+              <span className="text-[8px] font-black text-indigo-500 uppercase bg-indigo-500/10 px-1.5 py-0.5 rounded tracking-[0.1em]">{investmentAccounts.length} Assets</span>
+            </div>
+            <AccountList accounts={investmentAccounts} />
+          </div>
+        )}
       </div>
 
-      {/* Row 2: Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all">
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Net Worth</div>
@@ -239,7 +221,7 @@ export default function Home() {
 
         <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all">
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Period Inflow</div>
-          <div className="text-lg font-black text-emerald-500 tracking-tighter truncate">₹{(parseInt(insights.runwayMonths) * 0).toLocaleString() /* Placeholder for period flow logic if available, else 0 */} {insights.savingsRate}% Savings</div>
+          <div className="text-lg font-black text-emerald-500 tracking-tighter truncate">₹{(parseFloat(insights.runwayMonths) * 0).toLocaleString()} {insights.savingsRate}% Savings</div>
           <div className="mt-2 flex items-center gap-1.5">
              <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-white/10" />
              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">30 Day Window</span>
@@ -248,7 +230,7 @@ export default function Home() {
 
         <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all">
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Period Outflow</div>
-          <div className="text-lg font-black text-rose-500 tracking-tighter truncate">₹{liabilities.toLocaleString() /* Using liabilities as a fallback or similar flow stat */}</div>
+          <div className="text-lg font-black text-rose-500 tracking-tighter truncate">₹{liabilities.toLocaleString()}</div>
           <div className="mt-2 flex items-center gap-1.5">
              <div className="w-1 h-1 rounded-full bg-rose-500/20" />
              <span className="text-[8px] font-black text-rose-400 uppercase tracking-widest">Efficiency 100%</span>
@@ -265,9 +247,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Row 1: Split, Goals, Insights */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:items-stretch">
-        <AssetAllocationDonut data={realTimeAssetAllocation.length > 0 ? realTimeAssetAllocation : stats.assetAllocation} />
+        <AssetAllocationDonut data={realTimeAssetAllocation.length > 0 ? realTimeAssetAllocation : (stats?.assetAllocation || [])} />
         
         <div className="space-y-4 flex flex-col">
             <div className="flex items-center justify-between px-1">
@@ -283,7 +264,7 @@ export default function Home() {
               </div>
             ) : (
                 goals.slice(0, 3).map((goal: FinancialGoal) => {
-                  const pace = stats.goalPacing.find((pByGoal: { goalId: string; expectedPercentage: number; actualPercentage: number }) => pByGoal.goalId === goal.id);
+                  const pace = stats?.goalPacing.find((pByGoal) => pByGoal.goalId === goal.id);
                   return (
                     <GoalProgressCard 
                       key={goal.id}
@@ -316,7 +297,6 @@ export default function Home() {
           </Card>
       </div>
 
-      {/* Row 2: Wealth Pulse */}
       <div>
         <NetWorthChart 
             data={computedNetWorthHistory} 
@@ -325,12 +305,11 @@ export default function Home() {
         />
       </div>
 
-      {/* Transfer UI Overlay */}
       <AddAccountModal 
         isOpen={isAccountModalOpen} 
         onClose={() => setIsAccountModalOpen(false)} 
-        onSave={(data) => {
-          dispatch(createAccount({
+        onSave={async (data) => {
+          await dispatch(createAccount({
             name: data.name,
             type: data.type as AccountType,
             assetType: "",
@@ -338,8 +317,7 @@ export default function Home() {
             minimumBalance: parseFloat(data.minimumBalance || "0") || 0,
             maxLimit: parseFloat(data.maxLimit || "0") || 0,
             currency: "INR",
-          }));
-          setIsAccountModalOpen(false);
+          })).unwrap();
         }} 
       />
     </div>

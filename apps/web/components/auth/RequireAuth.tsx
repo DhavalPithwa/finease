@@ -23,11 +23,29 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!authLoading && !user && pathname && !PUBLIC_ROUTES.includes(pathname)) {
       router.push("/");
+      return;
     }
     
-    // Auto-redirect logged-in users from landing to dashboard
-    if (!authLoading && user && pathname === "/") {
+    // Admin route protection: Kicking non-admins out of /admin routes
+    if (!authLoading && user && pathname?.startsWith("/admin") && user.role !== "admin") {
       router.push("/dashboard");
+      return;
+    }
+
+    // User route protection: Kicking admins out of regular user routes
+    const USER_ONLY_ROUTES = ["/dashboard", "/transactions", "/accounts", "/portfolio", "/goals", "/settings"];
+    if (!authLoading && user && user.role === "admin" && USER_ONLY_ROUTES.some(route => pathname?.startsWith(route))) {
+      router.push("/admin/dashboard");
+      return;
+    }
+
+    // Auto-redirect logged-in users from landing to their respective dashboards
+    if (!authLoading && user && pathname === "/") {
+      if (user.role === "admin") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
     }
   }, [user, authLoading, pathname, router]);
 
@@ -42,12 +60,18 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     (transactionsCount === 0 && transactionsLoading)
   );
 
-  if (authLoading || isDataFetching) {
+  if (authLoading) {
     return <Loading />;
   }
 
   // If not loading, not user, and is not public route, it will redirect, but meanwhile return null to prevent flash
   if (!user && pathname && !PUBLIC_ROUTES.includes(pathname)) {
+    return null;
+  }
+
+  // If we are authenticated but fetching initial data, return null to let 
+  // SecurityProvider's splash screen exit naturally or show skeleton in children
+  if (isDataFetching) {
     return null;
   }
 

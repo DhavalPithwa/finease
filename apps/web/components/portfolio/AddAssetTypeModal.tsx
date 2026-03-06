@@ -1,22 +1,26 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { X, LayoutGrid } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { LayoutGrid } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 
 interface AddAssetTypeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { id?: string; name: string; color: string }) => void;
-  onDelete?: (id: string) => void;
+  onSave: (data: { id?: string; name: string; color: string }) => Promise<void> | void;
+  onDelete?: (id: string) => Promise<void> | void;
   assetType?: { id: string; name: string; color: string } | null;
 }
 
 export function AddAssetTypeModal({ isOpen, onClose, onSave, onDelete, assetType }: AddAssetTypeModalProps) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("bg-indigo-500");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
       if (assetType) {
         setName(assetType.name);
         setColor(assetType.color);
@@ -24,10 +28,7 @@ export function AddAssetTypeModal({ isOpen, onClose, onSave, onDelete, assetType
         setName("");
         setColor("bg-indigo-500");
       }
-    } else {
-      document.body.style.overflow = 'auto';
     }
-    return () => { document.body.style.overflow = 'auto'; };
   }, [assetType, isOpen]);
 
   const colors = [
@@ -41,82 +42,94 @@ export function AddAssetTypeModal({ isOpen, onClose, onSave, onDelete, assetType
     "bg-amber-500"
   ];
 
-  if (!isOpen) return null;
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    setIsSaving(true);
+    try {
+      await onSave({ id: assetType?.id, name, color });
+      onClose();
+    } catch {
+      // Error handled by parent
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!assetType || !onDelete) return;
+    setIsDeleting(true);
+    try {
+      await onDelete(assetType.id);
+      onClose();
+    } catch {
+      // Error handled by parent
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md">
-          <motion.div 
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] overflow-hidden max-h-[92vh] flex flex-col"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={assetType ? "Class Refinement" : "New Asset Class"}
+      maxWidth="max-w-sm"
+      footer={
+        <div className="flex gap-3 w-full">
+          {assetType && onDelete && (
+            <Button
+              variant="danger"
+              onClick={handleDelete}
+              isLoading={isDeleting}
+              disabled={isSaving}
+              className="flex-1"
+            >
+              Scrap
+            </Button>
+          )}
+          <Button
+            onClick={handleSave}
+            isLoading={isSaving}
+            disabled={isDeleting || !name.trim()}
+            className="flex-[2]"
+            leftIcon={<LayoutGrid className="w-4 h-4" />}
           >
-            <div className="px-5 py-3.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between shrink-0">
-              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
-                {assetType ? "Class Refinement" : "New Asset Class"}
-              </h3>
-              <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-400">
-                <X className="w-4 h-4" />
+            {assetType ? "Commit" : "Create"}
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Class Label</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={isSaving || isDeleting}
+            placeholder="e.g. Equity, Gold..."
+            className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-slate-400"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Visual Identity</label>
+          <div className="flex flex-wrap gap-2.5 px-1 py-1">
+            {colors.map((c) => (
+              <button
+                key={c}
+                disabled={isSaving || isDeleting}
+                onClick={() => setColor(c)}
+                className={`w-6 h-6 rounded-full ${c} transition-all active:scale-90 flex items-center justify-center ${
+                  color === c ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900 shadow-lg" : ""
+                }`}
+              >
+                {color === c && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
               </button>
-            </div>
-
-            <div className="p-5 space-y-4 overflow-y-auto">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Class Label</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Equity, Gold..."
-                  className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-slate-400"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Visual Identity</label>
-                <div className="flex flex-wrap gap-2.5 px-1 py-1">
-                  {colors.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setColor(c)}
-                      className={`w-6 h-6 rounded-full ${c} transition-all active:scale-90 flex items-center justify-center ${
-                        color === c ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900 shadow-lg" : ""
-                      }`}
-                    >
-                      {color === c && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-slate-50 dark:bg-slate-950/50 mt-auto border-t border-slate-100 dark:border-white/5 flex gap-3">
-                {assetType && onDelete && (
-                  <button
-                    onClick={() => onDelete(assetType.id)}
-                    className="flex-1 h-10 bg-rose-50 dark:bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-100 transition-all active:scale-95 border border-rose-100 dark:border-rose-500/20"
-                  >
-                    Scrap
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    if(name.trim()) {
-                      onSave({ id: assetType?.id, name, color });
-                    }
-                  }}
-                  className="flex-[2] h-10 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2"
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                  {assetType ? "Commit" : "Create"}
-                </button>
-              </div>
-        </motion.div>
+            ))}
+          </div>
+        </div>
       </div>
-     )}
-    </AnimatePresence>
+    </Modal>
   );
 }

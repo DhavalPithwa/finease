@@ -3,17 +3,29 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export function TopNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
-  const navLinks = [
+  const isAdmin = user?.role === 'admin';
+
+  const userLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/goals", label: "Goals" },
     { href: "/portfolio", label: "Portfolio" },
     { href: "/transactions", label: "Transactions" },
     { href: "/reports", label: "Reports" },
   ];
+
+  const adminLinks = [
+    { href: "/admin/dashboard", label: "Command Room" },
+    { href: "/admin/users", label: "Governance" },
+    { href: "/admin/reports", label: "Institutional" },
+  ];
+
+  const navLinks = isAdmin ? adminLinks : userLinks;
 
   return (
     <nav className="hidden lg:flex items-center gap-8">
@@ -24,10 +36,10 @@ export function TopNav() {
             key={link.href}
             href={link.href}
             className={clsx(
-              "text-sm transition-colors",
+              "text-[10px] font-black uppercase tracking-widest transition-all",
               isActive
-                ? "font-bold text-primary"
-                : "font-medium text-slate-500 hover:text-primary"
+                ? "text-primary"
+                : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
             )}
           >
             {link.label}
