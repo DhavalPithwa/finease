@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, createContext, useContext, useState } from "react";
+import {
+  useEffect,
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+} from "react";
 import toast from "react-hot-toast";
 
 interface SignalContextType {
@@ -27,7 +33,7 @@ export function SignalProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const requestPermission = async () => {
+  const requestPermission = useCallback(async () => {
     if (typeof window === "undefined") return;
 
     // Detection for iOS
@@ -73,11 +79,11 @@ export function SignalProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: unknown) {
       console.error(
-        'Error requesting notification permission:',
+        "Error requesting notification permission:",
         error instanceof Error ? error.message : String(error),
       );
     }
-  };
+  }, [isSupported]);
 
   return (
     <SignalContext.Provider
