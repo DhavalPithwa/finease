@@ -32,14 +32,15 @@ export function GlobalLoadingBar() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
     if (isLoading) {
-      if (timeout!) clearTimeout(timeout);
       setVisible(true);
     } else {
       timeout = setTimeout(() => setVisible(false), 400);
     }
-    return () => { if (timeout!) clearTimeout(timeout); };
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
   }, [isLoading]);
 
   return (

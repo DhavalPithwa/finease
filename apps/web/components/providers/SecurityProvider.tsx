@@ -117,27 +117,27 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   const accountsCount = useSelector((state: RootState) => state.accounts.items.length);
 
   useEffect(() => {
-    const initSecurity = async () => {
-      if (isLocked && lockType === "biometric") {
-        const timer = setTimeout(() => {
-          authenticate();
-        }, 50);
-        return () => clearTimeout(timer);
-      }
-      
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    
+    if (isLocked && lockType === "biometric") {
+      timer = setTimeout(() => {
+        void authenticate();
+      }, 50);
+    } else {
       // Wait for Auth AND Data (if logged in) to prevent "blink"
       const isAuthReady = !authLoading;
       const isDataReady = user ? (accountsCount > 0 || !accountsLoading) : true;
       
       if (isAuthReady && isDataReady) {
-        const timer = setTimeout(() => {
+        timer = setTimeout(() => {
           setIsChecking(false);
         }, 600); // Buffer for animations
-        return () => clearTimeout(timer);
       }
-    };
+    }
 
-    initSecurity();
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [authenticate, isLocked, lockType, authLoading, user, accountsLoading, accountsCount]);
 
   const registerCredential = async (): Promise<boolean> => {

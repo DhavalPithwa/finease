@@ -55,6 +55,12 @@ export class RemindersService {
     data: Partial<Reminder>,
   ): Promise<Reminder> {
     const reminderRef = this.collection.doc(reminderId);
+    const doc = await reminderRef.get();
+
+    if (!doc.exists || doc.data()?.userId !== userId) {
+      throw new Error('Reminder not found or unauthorized');
+    }
+
     await reminderRef.update(data);
     const updated = await reminderRef.get();
     const updatedData = updated.data() as Partial<Reminder> | undefined;
@@ -71,6 +77,11 @@ export class RemindersService {
   }
 
   async deleteReminder(userId: string, reminderId: string): Promise<void> {
-    await this.collection.doc(reminderId).delete();
+    const reminderRef = this.collection.doc(reminderId);
+    const doc = await reminderRef.get();
+
+    if (doc.exists && doc.data()?.userId === userId) {
+      await reminderRef.delete();
+    }
   }
 }
