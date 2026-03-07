@@ -19,21 +19,29 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl shadow-2xl ring-1 ring-white/10">
-        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{payload[0]?.name}</p>
-        <p className="text-sm font-black text-white leading-none">{formatCurrency(payload[0]?.value || 0)}</p>
+        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">
+          {payload[0]?.name}
+        </p>
+        <p className="text-sm font-black text-white leading-none">
+          {formatCurrency(payload[0]?.value || 0)}
+        </p>
       </div>
     );
   }
   return null;
 };
 
-export function AssetAllocationDonut({ data }: { data: AssetAllocationData[] }) {
+export function AssetAllocationDonut({
+  data,
+}: {
+  data: AssetAllocationData[];
+}) {
   const total = data.reduce((acc, curr) => acc + curr.value, 0);
   const ghostData = [{ value: 1 }];
 
   return (
-    <Card 
-      title="Wealth Split" 
+    <Card
+      title="Wealth Split"
       subtitle="Asset distribution"
       className="flex flex-col h-full shadow-none border-slate-100 dark:border-slate-800"
     >
@@ -66,10 +74,10 @@ export function AssetAllocationDonut({ data }: { data: AssetAllocationData[] }) 
                 animationDuration={1500}
               >
                 {data.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.color} 
-                    className="hover:opacity-80 transition-opacity cursor-pointer outline-none shadow-xl" 
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.color}
+                    className="hover:opacity-80 transition-opacity cursor-pointer outline-none shadow-xl"
                   />
                 ))}
               </Pie>
@@ -77,17 +85,21 @@ export function AssetAllocationDonut({ data }: { data: AssetAllocationData[] }) 
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-slate-400 text-[8px] font-black uppercase tracking-[0.2em] mb-0.5">Total</span>
-            <span className="text-slate-900 dark:text-white text-xl font-black">{formatCurrency(total)}</span>
+            <span className="text-slate-400 text-[8px] font-black uppercase tracking-[0.2em] mb-0.5">
+              Total
+            </span>
+            <span className="text-slate-900 dark:text-white text-xl font-black">
+              {formatCurrency(total)}
+            </span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-4 w-full px-2">
           {data.map((item, idx) => (
             <div key={idx} className="flex items-start gap-2 group/item">
-              <div 
-                className="w-1 h-6 rounded-full transition-transform group-hover/item:scale-y-125" 
-                style={{ backgroundColor: item.color }} 
+              <div
+                className="w-1 h-6 rounded-full transition-transform group-hover/item:scale-y-125"
+                style={{ backgroundColor: item.color }}
               />
               <div className="flex flex-col">
                 <span className="text-[8px] text-slate-400 font-black uppercase tracking-widest mb-0.5 flex items-center gap-1">

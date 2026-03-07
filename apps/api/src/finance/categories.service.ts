@@ -19,14 +19,19 @@ export class CategoriesService {
 
   async findAll(userId: string): Promise<Category[]> {
     const snapshot = await this.collection.where('userId', '==', userId).get();
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...(doc.data() as Omit<Category, 'id'>),
-    }));
+    return snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<Category, 'id'>),
+      }))
+      .filter((category) => !category.deletedAt);
   }
 
   async create(category: Partial<Category>): Promise<Category> {
-    const docRef = await this.collection.add(category);
+    const docRef = await this.collection.add({
+      ...category,
+      deletedAt: null,
+    });
     const doc = await docRef.get();
     return { id: doc.id, ...(doc.data() as Omit<Category, 'id'>) };
   }
@@ -38,19 +43,24 @@ export class CategoriesService {
   }
 
   async remove(id: string): Promise<void> {
-    // Check if any transaction is using this category
+    // Check if any active transaction is using this category
     const transactionsSnapshot = await this.db
       .collection(this.transactionsCollection)
       .where('category', '==', id)
-      .limit(1)
       .get();
 
-    if (!transactionsSnapshot.empty) {
+    const activeTransactions = transactionsSnapshot.docs.filter(
+      (doc) => !(doc.data() as { deletedAt?: string | null }).deletedAt,
+    );
+
+    if (activeTransactions.length > 0) {
       throw new BadRequestException(
-        'Cannot delete Category: it is still associated with one or more transactions. Please update those transactions first.',
+        'Cannot archive Category: it is still associated with one or more active transactions. Please update those transactions first.',
       );
     }
 
-    await this.collection.doc(id).delete();
+    await this.collection.doc(id).update({
+      deletedAt: new Date().toISOString(),
+    });
   }
 }

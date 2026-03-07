@@ -12,12 +12,24 @@ import { Button } from "@/components/ui/Button";
 interface AddInvestmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { assetName: string; assetType: string; investedAmount: string; currentAmount: string }) => Promise<void> | void;
+  onSave: (data: {
+    assetName: string;
+    assetType: string;
+    investedAmount: string;
+    currentAmount: string;
+  }) => Promise<void> | void;
   investment?: Account | null;
 }
 
-export function AddInvestmentModal({ isOpen, onClose, onSave, investment }: AddInvestmentModalProps) {
-  const assetTypes = useSelector((state: RootState) => state.assetClasses.items);
+export function AddInvestmentModal({
+  isOpen,
+  onClose,
+  onSave,
+  investment,
+}: AddInvestmentModalProps) {
+  const assetTypes = useSelector(
+    (state: RootState) => state.assetClasses.items,
+  );
   const [formData, setFormData] = useState({
     assetName: "",
     assetType: "",
@@ -31,8 +43,10 @@ export function AddInvestmentModal({ isOpen, onClose, onSave, investment }: AddI
       if (investment) {
         setFormData({
           assetName: investment.name,
-          assetType: investment.assetType || (assetTypes[0]?.id || ""),
-          investedAmount: String(investment.investedAmount || investment.balance),
+          assetType: investment.assetType || assetTypes[0]?.id || "",
+          investedAmount: String(
+            investment.investedAmount || investment.balance,
+          ),
           currentAmount: String(investment.balance),
         });
       } else {
@@ -67,7 +81,11 @@ export function AddInvestmentModal({ isOpen, onClose, onSave, investment }: AddI
     setIsSaving(true);
     try {
       await onSave(formData);
-      toast.success(investment ? "Investment updated successfully" : "Investment logged successfully");
+      toast.success(
+        investment
+          ? "Investment updated successfully"
+          : "Investment logged successfully",
+      );
       onClose();
     } catch {
       // toast.error("Failed to save investment");
@@ -84,7 +102,7 @@ export function AddInvestmentModal({ isOpen, onClose, onSave, investment }: AddI
       maxWidth="max-w-sm"
       footer={
         <div className="flex gap-3 w-full">
-          <Button 
+          <Button
             variant="secondary"
             onClick={onClose}
             className="flex-1"
@@ -92,7 +110,7 @@ export function AddInvestmentModal({ isOpen, onClose, onSave, investment }: AddI
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleSave}
             isLoading={isSaving}
             className="flex-[2]"
@@ -105,27 +123,39 @@ export function AddInvestmentModal({ isOpen, onClose, onSave, investment }: AddI
     >
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Instrument / Ticker</label>
-          <input 
-            type="text" 
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Instrument / Ticker
+          </label>
+          <input
+            type="text"
             value={formData.assetName}
-            onChange={(e) => setFormData({ ...formData, assetName: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, assetName: e.target.value })
+            }
             placeholder="e.g. BTC-INR or NIFTY 50"
             className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-slate-400"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Asset Category</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Asset Category
+          </label>
           <div className="relative">
-            <select 
+            <select
               value={formData.assetType}
-              onChange={(e) => setFormData({ ...formData, assetType: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, assetType: e.target.value })
+              }
               className="w-full h-10 appearance-none bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all"
             >
-              <option value="" disabled>Select Sector</option>
+              <option value="" disabled>
+                Select Sector
+              </option>
               {assetTypes.map((type) => (
-                <option key={type.id} value={type.id}>{type.name}</option>
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
               ))}
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -134,26 +164,34 @@ export function AddInvestmentModal({ isOpen, onClose, onSave, investment }: AddI
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Basis (Capital)</label>
-            <input 
-              type="number" 
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Basis (Capital)
+            </label>
+            <input
+              type="number"
               value={formData.investedAmount}
-              onChange={(e) => setFormData({ ...formData, investedAmount: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, investedAmount: e.target.value })
+              }
               placeholder="0.00"
               disabled={!!investment || isSaving}
               className={`w-full h-10 border-none rounded-xl px-3 text-xs font-black ring-1 outline-none transition-all ${
-                investment 
-                  ? "bg-slate-100 dark:bg-slate-800 text-slate-500 ring-slate-200 dark:ring-white/5 cursor-not-allowed" 
+                investment
+                  ? "bg-slate-100 dark:bg-slate-800 text-slate-500 ring-slate-200 dark:ring-white/5 cursor-not-allowed"
                   : "bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary"
               }`}
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest pl-1">Valuation</label>
-            <input 
-              type="number" 
+            <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest pl-1">
+              Valuation
+            </label>
+            <input
+              type="number"
               value={formData.currentAmount}
-              onChange={(e) => setFormData({ ...formData, currentAmount: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, currentAmount: e.target.value })
+              }
               placeholder="0.00"
               className="w-full h-10 bg-emerald-50 dark:bg-emerald-500/10 border-none rounded-xl px-3 text-xs font-black text-emerald-500 ring-1 ring-emerald-500/20 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
             />

@@ -9,12 +9,19 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-interface PasswordInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'className'> {
+interface PasswordInputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "className"
+> {
   containerClassName?: string;
   className?: string; // This will be applied to the input
 }
 
-export function PasswordInput({ containerClassName, className, ...props }: PasswordInputProps) {
+export function PasswordInput({
+  containerClassName,
+  className,
+  ...props
+}: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   const togglePasswordVisibility = () => {
@@ -28,7 +35,7 @@ export function PasswordInput({ containerClassName, className, ...props }: Passw
         type={showPassword ? "text" : "password"}
         className={cn(
           "w-full bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl px-4 py-3 pr-11 text-sm focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white placeholder:text-slate-400/50",
-          className
+          className,
         )}
       />
       <button

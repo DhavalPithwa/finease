@@ -67,17 +67,24 @@ export class AnalyticsService {
   async getAdminStats(): Promise<AdminStats> {
     const db = this.firebaseAdmin.getFirestore();
 
-    // Fetch real counts (only non-admin users)
-    const usersSnapshot = await db.collection('users').get();
-    const userDocs = usersSnapshot.docs.filter((doc) => {
-      const data = doc.data() as Partial<User>;
-      return data.role !== 'admin';
-    });
+    // Fetch real counts (only non-deleted users)
+    const usersSnapshot = await db
+      .collection('users')
+      .where('deletedAt', '==', null)
+      .get();
+
+    // Filter non-admins in memory to bypass composite index requirement
+    const userDocs = usersSnapshot.docs.filter(
+      (doc) => (doc.data() as User).role !== 'admin',
+    );
 
     const validUserIds = new Set(userDocs.map((doc) => doc.id));
     const totalUsers = userDocs.length;
 
-    const accountsSnapshot = await db.collection('accounts').get();
+    const accountsSnapshot = await db
+      .collection('accounts')
+      .where('deletedAt', '==', null)
+      .get();
     const totalAssetsTracked = accountsSnapshot.docs.reduce(
       (sum: number, doc) => {
         const data = doc.data() as {
@@ -90,28 +97,26 @@ export class AnalyticsService {
       0,
     );
 
-    // Fetch real recent activities
-    const recentUsersSnapshot = await db
-      .collection('users')
-      .orderBy('createdAt', 'desc')
-      .get();
+    // Fetch real recent activities (only non-deleted users)
+    // We filter non-admins and sort in memory
+    const recentActivities: AdminStats['recentActivities'] = userDocs
+      .sort((a, b) => {
+        const catA = (a.data() as User).createdAt || '';
+        const catB = (b.data() as User).createdAt || '';
+        return catB.localeCompare(catA);
+      })
+      .slice(0, 5)
+      .map((doc, index) => {
+        const data = doc.data() as User;
+        return {
+          id: index + 1,
+          type: 'signup',
+          user: data.displayName || 'New Identity',
+          time: this.formatRelativeTime(data.createdAt),
+        };
+      });
 
-    // Filter non-admins and take top 5
-    const recentActivities: AdminStats['recentActivities'] =
-      recentUsersSnapshot.docs
-        .filter((doc) => (doc.data() as User).role !== 'admin')
-        .slice(0, 5)
-        .map((doc, index) => {
-          const data = doc.data() as User;
-          return {
-            id: index + 1,
-            type: 'signup',
-            user: data.displayName || 'New Identity',
-            time: this.formatRelativeTime(data.createdAt),
-          };
-        });
-
-    // Calculate real user growth for last 7 days (non-admin)
+    // Calculate real user growth for last 7 days (non-admin, non-deleted)
     const last7Days: { day: string; count: number }[] = [];
     const now = new Date();
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -124,7 +129,7 @@ export class AnalyticsService {
       const dayEnd = new Date(d.setHours(23, 59, 59, 999));
 
       const count = userDocs.filter((doc) => {
-        const userData = doc.data() as Partial<User>;
+        const userData = doc.data() as User;
         const createdAt = userData.createdAt;
         if (!createdAt) return false;
         const createdDate = new Date(createdAt);
@@ -136,7 +141,7 @@ export class AnalyticsService {
 
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const activeUsers24h = userDocs.filter((doc) => {
-      const userData = doc.data() as Partial<User>;
+      const userData = doc.data() as User;
       const activeAt = userData.lastActiveAt || userData.createdAt;
       if (!activeAt) return false;
       return new Date(activeAt) >= twentyFourHoursAgo;

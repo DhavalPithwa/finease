@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { Fingerprint, MonitorSmartphone, Lock, Delete } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SplashScreen } from "@/components/ui/SplashScreen";
@@ -15,11 +21,17 @@ interface SecurityContextType {
   isLocked: boolean;
   isLockEnabled: boolean;
   lockType: LockType;
-  toggleLock: (enabled: boolean, type?: LockType, pin?: string) => Promise<boolean>;
+  toggleLock: (
+    enabled: boolean,
+    type?: LockType,
+    pin?: string,
+  ) => Promise<boolean>;
   authenticate: () => Promise<boolean>;
 }
 
-const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
+const SecurityContext = createContext<SecurityContextType | undefined>(
+  undefined,
+);
 
 export function SecurityProvider({ children }: { children: React.ReactNode }) {
   const [isLockEnabled, setIsLockEnabled] = useState(() => {
@@ -30,14 +42,17 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   });
   const [lockType, setLockType] = useState<LockType>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("finease_lock_type") as LockType) || "biometric";
+      return (
+        (localStorage.getItem("finease_lock_type") as LockType) || "biometric"
+      );
     }
     return "biometric";
   });
   const [isLocked, setIsLocked] = useState(() => {
     if (typeof window !== "undefined") {
       const enabled = localStorage.getItem("finease_app_lock") === "true";
-      const sessionAuthenticated = sessionStorage.getItem("finease_session_authenticated") === "true";
+      const sessionAuthenticated =
+        sessionStorage.getItem("finease_session_authenticated") === "true";
       return enabled && !sessionAuthenticated;
     }
     return false;
@@ -61,7 +76,8 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
         return true;
       }
 
-      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      const available =
+        await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
       if (!available) {
         setIsLocked(false);
         isAuthenticatingRef.current = false;
@@ -79,18 +95,22 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
-      const uint8Id = Uint8Array.from(atob(credentialId), c => c.charCodeAt(0));
+      const uint8Id = Uint8Array.from(atob(credentialId), (c) =>
+        c.charCodeAt(0),
+      );
       const options: CredentialRequestOptions = {
         publicKey: {
           challenge,
-          allowCredentials: [{
-            id: uint8Id,
-            type: 'public-key',
-            transports: ['internal'],
-          }],
-          userVerification: 'required',
+          allowCredentials: [
+            {
+              id: uint8Id,
+              type: "public-key",
+              transports: ["internal"],
+            },
+          ],
+          userVerification: "required",
           timeout: 60000,
-        }
+        },
       };
 
       const assertion = await navigator.credentials.get(options);
@@ -101,7 +121,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
         setAuthenticating(false);
         return true;
       }
-      
+
       isAuthenticatingRef.current = false;
       setAuthenticating(false);
       return false;
@@ -113,12 +133,16 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   }, [lockType]);
 
   const { user, loading: authLoading } = useAuth();
-  const accountsLoading = useSelector((state: RootState) => state.accounts.loading);
-  const accountsCount = useSelector((state: RootState) => state.accounts.items.length);
+  const accountsLoading = useSelector(
+    (state: RootState) => state.accounts.loading,
+  );
+  const accountsCount = useSelector(
+    (state: RootState) => state.accounts.items.length,
+  );
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
-    
+
     if (isLocked && lockType === "biometric") {
       timer = setTimeout(() => {
         void authenticate();
@@ -126,8 +150,8 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
     } else {
       // Wait for Auth AND Data (if logged in) to prevent "blink"
       const isAuthReady = !authLoading;
-      const isDataReady = user ? (accountsCount > 0 || !accountsLoading) : true;
-      
+      const isDataReady = user ? accountsCount > 0 || !accountsLoading : true;
+
       if (isAuthReady && isDataReady) {
         timer = setTimeout(() => {
           setIsChecking(false);
@@ -138,13 +162,21 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [authenticate, isLocked, lockType, authLoading, user, accountsLoading, accountsCount]);
+  }, [
+    authenticate,
+    isLocked,
+    lockType,
+    authLoading,
+    user,
+    accountsLoading,
+    accountsCount,
+  ]);
 
   const registerCredential = async (): Promise<boolean> => {
     try {
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
-      
+
       const options: CredentialCreationOptions = {
         publicKey: {
           challenge,
@@ -152,24 +184,35 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
           user: {
             id: new Uint8Array(16),
             name: "user@finease.io",
-            displayName: "FinEase User"
+            displayName: "FinEase User",
           },
           pubKeyCredParams: [{ type: "public-key", alg: -7 }],
           timeout: 60000,
           authenticatorSelection: {
             authenticatorAttachment: "platform",
-            userVerification: "required"
+            userVerification: "required",
           },
-          excludeCredentials: localStorage.getItem("finease_credential_id") ? [{
-            id: Uint8Array.from(atob(localStorage.getItem("finease_credential_id")!), c => c.charCodeAt(0)),
-            type: 'public-key'
-          }] : []
-        }
+          excludeCredentials: localStorage.getItem("finease_credential_id")
+            ? [
+                {
+                  id: Uint8Array.from(
+                    atob(localStorage.getItem("finease_credential_id")!),
+                    (c) => c.charCodeAt(0),
+                  ),
+                  type: "public-key",
+                },
+              ]
+            : [],
+        },
       };
 
-      const credential = (await navigator.credentials.create(options)) as PublicKeyCredential;
+      const credential = (await navigator.credentials.create(
+        options,
+      )) as PublicKeyCredential;
       if (credential) {
-        const idBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+        const idBase64 = btoa(
+          String.fromCharCode(...new Uint8Array(credential.rawId)),
+        );
         localStorage.setItem("finease_credential_id", idBase64);
         setIsLocked(false);
         sessionStorage.setItem("finease_session_authenticated", "true");
@@ -182,7 +225,11 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const toggleLock = async (enabled: boolean, type: LockType = "biometric", pin?: string): Promise<boolean> => {
+  const toggleLock = async (
+    enabled: boolean,
+    type: LockType = "biometric",
+    pin?: string,
+  ): Promise<boolean> => {
     if (enabled) {
       if (type === "biometric") {
         const success = await registerCredential();
@@ -222,7 +269,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
     if (enteredPin.length < 4) {
       const newPin = enteredPin + num;
       setEnteredPin(newPin);
-      
+
       if (newPin.length === 4) {
         const storedPin = localStorage.getItem("finease_pin");
         if (newPin === storedPin) {
@@ -239,7 +286,9 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <SecurityContext.Provider value={{ isLocked, isLockEnabled, lockType, toggleLock, authenticate }}>
+    <SecurityContext.Provider
+      value={{ isLocked, isLockEnabled, lockType, toggleLock, authenticate }}
+    >
       <AnimatePresence mode="wait">
         {isChecking ? (
           <motion.div
@@ -263,23 +312,27 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
               <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
                 <Lock className="w-8 h-8" />
               </div>
-              
-              <h1 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">Vault Locked</h1>
+
+              <h1 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">
+                Vault Locked
+              </h1>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-10">
-                {lockType === 'biometric' ? 'Biometric verification required' : 'Enter security PIN'}
+                {lockType === "biometric"
+                  ? "Biometric verification required"
+                  : "Enter security PIN"}
               </p>
-              
+
               {lockType === "pin" ? (
                 <div className="w-full space-y-12">
                   <div className="flex justify-center gap-6">
                     {[0, 1, 2, 3].map((idx) => (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         className={`size-4 rounded-full border-2 transition-all duration-200 ${
-                          enteredPin.length > idx 
-                          ? 'bg-primary border-primary scale-110 shadow-lg shadow-primary/20' 
-                          : 'border-slate-200 dark:border-white/10'
-                        }`} 
+                          enteredPin.length > idx
+                            ? "bg-primary border-primary scale-110 shadow-lg shadow-primary/20"
+                            : "border-slate-200 dark:border-white/10"
+                        }`}
                       />
                     ))}
                   </div>
@@ -310,7 +363,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
               ) : (
-                <button 
+                <button
                   disabled={authenticating}
                   onClick={async () => {
                     const success = await authenticate();
@@ -319,23 +372,25 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
                   className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
                 >
                   <Fingerprint className="w-5 h-5" />
-                  {authenticating ? 'Verifying...' : 'Authenticate'}
+                  {authenticating ? "Verifying..." : "Authenticate"}
                 </button>
               )}
-              
+
               <div className="mt-12 flex flex-col items-center gap-6">
                 <div className="flex items-center gap-2 text-slate-400">
                   <MonitorSmartphone className="w-4 h-4" />
-                  <span className="text-[8px] font-black uppercase tracking-widest text-center">Protected via Sovereign AES-256</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-center">
+                    Protected via Sovereign AES-256
+                  </span>
                 </div>
-                
-                <button 
+
+                <button
                   onClick={() => {
                     localStorage.removeItem("finease_app_lock");
                     localStorage.removeItem("finease_lock_type");
                     localStorage.removeItem("finease_pin");
                     sessionStorage.removeItem("finease_session_authenticated");
-                    window.location.href = "/login"; 
+                    window.location.href = "/login";
                   }}
                   className="text-[9px] font-black text-rose-500/60 uppercase tracking-widest hover:text-rose-500 transition-colors"
                 >
@@ -361,6 +416,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
 
 export const useSecurity = () => {
   const context = useContext(SecurityContext);
-  if (!context) throw new Error("useSecurity must be used within SecurityProvider");
+  if (!context)
+    throw new Error("useSecurity must be used within SecurityProvider");
   return context;
 };

@@ -10,11 +10,22 @@ import { Button } from "@/components/ui/Button";
 interface AddAccountModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { name: string; type: string; balance: string; minimumBalance?: string; maxLimit?: string }) => Promise<void> | void;
+  onSave: (data: {
+    name: string;
+    type: string;
+    balance: string;
+    minimumBalance?: string;
+    maxLimit?: string;
+  }) => Promise<void> | void;
   account?: Account | null;
 }
 
-export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccountModalProps) {
+export function AddAccountModal({
+  isOpen,
+  onClose,
+  onSave,
+  account,
+}: AddAccountModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     type: "bank",
@@ -59,7 +70,9 @@ export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccount
     setIsSaving(true);
     try {
       await onSave(formData);
-      toast.success(account ? "Account updated successfully" : "Account added successfully");
+      toast.success(
+        account ? "Account updated successfully" : "Account added successfully",
+      );
       onClose();
     } catch {
       // toast.error is usually handled by the caller or slice
@@ -76,7 +89,7 @@ export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccount
       maxWidth="max-w-sm"
       footer={
         <div className="flex gap-3 w-full">
-          <Button 
+          <Button
             variant="secondary"
             onClick={onClose}
             className="flex-1"
@@ -84,7 +97,7 @@ export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccount
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleSave}
             isLoading={isSaving}
             className="flex-[2]"
@@ -97,9 +110,11 @@ export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccount
     >
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Identification</label>
-          <input 
-            type="text" 
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Identification
+          </label>
+          <input
+            type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="e.g. HDFC Core"
@@ -108,25 +123,32 @@ export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccount
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Node Class</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Node Class
+          </label>
           <div className="grid grid-cols-3 gap-2">
             {[
               { id: "bank", icon: Building2, label: "Bank" },
               { id: "card", icon: CreditCard, label: "Card" },
-              { id: "cash", icon: Wallet, label: "Cash" }
+              { id: "cash", icon: Wallet, label: "Cash" },
             ].map((node) => (
-              <button 
+              <button
                 key={node.id}
                 disabled={!!account || isSaving}
-                onClick={(e) => { e.preventDefault(); setFormData({ ...formData, type: node.id }); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setFormData({ ...formData, type: node.id });
+                }}
                 className={`h-9 rounded-xl border-none ring-1 flex flex-col items-center justify-center gap-1 transition-all ${
-                  formData.type === node.id 
-                    ? "bg-primary text-white ring-primary shadow-lg shadow-primary/20" 
+                  formData.type === node.id
+                    ? "bg-primary text-white ring-primary shadow-lg shadow-primary/20"
                     : "bg-slate-50 dark:bg-slate-950 ring-slate-100 dark:ring-white/5 text-slate-400 hover:ring-slate-200 dark:hover:ring-white/10"
                 }`}
               >
                 <node.icon className="w-3.5 h-3.5" />
-                <span className="text-[8px] font-black uppercase tracking-widest">{node.label}</span>
+                <span className="text-[8px] font-black uppercase tracking-widest">
+                  {node.label}
+                </span>
               </button>
             ))}
           </div>
@@ -134,18 +156,26 @@ export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccount
 
         <div className="space-y-1.5">
           <div className="flex justify-between px-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Liquid Value (₹)</label>
-              {account && <span className="text-[7px] font-black text-amber-500 uppercase tracking-widest animate-pulse">Read-Only</span>}
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              Liquid Value (₹)
+            </label>
+            {account && (
+              <span className="text-[7px] font-black text-amber-500 uppercase tracking-widest animate-pulse">
+                Read-Only
+              </span>
+            )}
           </div>
-          <input 
-            type="number" 
+          <input
+            type="number"
             value={formData.balance}
-            onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, balance: e.target.value })
+            }
             placeholder="0.00"
             disabled={!!account || isSaving}
             className={`w-full h-10 border-none rounded-xl px-3 text-xs font-black ring-1 outline-none transition-all ${
-              account 
-                ? "bg-slate-100 dark:bg-slate-800 text-slate-500 ring-slate-200 dark:ring-white/5 cursor-not-allowed" 
+              account
+                ? "bg-slate-100 dark:bg-slate-800 text-slate-500 ring-slate-200 dark:ring-white/5 cursor-not-allowed"
                 : "bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary"
             }`}
           />
@@ -153,11 +183,15 @@ export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccount
 
         {formData.type === "bank" && (
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Threshold (₹)</label>
-            <input 
-              type="number" 
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Threshold (₹)
+            </label>
+            <input
+              type="number"
               value={formData.minimumBalance}
-              onChange={(e) => setFormData({ ...formData, minimumBalance: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, minimumBalance: e.target.value })
+              }
               placeholder="Minimum..."
               className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all"
             />
@@ -166,11 +200,15 @@ export function AddAccountModal({ isOpen, onClose, onSave, account }: AddAccount
 
         {formData.type === "card" && (
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1">Node Limit (₹)</label>
-            <input 
-              type="number" 
+            <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1">
+              Node Limit (₹)
+            </label>
+            <input
+              type="number"
               value={formData.maxLimit}
-              onChange={(e) => setFormData({ ...formData, maxLimit: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, maxLimit: e.target.value })
+              }
               placeholder="Total credit limit..."
               className="w-full h-10 bg-primary/5 dark:bg-primary/10 border-none rounded-xl px-3 text-xs font-black text-primary ring-1 ring-primary/20 focus:ring-2 focus:ring-primary outline-none transition-all"
             />

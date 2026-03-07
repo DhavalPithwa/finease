@@ -67,7 +67,9 @@ export function ConfirmModal({
       }
     >
       <div className="flex flex-col items-center text-center p-2">
-        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isDestructive ? 'bg-rose-500/10 text-rose-500' : 'bg-primary/10 text-primary'}`}>
+        <div
+          className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isDestructive ? "bg-rose-500/10 text-rose-500" : "bg-primary/10 text-primary"}`}
+        >
           <AlertTriangle className="w-6 h-6" />
         </div>
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-loose">

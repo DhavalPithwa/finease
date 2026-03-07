@@ -41,9 +41,9 @@ export class TransactionsService {
 
   async findAll(userId: string): Promise<Transaction[]> {
     const snapshot = await this.collection.where('userId', '==', userId).get();
-    const transactions = snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() }) as Transaction,
-    );
+    const transactions = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }) as Transaction)
+      .filter((tx) => !tx.deletedAt);
     // Sort in-memory to bypass index requirement
     return transactions.sort((a, b) => {
       const dateA = a.date ? new Date(a.date).getTime() : 0;
@@ -170,6 +170,7 @@ export class TransactionsService {
       date: transaction.date || new Date().toISOString(),
       balanceAfter,
       toBalanceAfter,
+      deletedAt: null,
     });
 
     await batch.commit();
@@ -179,7 +180,7 @@ export class TransactionsService {
 
   async findOne(id: string): Promise<Transaction> {
     const doc = await this.collection.doc(id).get();
-    if (!doc.exists) {
+    if (!doc.exists || doc.data()?.deletedAt) {
       throw new NotFoundException(`Transaction with ID ${id} not found`);
     }
     return { id: doc.id, ...doc.data() } as Transaction;
@@ -478,8 +479,10 @@ export class TransactionsService {
       }
     }
 
-    // 3. Delete transaction
-    batch.delete(txRef);
+    // 3. Soft-delete transaction
+    batch.update(txRef, {
+      deletedAt: new Date().toISOString(),
+    });
     await batch.commit();
   }
 
@@ -488,8 +491,12 @@ export class TransactionsService {
       .where('accountId', '==', accountId)
       .get();
     const batch = this.db.batch();
+    const now = new Date().toISOString();
     snapshot.docs.forEach((doc) => {
-      batch.delete(doc.ref);
+      const data = doc.data() as { deletedAt?: string | null };
+      if (!data.deletedAt) {
+        batch.update(doc.ref, { deletedAt: now });
+      }
     });
     await batch.commit();
   }

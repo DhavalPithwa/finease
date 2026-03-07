@@ -23,7 +23,12 @@ interface EditGoalModalProps {
   } | null;
 }
 
-export function EditGoalModal({ isOpen, onClose, onSave, editingGoal }: EditGoalModalProps) {
+export function EditGoalModal({
+  isOpen,
+  onClose,
+  onSave,
+  editingGoal,
+}: EditGoalModalProps) {
   const [formData, setFormData] = useState<GoalFormData>({
     name: "",
     targetAmount: 0,
@@ -63,7 +68,7 @@ export function EditGoalModal({ isOpen, onClose, onSave, editingGoal }: EditGoal
       maxWidth="max-w-sm"
       footer={
         <div className="flex gap-3 w-full">
-          <Button 
+          <Button
             variant="secondary"
             onClick={onClose}
             className="flex-1"
@@ -71,7 +76,7 @@ export function EditGoalModal({ isOpen, onClose, onSave, editingGoal }: EditGoal
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleSave}
             isLoading={isSaving}
             className="flex-[2]"
@@ -84,9 +89,11 @@ export function EditGoalModal({ isOpen, onClose, onSave, editingGoal }: EditGoal
     >
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Objective</label>
-          <input 
-            type="text" 
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Objective
+          </label>
+          <input
+            type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="e.g. World Tour"
@@ -95,22 +102,30 @@ export function EditGoalModal({ isOpen, onClose, onSave, editingGoal }: EditGoal
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Target Magnitude (₹)</label>
-          <input 
-            type="number" 
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Target Magnitude (₹)
+          </label>
+          <input
+            type="number"
             value={formData.targetAmount || ""}
-            onChange={(e) => setFormData({ ...formData, targetAmount: Number(e.target.value) })}
+            onChange={(e) =>
+              setFormData({ ...formData, targetAmount: Number(e.target.value) })
+            }
             placeholder="0.00"
             className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-black text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Horizon Date</label>
-          <input 
-            type="date" 
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Horizon Date
+          </label>
+          <input
+            type="date"
             value={formData.targetDate}
-            onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, targetDate: e.target.value })
+            }
             className="w-full h-12 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all"
           />
         </div>

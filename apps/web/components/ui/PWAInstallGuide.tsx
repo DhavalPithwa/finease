@@ -11,18 +11,20 @@ interface NavigatorStandalone extends Navigator {
 
 export function PWAInstallGuide() {
   const [show, setShow] = useState(false);
-  const [platform, setPlatform] = useState<"ios" | "android" | "other" | null>(null);
+  const [platform, setPlatform] = useState<"ios" | "android" | "other" | null>(
+    null,
+  );
 
   useEffect(() => {
     // Check if user dismissed it recently
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const dismissalData = localStorage.getItem("pwa-guide-dismissal");
       if (dismissalData) {
         try {
           const { timestamp } = JSON.parse(dismissalData);
           const now = Date.now();
           const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
-          
+
           if (now - timestamp < threeDaysInMs) {
             return; // Still in cooldown
           }
@@ -34,9 +36,10 @@ export function PWAInstallGuide() {
 
     // Check if already installed
     const nav = window.navigator as NavigatorStandalone;
-    const isPWA = window.matchMedia("(display-mode: standalone)").matches 
-      || !!nav.standalone 
-      || document.referrer.includes('android-app://');
+    const isPWA =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      !!nav.standalone ||
+      document.referrer.includes("android-app://");
 
     if (isPWA) {
       setShow(false);
@@ -60,9 +63,12 @@ export function PWAInstallGuide() {
 
   const handleDismiss = () => {
     setShow(false);
-    localStorage.setItem("pwa-guide-dismissal", JSON.stringify({
-      timestamp: Date.now()
-    }));
+    localStorage.setItem(
+      "pwa-guide-dismissal",
+      JSON.stringify({
+        timestamp: Date.now(),
+      }),
+    );
   };
 
   if (!platform) return null;
@@ -70,14 +76,14 @@ export function PWAInstallGuide() {
   return (
     <AnimatePresence>
       {show && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
           className="fixed bottom-20 left-4 right-4 z-[100] lg:bottom-6 lg:left-auto lg:right-6 lg:w-80"
         >
           <Card className="p-5 bg-slate-900 border-none shadow-2xl relative overflow-hidden group">
-            <button 
+            <button
               onClick={handleDismiss}
               className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors p-2 z-[110] active:scale-95"
               aria-label="Close"
@@ -91,8 +97,12 @@ export function PWAInstallGuide() {
                   <Download className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-white font-black text-sm uppercase tracking-tight">Install Finease</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Experience the full app</p>
+                  <h3 className="text-white font-black text-sm uppercase tracking-tight">
+                    Install Finease
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                    Experience the full app
+                  </p>
                 </div>
               </div>
 
@@ -103,13 +113,23 @@ export function PWAInstallGuide() {
                       <div className="mt-0.5 p-1 bg-white/10 rounded-lg">
                         <Share className="w-3.5 h-3.5 text-white" />
                       </div>
-                      <p>Tap the <span className="text-white font-bold">Share</span> button in Safari.</p>
+                      <p>
+                        Tap the{" "}
+                        <span className="text-white font-bold">Share</span>{" "}
+                        button in Safari.
+                      </p>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5 p-1 bg-white/10 rounded-lg">
                         <PlusSquare className="w-3.5 h-3.5 text-white" />
                       </div>
-                      <p>Scroll down and select <span className="text-white font-bold">Add to Home Screen</span>.</p>
+                      <p>
+                        Scroll down and select{" "}
+                        <span className="text-white font-bold">
+                          Add to Home Screen
+                        </span>
+                        .
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -118,18 +138,34 @@ export function PWAInstallGuide() {
                       <div className="mt-0.5 p-1 bg-white/10 rounded-lg">
                         <Share2 className="w-3.5 h-3.5 text-white" />
                       </div>
-                      <p>Tap the <span className="text-white font-bold">Menu (three dots)</span> in Chrome.</p>
+                      <p>
+                        Tap the{" "}
+                        <span className="text-white font-bold">
+                          Menu (three dots)
+                        </span>{" "}
+                        in Chrome.
+                      </p>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5 p-1 bg-white/10 rounded-lg">
                         <Download className="w-3.5 h-3.5 text-white" />
                       </div>
-                      <p>Select <span className="text-white font-bold">Install App</span> or <span className="text-white font-bold">Add to Home screen</span>.</p>
+                      <p>
+                        Select{" "}
+                        <span className="text-white font-bold">
+                          Install App
+                        </span>{" "}
+                        or{" "}
+                        <span className="text-white font-bold">
+                          Add to Home screen
+                        </span>
+                        .
+                      </p>
                     </div>
                   </div>
                 )}
               </div>
-              
+
               <p className="text-[9px] text-center text-slate-500 font-bold uppercase tracking-widest">
                 Fast • Offline • Native Feel
               </p>

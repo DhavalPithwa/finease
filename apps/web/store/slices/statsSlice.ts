@@ -1,5 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { DashboardStats } from '@repo/types';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { DashboardStats } from "@repo/types";
 
 export interface StatsState {
   data: DashboardStats;
@@ -12,17 +12,17 @@ const initialState: StatsState = {
     totalLiabilities: 0,
     netWorthHistory: [],
     assetAllocation: [],
-    goalPacing: []
+    goalPacing: [],
   },
 };
 
 export const statsSlice = createSlice({
-  name: 'stats',
+  name: "stats",
   initialState,
   reducers: {
     updateStats: (state, action: PayloadAction<Partial<DashboardStats>>) => {
       state.data = { ...state.data, ...action.payload };
-    }
+    },
   },
 });
 

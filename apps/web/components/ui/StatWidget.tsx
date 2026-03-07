@@ -11,29 +11,42 @@ interface StatWidgetProps {
   className?: string;
 }
 
-export function StatWidget({ 
-  label, 
-  value, 
-  subValue, 
-  icon, 
-  iconBg = "bg-primary/10", 
+export function StatWidget({
+  label,
+  value,
+  subValue,
+  icon,
+  iconBg = "bg-primary/10",
   iconColor = "text-primary",
-  className 
+  className,
 }: StatWidgetProps) {
   return (
-    <div className={cn("flex flex-col gap-3 p-4 bg-white dark:bg-surface-dark border border-slate-200 dark:border-border-dark rounded-xl shadow-sm", className)}>
+    <div
+      className={cn(
+        "flex flex-col gap-3 p-4 bg-white dark:bg-surface-dark border border-slate-200 dark:border-border-dark rounded-xl shadow-sm",
+        className,
+      )}
+    >
       <div className="flex items-center gap-3">
         {icon && (
-          <div className={cn("p-2 rounded-lg flex-shrink-0", iconBg, iconColor)}>
+          <div
+            className={cn("p-2 rounded-lg flex-shrink-0", iconBg, iconColor)}
+          >
             {icon}
           </div>
         )}
         <div>
-          <h4 className="text-sm font-bold text-slate-900 dark:text-white">{label}</h4>
-          {subValue && <p className="text-xs text-slate-500 font-medium">{subValue}</p>}
+          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+            {label}
+          </h4>
+          {subValue && (
+            <p className="text-xs text-slate-500 font-medium">{subValue}</p>
+          )}
         </div>
       </div>
-      <div className="text-xl font-bold text-slate-900 dark:text-white">{value}</div>
+      <div className="text-xl font-bold text-slate-900 dark:text-white">
+        {value}
+      </div>
     </div>
   );
 }

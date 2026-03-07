@@ -13,7 +13,12 @@ interface AddAssetModalProps {
   onSave: (data: { name: string; balance: string }) => Promise<void> | void;
 }
 
-export function AddAssetModal({ isOpen, onClose, asset, onSave }: AddAssetModalProps) {
+export function AddAssetModal({
+  isOpen,
+  onClose,
+  asset,
+  onSave,
+}: AddAssetModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     balance: "",
@@ -98,7 +103,9 @@ export function AddAssetModal({ isOpen, onClose, asset, onSave }: AddAssetModalP
             min="0"
             step="0.01"
             value={formData.balance}
-            onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, balance: e.target.value })
+            }
             className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-black text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all"
             placeholder="0.00"
           />

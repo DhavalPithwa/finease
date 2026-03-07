@@ -38,7 +38,6 @@ async function bootstrap() {
     swaggerOptions: {
       persistAuthorization: true,
       displayRequestDuration: true,
-      filter: true,
     },
   });
 

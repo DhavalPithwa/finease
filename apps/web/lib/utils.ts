@@ -19,30 +19,34 @@ export function formatDate(dateString: string | Date | number) {
   return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "short",
-    year: "numeric"
+    year: "numeric",
   }).format(date);
 }
-export function calculateRunningBalances<T extends { date: string; amount: number; type: string }>(transactions: T[]) {
-  const chronological = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
+export function calculateRunningBalances<
+  T extends { date: string; amount: number; type: string },
+>(transactions: T[]) {
+  const chronological = [...transactions].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+
   let runningBalance = 0;
-  return chronological.map(t => {
+  return chronological.map((t) => {
     const balanceBefore = runningBalance;
-    const amount = t.type === 'expense' ? -t.amount : t.amount;
+    const amount = t.type === "expense" ? -t.amount : t.amount;
     runningBalance += amount;
     return {
       ...t,
       balanceBefore,
-      balanceAfter: runningBalance
+      balanceAfter: runningBalance,
     };
   });
 }
 
 export function parseImportDate(dateStr: string): Date {
   if (!dateStr) return new Date();
-  
-  const clean = dateStr.trim().replace(/\s+/g, ' ');
-  
+
+  const clean = dateStr.trim().replace(/\s+/g, " ");
+
   // 1. Handle common numeric formats: DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY
   const dmyMatch = clean.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/);
   if (dmyMatch && dmyMatch[3]) {
@@ -53,14 +57,26 @@ export function parseImportDate(dateStr: string): Date {
     const d = new Date(year, month, day);
     if (!isNaN(d.getTime())) return d;
   }
-  
+
   // 2. Handle formats with month names: DD-MMM-YYYY, DD MMM YYYY (e.g., 01-JAN-2024)
   const monthNames: Record<string, number> = {
-    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+    jan: 0,
+    feb: 1,
+    mar: 2,
+    apr: 3,
+    may: 4,
+    jun: 5,
+    jul: 6,
+    aug: 7,
+    sep: 8,
+    oct: 9,
+    nov: 10,
+    dec: 11,
   };
-  
-  const alphaMatch = clean.match(/^(\d{1,2})[-/.\x20]([A-Za-z]{3})[-/.\x20](\d{2,4})/);
+
+  const alphaMatch = clean.match(
+    /^(\d{1,2})[-/.\x20]([A-Za-z]{3})[-/.\x20](\d{2,4})/,
+  );
   if (alphaMatch && alphaMatch[3]) {
     const day = parseInt(alphaMatch[1]!);
     const month = monthNames[alphaMatch[2]!.toLowerCase().substring(0, 3)];
@@ -75,6 +91,6 @@ export function parseImportDate(dateStr: string): Date {
   // 3. Fallback to native constructor
   const nativeDate = new Date(clean);
   if (!isNaN(nativeDate.getTime())) return nativeDate;
-  
+
   return new Date();
 }

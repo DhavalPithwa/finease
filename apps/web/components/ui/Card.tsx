@@ -9,14 +9,28 @@ interface CardProps {
   headerAction?: ReactNode;
 }
 
-export function Card({ children, className, title, subtitle, headerAction }: CardProps) {
+export function Card({
+  children,
+  className,
+  title,
+  subtitle,
+  headerAction,
+}: CardProps) {
   return (
     <div className={cn("finease-card p-6", className)}>
       {(title || headerAction) && (
         <div className="flex items-center justify-between mb-6">
           <div>
-            {title && <h3 className="text-slate-900 dark:text-white font-bold text-lg tracking-tight">{title}</h3>}
-            {subtitle && <div className="text-slate-500 text-sm font-medium mt-0.5">{subtitle}</div>}
+            {title && (
+              <h3 className="text-slate-900 dark:text-white font-bold text-lg tracking-tight">
+                {title}
+              </h3>
+            )}
+            {subtitle && (
+              <div className="text-slate-500 text-sm font-medium mt-0.5">
+                {subtitle}
+              </div>
+            )}
           </div>
           {headerAction && <div>{headerAction}</div>}
         </div>

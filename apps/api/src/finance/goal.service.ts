@@ -18,15 +18,18 @@ export class GoalService {
 
   async findAll(userId: string): Promise<FinancialGoal[]> {
     const snapshot = await this.collection.where('userId', '==', userId).get();
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...(doc.data() as Omit<FinancialGoal, 'id'>),
-    }));
+    return snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<FinancialGoal, 'id'>),
+      }))
+      .filter((goal) => !goal.deletedAt);
   }
 
   async create(goal: Partial<FinancialGoal>): Promise<FinancialGoal> {
     const docRef = await this.collection.add({
       ...goal,
+      deletedAt: null,
       startDate: goal.startDate || new Date().toISOString(),
     });
     const doc = await docRef.get();
@@ -43,7 +46,9 @@ export class GoalService {
   }
 
   async remove(id: string): Promise<void> {
-    await this.collection.doc(id).delete();
+    await this.collection.doc(id).update({
+      deletedAt: new Date().toISOString(),
+    });
   }
 
   calculateMonthlyRequirement(goal: FinancialGoal): number {

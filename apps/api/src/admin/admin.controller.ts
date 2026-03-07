@@ -35,4 +35,48 @@ export class AdminController {
   async getAdminStats(): Promise<AdminStats> {
     return this.analyticsService.getAdminStats();
   }
+
+  @Put('users/:uid/reset-onboarding')
+  async resetUserOnboarding(@Param('uid') uid: string) {
+    return this.usersService.update(uid, { hasOnboarded: false });
+  }
+
+  @Put('bulk-soft-delete-migration')
+  async migrateToSoftDelete() {
+    const db = this.usersService.getFirestore();
+    const collections = [
+      'users',
+      'accounts',
+      'transactions',
+      'goals',
+      'categories',
+      'asset_classes',
+      'reminders',
+    ];
+    let totalUpdated = 0;
+
+    for (const collectionName of collections) {
+      const snapshot = await db.collection(collectionName).get();
+      const batch = db.batch();
+      let count = 0;
+
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data() as { deletedAt?: string | null };
+        if (data.deletedAt === undefined) {
+          batch.update(doc.ref, { deletedAt: null });
+          count++;
+        }
+      });
+
+      if (count > 0) {
+        await batch.commit();
+        totalUpdated += count;
+      }
+    }
+
+    return {
+      message: `Soft delete field initialized for ${totalUpdated} records across ${collections.length} collections.`,
+      totalUpdated,
+    };
+  }
 }

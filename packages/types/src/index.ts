@@ -14,10 +14,18 @@ export interface User {
     wants: number;
     savings: number;
   };
+  hasOnboarded?: boolean;
   lastActiveAt?: string;
+  deletedAt?: string | null;
 }
 
-export type AccountType = "bank" | "cash" | "debt" | "investment" | "card" | "asset";
+export type AccountType =
+  | "bank"
+  | "cash"
+  | "debt"
+  | "investment"
+  | "card"
+  | "asset";
 
 export interface Account {
   id: string;
@@ -35,6 +43,7 @@ export interface Account {
   currency: string;
   institutionName?: string;
   lastSyncedAt: string;
+  deletedAt?: string | null;
 }
 
 export interface FinancialGoal {
@@ -47,6 +56,7 @@ export interface FinancialGoal {
   startDate: string;
   category: string;
   icon?: string;
+  deletedAt?: string | null;
 }
 
 export type CategoryParentType = "needs" | "wants" | "savings" | "income";
@@ -58,6 +68,7 @@ export interface Category {
   color: string;
   type?: "expense" | "income";
   parentType?: CategoryParentType;
+  deletedAt?: string | null;
 }
 
 export interface AssetClass {
@@ -65,9 +76,15 @@ export interface AssetClass {
   userId: string;
   name: string;
   color: string;
+  deletedAt?: string | null;
 }
 
-export type TransactionStatus = "pending" | "approved" | "rejected" | "pending_confirmation" | "completed";
+export type TransactionStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "pending_confirmation"
+  | "completed";
 export type TransactionType = "income" | "expense" | "transfer";
 export type TransactionFrequency = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -92,6 +109,7 @@ export interface Transaction {
   recurringCount?: string | number;
   balanceAfter?: number;
   toBalanceAfter?: number;
+  deletedAt?: string | null;
 }
 
 export interface DashboardStats {
@@ -118,7 +136,11 @@ export interface TransactionImportMapping {
   type?: string;
 }
 
-export type TransactionImportStage = "upload" | "password" | "mapping" | "review";
+export type TransactionImportStage =
+  | "upload"
+  | "password"
+  | "mapping"
+  | "review";
 
 export interface RawTransactionData {
   [key: string]: string;
@@ -149,4 +171,5 @@ export interface Reminder {
   renewalAmount: number;
   metadata?: Record<string, unknown>;
   createdAt: string;
+  deletedAt?: string | null;
 }

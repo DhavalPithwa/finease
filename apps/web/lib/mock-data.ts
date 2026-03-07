@@ -1,4 +1,9 @@
-import { Account, FinancialGoal, Transaction, DashboardStats } from "@repo/types";
+import {
+  Account,
+  FinancialGoal,
+  Transaction,
+  DashboardStats,
+} from "@repo/types";
 
 export const MOCK_ACCOUNTS: Account[] = [
   {
@@ -70,8 +75,8 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
     type: "expense",
     status: "pending",
     metadata: {
-      originalInstitutionDescription: "AMZN MKTP IN"
-    }
+      originalInstitutionDescription: "AMZN MKTP IN",
+    },
   },
   {
     id: "tx-2",
@@ -84,9 +89,9 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
     type: "transfer",
     status: "pending",
     metadata: {
-      isCashWithdrawal: true
-    }
-  }
+      isCashWithdrawal: true,
+    },
+  },
 ];
 
 export const MOCK_STATS: DashboardStats = {

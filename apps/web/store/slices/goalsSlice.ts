@@ -1,6 +1,6 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import api from '@/lib/api';
-import { FinancialGoal } from '@repo/types';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import api from "@/lib/api";
+import { FinancialGoal } from "@repo/types";
 
 export interface GoalsState {
   items: FinancialGoal[];
@@ -14,28 +14,37 @@ const initialState: GoalsState = {
   error: null,
 };
 
-export const fetchGoals = createAsyncThunk('goals/fetchAll', async () => {
-  const response = await api.get<FinancialGoal[]>('/finance/goals');
+export const fetchGoals = createAsyncThunk("goals/fetchAll", async () => {
+  const response = await api.get<FinancialGoal[]>("/finance/goals");
   return response.data;
 });
 
-export const addGoalAction = createAsyncThunk('goals/add', async (goal: Partial<FinancialGoal>) => {
-  const response = await api.post<FinancialGoal>('/finance/goals', goal);
-  return response.data;
-});
+export const addGoalAction = createAsyncThunk(
+  "goals/add",
+  async (goal: Partial<FinancialGoal>) => {
+    const response = await api.post<FinancialGoal>("/finance/goals", goal);
+    return response.data;
+  },
+);
 
-export const updateGoalAction = createAsyncThunk('goals/update', async ({ id, data }: { id: string; data: Partial<FinancialGoal> }) => {
-  const response = await api.put<FinancialGoal>(`/finance/goals/${id}`, data);
-  return response.data;
-});
+export const updateGoalAction = createAsyncThunk(
+  "goals/update",
+  async ({ id, data }: { id: string; data: Partial<FinancialGoal> }) => {
+    const response = await api.put<FinancialGoal>(`/finance/goals/${id}`, data);
+    return response.data;
+  },
+);
 
-export const deleteGoalAction = createAsyncThunk('goals/delete', async (id: string) => {
-  await api.delete(`/finance/goals/${id}`);
-  return id;
-});
+export const deleteGoalAction = createAsyncThunk(
+  "goals/delete",
+  async (id: string) => {
+    await api.delete(`/finance/goals/${id}`);
+    return id;
+  },
+);
 
 export const goalsSlice = createSlice({
-  name: 'goals',
+  name: "goals",
   initialState,
   reducers: {},
   extraReducers: (builder) => {
@@ -49,19 +58,19 @@ export const goalsSlice = createSlice({
       })
       .addCase(fetchGoals.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message ?? 'Failed to fetch goals';
+        state.error = action.error.message ?? "Failed to fetch goals";
       })
       .addCase(addGoalAction.fulfilled, (state, action) => {
         state.items.push(action.payload);
       })
       .addCase(updateGoalAction.fulfilled, (state, action) => {
-        const index = state.items.findIndex(g => g.id === action.payload.id);
+        const index = state.items.findIndex((g) => g.id === action.payload.id);
         if (index !== -1) {
           state.items[index] = action.payload;
         }
       })
       .addCase(deleteGoalAction.fulfilled, (state, action) => {
-        state.items = state.items.filter(g => g.id !== action.payload);
+        state.items = state.items.filter((g) => g.id !== action.payload);
       });
   },
 });

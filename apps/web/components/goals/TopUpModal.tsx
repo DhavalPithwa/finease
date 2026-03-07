@@ -43,7 +43,7 @@ export function TopUpModal({ isOpen, onClose, goal, onSave }: TopUpModalProps) {
       maxWidth="max-w-sm"
       footer={
         <div className="flex gap-3 w-full">
-          <Button 
+          <Button
             variant="secondary"
             onClick={onClose}
             className="flex-1"
@@ -51,12 +51,14 @@ export function TopUpModal({ isOpen, onClose, goal, onSave }: TopUpModalProps) {
           >
             Retreat
           </Button>
-          <Button 
+          <Button
             onClick={handleSave}
             isLoading={isSaving}
             disabled={!amount || parseFloat(amount) <= 0}
             className="flex-[2]"
-            leftIcon={<Rocket className="w-4 h-4 hover:rotate-12 transition-transform" />}
+            leftIcon={
+              <Rocket className="w-4 h-4 hover:rotate-12 transition-transform" />
+            }
           >
             Deploy Capital
           </Button>
@@ -66,12 +68,21 @@ export function TopUpModal({ isOpen, onClose, goal, onSave }: TopUpModalProps) {
       <div className="space-y-5">
         <div className="p-4 rounded-xl bg-primary/5 ring-1 ring-primary/10">
           <div className="flex justify-between items-center mb-1">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Current Position</span>
-            <span className="text-[10px] font-black text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded-lg">{Math.round((goal.currentAmount / goal.targetAmount) * 100)}% Complete</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+              Current Position
+            </span>
+            <span className="text-[10px] font-black text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded-lg">
+              {Math.round((goal.currentAmount / goal.targetAmount) * 100)}%
+              Complete
+            </span>
           </div>
           <div className="flex justify-between items-baseline mt-1">
-            <span className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">₹{goal.currentAmount.toLocaleString()}</span>
-            <span className="text-[10px] text-slate-400 font-bold uppercase">target ₹{goal.targetAmount.toLocaleString()}</span>
+            <span className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">
+              ₹{goal.currentAmount.toLocaleString()}
+            </span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase">
+              target ₹{goal.targetAmount.toLocaleString()}
+            </span>
           </div>
         </div>
 
@@ -80,9 +91,11 @@ export function TopUpModal({ isOpen, onClose, goal, onSave }: TopUpModalProps) {
             Injection Magnitude
           </label>
           <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">₹</span>
-            <input 
-              type="number" 
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">
+              ₹
+            </span>
+            <input
+              type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               disabled={isSaving}

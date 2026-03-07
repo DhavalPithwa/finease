@@ -9,7 +9,7 @@ export function TopNav() {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === "admin";
 
   const userLinks = [
     { href: "/dashboard", label: "Dashboard" },
@@ -39,7 +39,7 @@ export function TopNav() {
               "text-[10px] font-black uppercase tracking-widest transition-all",
               isActive
                 ? "text-primary"
-                : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                : "text-slate-500 hover:text-slate-900 dark:hover:text-white",
             )}
           >
             {link.label}

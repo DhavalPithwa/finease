@@ -3,7 +3,10 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch } from "@/store";
-import { setUser, updateUserProfile as reduxUpdateUserProfile } from "@/store/slices/userSlice";
+import {
+  setUser,
+  updateUserProfile as reduxUpdateUserProfile,
+} from "@/store/slices/userSlice";
 import { fetchCategories } from "@/store/slices/categoriesSlice";
 import { fetchAssetClasses } from "@/store/slices/assetClassesSlice";
 import { fetchGoals } from "@/store/slices/goalsSlice";
@@ -24,6 +27,7 @@ interface AuthUser {
     wants: number;
     savings: number;
   };
+  hasOnboarded?: boolean;
 }
 
 interface ApiUserResponse {
@@ -40,6 +44,7 @@ interface ApiUserResponse {
     wants: number;
     savings: number;
   };
+  hasOnboarded?: boolean;
 }
 
 interface ApiAuthResponse {
@@ -50,7 +55,11 @@ interface ApiAuthResponse {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  loginWithGoogle: (email?: string, name?: string, password?: string) => Promise<void>;
+  loginWithGoogle: (
+    email?: string,
+    name?: string,
+    password?: string,
+  ) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<AuthUser>) => void;
   resetPassword: (email: string, newPassword: string) => Promise<void>;
@@ -70,6 +79,7 @@ function buildUser(userData: ApiUserResponse): AuthUser {
     gender: userData.gender,
     dob: userData.dob,
     budgetTargets: userData.budgetTargets,
+    hasOnboarded: userData.hasOnboarded,
   };
 }
 
@@ -98,7 +108,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void initAuth();
   }, [dispatch]);
 
-  const loginWithGoogle = async (email?: string, name?: string, password?: string) => {
+  const loginWithGoogle = async (
+    email?: string,
+    name?: string,
+    password?: string,
+  ) => {
     const endpoint = name ? "/auth/signup" : "/auth/login";
     const payload = name
       ? { email, name, password: password ?? "password123" }
@@ -135,7 +149,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithGoogle, logout, updateProfile, resetPassword }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        loginWithGoogle,
+        logout,
+        updateProfile,
+        resetPassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

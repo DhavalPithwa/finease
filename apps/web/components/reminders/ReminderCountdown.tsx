@@ -15,13 +15,21 @@ interface ReminderCountdownProps {
 
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
-export function ReminderCountdown({ reminders, onEdit }: ReminderCountdownProps) {
-  const [reminderToDelete, setReminderToDelete] = useState<Reminder | null>(null);
+export function ReminderCountdown({
+  reminders,
+  onEdit,
+}: ReminderCountdownProps) {
+  const [reminderToDelete, setReminderToDelete] = useState<Reminder | null>(
+    null,
+  );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
 
   const sortedReminders = useMemo(() => {
-    return [...reminders].sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
+    return [...reminders].sort(
+      (a, b) =>
+        new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime(),
+    );
   }, [reminders]);
 
   if (reminders.length === 0) return null;
@@ -30,19 +38,25 @@ export function ReminderCountdown({ reminders, onEdit }: ReminderCountdownProps)
     <div className="space-y-4">
       <div className="flex items-center justify-between px-1">
         <div className="flex flex-col">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Signal Horizon</h3>
-          <p className="text-[8px] font-bold text-slate-500 mt-0.5 uppercase tracking-widest leading-none">Omni-Channel Expiry Nodes</p>
+          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+            Signal Horizon
+          </h3>
+          <p className="text-[8px] font-bold text-slate-500 mt-0.5 uppercase tracking-widest leading-none">
+            Omni-Channel Expiry Nodes
+          </p>
         </div>
-        <span className="text-[8px] font-black text-primary uppercase bg-primary/10 px-2 py-1 rounded-full border border-primary/20 tracking-[0.1em]">Active Monitoring</span>
+        <span className="text-[8px] font-black text-primary uppercase bg-primary/10 px-2 py-1 rounded-full border border-primary/20 tracking-[0.1em]">
+          Active Monitoring
+        </span>
       </div>
-      
+
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
         <AnimatePresence mode="popLayout">
           {sortedReminders.map((reminder) => (
-            <CountdownCard 
-              key={reminder.id} 
-              reminder={reminder} 
-              onClick={() => onEdit?.(reminder)} 
+            <CountdownCard
+              key={reminder.id}
+              reminder={reminder}
+              onClick={() => onEdit?.(reminder)}
               onDelete={() => {
                 setReminderToDelete(reminder);
                 setIsDeleteModalOpen(true);
@@ -54,7 +68,10 @@ export function ReminderCountdown({ reminders, onEdit }: ReminderCountdownProps)
 
       <ConfirmModal
         isOpen={isDeleteModalOpen}
-        onCancel={() => { setIsDeleteModalOpen(false); setReminderToDelete(null); }}
+        onCancel={() => {
+          setIsDeleteModalOpen(false);
+          setReminderToDelete(null);
+        }}
         onConfirm={async () => {
           if (!reminderToDelete) return;
           await dispatch(deleteReminder(reminderToDelete.id)).unwrap();
@@ -71,12 +88,25 @@ export function ReminderCountdown({ reminders, onEdit }: ReminderCountdownProps)
   );
 }
 
-function CountdownCard({ reminder, onClick, onDelete }: { reminder: Reminder; onClick?: () => void; onDelete: () => void }) {
-  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number }>({ days: 0, hours: 0, minutes: 0 });
+function CountdownCard({
+  reminder,
+  onClick,
+  onDelete,
+}: {
+  reminder: Reminder;
+  onClick?: () => void;
+  onDelete: () => void;
+}) {
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+  }>({ days: 0, hours: 0, minutes: 0 });
 
   useEffect(() => {
     const calculate = () => {
-      const diff = new Date(reminder.expiryDate).getTime() - new Date().getTime();
+      const diff =
+        new Date(reminder.expiryDate).getTime() - new Date().getTime();
       if (diff <= 0) {
         setTimeLeft({ days: 0, hours: 0, minutes: 0 });
         return;
@@ -94,9 +124,15 @@ function CountdownCard({ reminder, onClick, onDelete }: { reminder: Reminder; on
   }, [reminder.expiryDate]);
 
   const isCritical = timeLeft.days < 7;
-  const isExpired = timeLeft.days === 0 && timeLeft.hours === 0 && timeLeft.minutes === 0;
+  const isExpired =
+    timeLeft.days === 0 && timeLeft.hours === 0 && timeLeft.minutes === 0;
 
-  const Icon = reminder.type === 'policy' ? ShieldAlert : reminder.type === 'document' ? FileText : Activity;
+  const Icon =
+    reminder.type === "policy"
+      ? ShieldAlert
+      : reminder.type === "document"
+        ? FileText
+        : Activity;
 
   return (
     <motion.div
@@ -105,49 +141,67 @@ function CountdownCard({ reminder, onClick, onDelete }: { reminder: Reminder; on
       exit={{ opacity: 0 }}
       onClick={onClick}
       className={`group relative p-4 rounded-3xl border transition-colors h-full flex flex-col justify-between cursor-pointer ${
-        isCritical 
-          ? "bg-rose-50/20 dark:bg-rose-500/5 border-rose-100 dark:border-rose-500/20 shadow-sm" 
+        isCritical
+          ? "bg-rose-50/20 dark:bg-rose-500/5 border-rose-100 dark:border-rose-500/20 shadow-sm"
           : "bg-white dark:bg-slate-900/50 border-slate-100 dark:border-white/5 hover:border-slate-200 dark:hover:border-white/10"
       }`}
     >
       <div className="space-y-4">
         <div className="flex justify-between items-start">
-          <div className={`p-2 rounded-2xl ${isCritical ? "bg-rose-500/10 text-rose-500" : "bg-slate-100 dark:bg-slate-800 text-slate-500"}`}>
-             <Icon className="w-3.5 h-3.5" />
+          <div
+            className={`p-2 rounded-2xl ${isCritical ? "bg-rose-500/10 text-rose-500" : "bg-slate-100 dark:bg-slate-800 text-slate-500"}`}
+          >
+            <Icon className="w-3.5 h-3.5" />
           </div>
-          <span className={`text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${
-            isExpired ? "text-rose-600 bg-rose-500/10 border-rose-500/20" : 
-            isCritical ? "text-orange-600 bg-orange-500/10 border-orange-500/20" : 
-            "text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-white/5"
-          }`}>
+          <span
+            className={`text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${
+              isExpired
+                ? "text-rose-600 bg-rose-500/10 border-rose-500/20"
+                : isCritical
+                  ? "text-orange-600 bg-orange-500/10 border-orange-500/20"
+                  : "text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-white/5"
+            }`}
+          >
             {isExpired ? "Expired" : isCritical ? "Urgent" : "Active"}
           </span>
         </div>
 
         <div className="min-w-0">
-          <h4 className={`text-xs font-black truncate tracking-tight uppercase ${isCritical ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-white"}`}>
+          <h4
+            className={`text-xs font-black truncate tracking-tight uppercase ${isCritical ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-white"}`}
+          >
             {reminder.name}
           </h4>
-          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">₹{reminder.renewalAmount.toLocaleString()}</p>
+          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            ₹{reminder.renewalAmount.toLocaleString()}
+          </p>
         </div>
 
         <div className="flex items-end justify-between">
           <div className="flex gap-4">
             <div className="flex flex-col">
-              <span className={`text-xl font-black tracking-tighter leading-none ${isCritical ? "text-rose-500" : "text-slate-900 dark:text-white"}`}>
+              <span
+                className={`text-xl font-black tracking-tighter leading-none ${isCritical ? "text-rose-500" : "text-slate-900 dark:text-white"}`}
+              >
                 {timeLeft.days}
               </span>
-              <span className="text-[6px] font-bold text-slate-400 uppercase tracking-widest mt-1">Days</span>
+              <span className="text-[6px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                Days
+              </span>
             </div>
             <div className="flex flex-col">
-              <span className={`text-xl font-black tracking-tighter leading-none ${isCritical ? "text-rose-500" : "text-slate-900 dark:text-white"}`}>
+              <span
+                className={`text-xl font-black tracking-tighter leading-none ${isCritical ? "text-rose-500" : "text-slate-900 dark:text-white"}`}
+              >
                 {timeLeft.hours}
               </span>
-              <span className="text-[6px] font-bold text-slate-400 uppercase tracking-widest mt-1">Hrs</span>
+              <span className="text-[6px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                Hrs
+              </span>
             </div>
           </div>
-          
-          <button 
+
+          <button
             onClick={(e) => {
               e.stopPropagation();
               onDelete();

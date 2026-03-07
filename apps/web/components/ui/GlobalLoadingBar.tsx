@@ -6,28 +6,40 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 
 export function GlobalLoadingBar() {
-  const accountsLoading = useSelector((state: RootState) => state.accounts?.loading);
-  const transactionsLoading = useSelector((state: RootState) => state.transactions?.loading);
+  const accountsLoading = useSelector(
+    (state: RootState) => state.accounts?.loading,
+  );
+  const transactionsLoading = useSelector(
+    (state: RootState) => state.transactions?.loading,
+  );
   const goalsLoading = useSelector((state: RootState) => state.goals?.loading);
-  const categoriesLoading = useSelector((state: RootState) => state.categories?.loading);
-  const assetClassesLoading = useSelector((state: RootState) => state.assetClasses?.loading);
-  const remindersLoading = useSelector((state: RootState) => state.reminders?.loading);
+  const categoriesLoading = useSelector(
+    (state: RootState) => state.categories?.loading,
+  );
+  const assetClassesLoading = useSelector(
+    (state: RootState) => state.assetClasses?.loading,
+  );
+  const remindersLoading = useSelector(
+    (state: RootState) => state.reminders?.loading,
+  );
 
   const [apiLoading, setApiLoading] = useState(false);
 
   useEffect(() => {
-    const handleLoading = (e: Event) => setApiLoading((e as CustomEvent).detail);
-    window.addEventListener('api-loading', handleLoading);
-    return () => window.removeEventListener('api-loading', handleLoading);
+    const handleLoading = (e: Event) =>
+      setApiLoading((e as CustomEvent).detail);
+    window.addEventListener("api-loading", handleLoading);
+    return () => window.removeEventListener("api-loading", handleLoading);
   }, []);
 
-  const isLoading = accountsLoading || 
-                    transactionsLoading || 
-                    goalsLoading || 
-                    categoriesLoading || 
-                    assetClassesLoading || 
-                    remindersLoading ||
-                    apiLoading;
+  const isLoading =
+    accountsLoading ||
+    transactionsLoading ||
+    goalsLoading ||
+    categoriesLoading ||
+    assetClassesLoading ||
+    remindersLoading ||
+    apiLoading;
 
   const [visible, setVisible] = useState(false);
 

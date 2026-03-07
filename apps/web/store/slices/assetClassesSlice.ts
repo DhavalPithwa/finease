@@ -1,6 +1,6 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import api from '@/lib/api';
-import { AssetClass } from '@repo/types';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import api from "@/lib/api";
+import { AssetClass } from "@repo/types";
 
 export interface AssetClassesState {
   items: AssetClass[];
@@ -14,28 +14,46 @@ const initialState: AssetClassesState = {
   error: null,
 };
 
-export const fetchAssetClasses = createAsyncThunk('assetClasses/fetchAll', async () => {
-  const response = await api.get<AssetClass[]>('/finance/asset-classes');
-  return response.data;
-});
+export const fetchAssetClasses = createAsyncThunk(
+  "assetClasses/fetchAll",
+  async () => {
+    const response = await api.get<AssetClass[]>("/finance/asset-classes");
+    return response.data;
+  },
+);
 
-export const addAssetClassAction = createAsyncThunk('assetClasses/add', async (assetClass: Partial<AssetClass>) => {
-  const response = await api.post<AssetClass>('/finance/asset-classes', assetClass);
-  return response.data;
-});
+export const addAssetClassAction = createAsyncThunk(
+  "assetClasses/add",
+  async (assetClass: Partial<AssetClass>) => {
+    const response = await api.post<AssetClass>(
+      "/finance/asset-classes",
+      assetClass,
+    );
+    return response.data;
+  },
+);
 
-export const updateAssetClassAction = createAsyncThunk('assetClasses/update', async ({ id, data }: { id: string; data: Partial<AssetClass> }) => {
-  const response = await api.put<AssetClass>(`/finance/asset-classes/${id}`, data);
-  return response.data;
-});
+export const updateAssetClassAction = createAsyncThunk(
+  "assetClasses/update",
+  async ({ id, data }: { id: string; data: Partial<AssetClass> }) => {
+    const response = await api.put<AssetClass>(
+      `/finance/asset-classes/${id}`,
+      data,
+    );
+    return response.data;
+  },
+);
 
-export const removeAssetClassAction = createAsyncThunk('assetClasses/remove', async (id: string) => {
-  await api.delete(`/finance/asset-classes/${id}`);
-  return id;
-});
+export const removeAssetClassAction = createAsyncThunk(
+  "assetClasses/remove",
+  async (id: string) => {
+    await api.delete(`/finance/asset-classes/${id}`);
+    return id;
+  },
+);
 
 export const assetClassesSlice = createSlice({
-  name: 'assetClasses',
+  name: "assetClasses",
   initialState,
   reducers: {},
   extraReducers: (builder) => {
@@ -49,19 +67,19 @@ export const assetClassesSlice = createSlice({
       })
       .addCase(fetchAssetClasses.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message ?? 'Failed to fetch asset classes';
+        state.error = action.error.message ?? "Failed to fetch asset classes";
       })
       .addCase(addAssetClassAction.fulfilled, (state, action) => {
         state.items.push(action.payload);
       })
       .addCase(updateAssetClassAction.fulfilled, (state, action) => {
-        const index = state.items.findIndex(a => a.id === action.payload.id);
+        const index = state.items.findIndex((a) => a.id === action.payload.id);
         if (index !== -1) {
           state.items[index] = action.payload;
         }
       })
       .addCase(removeAssetClassAction.fulfilled, (state, action) => {
-        state.items = state.items.filter(a => a.id !== action.payload);
+        state.items = state.items.filter((a) => a.id !== action.payload);
       });
   },
 });

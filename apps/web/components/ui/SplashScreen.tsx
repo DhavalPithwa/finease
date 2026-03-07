@@ -15,9 +15,9 @@ export function SplashScreen() {
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ 
-            duration: 1.5, 
-            ease: [0.16, 1, 0.3, 1]
+          transition={{
+            duration: 1.5,
+            ease: [0.16, 1, 0.3, 1],
           }}
           className="relative w-48 h-30 flex items-center justify-center"
         >
@@ -27,14 +27,18 @@ export function SplashScreen() {
               key={i}
               initial={{ rotate: 0, opacity: 0 }}
               animate={{ rotate: 360, opacity: 1 }}
-              transition={{ 
-                rotate: { duration: 15 + i * 5, repeat: Infinity, ease: "linear" },
-                opacity: { duration: 1, delay: i * 0.2 }
+              transition={{
+                rotate: {
+                  duration: 15 + i * 5,
+                  repeat: Infinity,
+                  ease: "linear",
+                },
+                opacity: { duration: 1, delay: i * 0.2 },
               }}
               className="absolute border border-primary/10 dark:border-primary/5 rounded-[3rem]"
-              style={{ 
+              style={{
                 inset: i * 12,
-                borderRadius: `${40 - i * 5}%`
+                borderRadius: `${40 - i * 5}%`,
               }}
             />
           ))}
@@ -48,16 +52,16 @@ export function SplashScreen() {
           >
             {/* Glossy Overlay */}
             <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
-            
+
             {/* Dynamic Core */}
-            <motion.div 
-              animate={{ 
+            <motion.div
+              animate={{
                 scale: [1, 1.1, 1],
-                rotate: [0, 90, 180, 270, 360]
+                rotate: [0, 90, 180, 270, 360],
               }}
-              transition={{ 
+              transition={{
                 scale: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-                rotate: { duration: 20, repeat: Infinity, ease: "linear" }
+                rotate: { duration: 20, repeat: Infinity, ease: "linear" },
               }}
               className="size-10 border-2 border-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm"
             >
@@ -67,16 +71,19 @@ export function SplashScreen() {
         </motion.div>
 
         {/* Brand Typography */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.8 }}
           className="text-center"
         >
           <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
-            Fin<span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary via-blue-500 to-emerald-500">Ease</span>
+            Fin
+            <span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary via-blue-500 to-emerald-500">
+              Ease
+            </span>
           </h1>
-          <motion.div 
+          <motion.div
             initial={{ width: 0 }}
             animate={{ width: 40 }}
             transition={{ delay: 1.2, duration: 0.8 }}
@@ -93,16 +100,16 @@ export function SplashScreen() {
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            animate={{ 
+            animate={{
               height: [8, 24, 8],
               opacity: [0.3, 1, 0.3],
-              backgroundColor: ["#135bec", "#10b981", "#135bec"]
+              backgroundColor: ["#135bec", "#10b981", "#135bec"],
             }}
-            transition={{ 
-              duration: 1.5, 
-              repeat: Infinity, 
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
               delay: i * 0.15,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
             className="w-1 rounded-full"
           />
@@ -110,7 +117,7 @@ export function SplashScreen() {
       </div>
 
       {/* Security Signature */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.5, duration: 1 }}

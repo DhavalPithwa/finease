@@ -10,10 +10,21 @@ interface AddLiabilityModalProps {
   isOpen: boolean;
   onClose: () => void;
   liability?: Partial<Account>;
-  onSave: (data: { name: string; type: string; initialAmount: string; paidAmount: string; interestPaid: string }) => Promise<void> | void;
+  onSave: (data: {
+    name: string;
+    type: string;
+    initialAmount: string;
+    paidAmount: string;
+    interestPaid: string;
+  }) => Promise<void> | void;
 }
 
-export function AddLiabilityModal({ isOpen, onClose, liability, onSave }: AddLiabilityModalProps) {
+export function AddLiabilityModal({
+  isOpen,
+  onClose,
+  liability,
+  onSave,
+}: AddLiabilityModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     type: "debt",
@@ -30,7 +41,9 @@ export function AddLiabilityModal({ isOpen, onClose, liability, onSave }: AddLia
         setFormData({
           name: liability.name ?? "",
           type: liability.type ?? "debt",
-          initialAmount: liability.initialAmount?.toString() || (absBalance + (liability.paidAmount ?? 0)).toString(),
+          initialAmount:
+            liability.initialAmount?.toString() ||
+            (absBalance + (liability.paidAmount ?? 0)).toString(),
           paidAmount: liability.paidAmount?.toString() ?? "0",
           interestPaid: liability.interestPaid?.toString() ?? "0",
         });
@@ -66,7 +79,7 @@ export function AddLiabilityModal({ isOpen, onClose, liability, onSave }: AddLia
       maxWidth="max-w-sm"
       footer={
         <div className="flex gap-3 w-full">
-          <Button 
+          <Button
             variant="secondary"
             onClick={onClose}
             className="flex-1"
@@ -74,7 +87,7 @@ export function AddLiabilityModal({ isOpen, onClose, liability, onSave }: AddLia
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleSubmit}
             isLoading={isSaving}
             className="flex-[2]"
@@ -87,9 +100,11 @@ export function AddLiabilityModal({ isOpen, onClose, liability, onSave }: AddLia
     >
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Instrument Label</label>
-          <input 
-            type="text" 
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Instrument Label
+          </label>
+          <input
+            type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="e.g. Home Loan"
@@ -98,11 +113,15 @@ export function AddLiabilityModal({ isOpen, onClose, liability, onSave }: AddLia
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Obligation (₹)</label>
-          <input 
-            type="number" 
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Total Obligation (₹)
+          </label>
+          <input
+            type="number"
             value={formData.initialAmount}
-            onChange={(e) => setFormData({ ...formData, initialAmount: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, initialAmount: e.target.value })
+            }
             placeholder="0.00"
             className="w-full h-10 bg-slate-50 dark:bg-slate-950 border-none rounded-xl px-3 text-xs font-black text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all"
           />
@@ -110,20 +129,28 @@ export function AddLiabilityModal({ isOpen, onClose, liability, onSave }: AddLia
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest pl-1">Principal (₹)</label>
-            <input 
-              type="number" 
+            <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest pl-1">
+              Principal (₹)
+            </label>
+            <input
+              type="number"
               value={formData.paidAmount}
-              onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, paidAmount: e.target.value })
+              }
               className="w-full h-10 bg-emerald-50 dark:bg-emerald-500/10 border-none rounded-xl px-3 text-xs font-black text-emerald-500 ring-1 ring-emerald-500/20 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-orange-500 uppercase tracking-widest pl-1">Cost (₹)</label>
-            <input 
-              type="number" 
+            <label className="text-[10px] font-black text-orange-500 uppercase tracking-widest pl-1">
+              Cost (₹)
+            </label>
+            <input
+              type="number"
               value={formData.interestPaid}
-              onChange={(e) => setFormData({ ...formData, interestPaid: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, interestPaid: e.target.value })
+              }
               className="w-full h-10 bg-orange-50 dark:bg-orange-500/10 border-none rounded-xl px-3 text-xs font-black text-orange-500 ring-1 ring-orange-500/20 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
             />
           </div>

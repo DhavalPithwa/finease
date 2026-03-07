@@ -13,28 +13,58 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  
+
   // Redux loading states
-  const accountsLoading = useSelector((state: RootState) => state.accounts.loading);
-  const accountsCount = useSelector((state: RootState) => state.accounts.items.length);
-  const transactionsLoading = useSelector((state: RootState) => state.transactions.loading);
-  const transactionsCount = useSelector((state: RootState) => state.transactions.items.length);
+  const accountsLoading = useSelector(
+    (state: RootState) => state.accounts.loading,
+  );
+  const accountsCount = useSelector(
+    (state: RootState) => state.accounts.items.length,
+  );
+  const transactionsLoading = useSelector(
+    (state: RootState) => state.transactions.loading,
+  );
+  const transactionsCount = useSelector(
+    (state: RootState) => state.transactions.items.length,
+  );
 
   useEffect(() => {
-    if (!authLoading && !user && pathname && !PUBLIC_ROUTES.includes(pathname)) {
+    if (
+      !authLoading &&
+      !user &&
+      pathname &&
+      !PUBLIC_ROUTES.includes(pathname)
+    ) {
       router.push("/");
       return;
     }
-    
+
     // Admin route protection: Kicking non-admins out of /admin routes
-    if (!authLoading && user && pathname?.startsWith("/admin") && user.role !== "admin") {
+    if (
+      !authLoading &&
+      user &&
+      pathname?.startsWith("/admin") &&
+      user.role !== "admin"
+    ) {
       router.push("/dashboard");
       return;
     }
 
     // User route protection: Kicking admins out of regular user routes
-    const USER_ONLY_ROUTES = ["/dashboard", "/transactions", "/accounts", "/portfolio", "/goals", "/settings"];
-    if (!authLoading && user && user.role === "admin" && USER_ONLY_ROUTES.some(route => pathname?.startsWith(route))) {
+    const USER_ONLY_ROUTES = [
+      "/dashboard",
+      "/transactions",
+      "/accounts",
+      "/portfolio",
+      "/goals",
+      "/settings",
+    ];
+    if (
+      !authLoading &&
+      user &&
+      user.role === "admin" &&
+      USER_ONLY_ROUTES.some((route) => pathname?.startsWith(route))
+    ) {
       router.push("/admin/dashboard");
       return;
     }
@@ -51,14 +81,14 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   // is we are on a protected route
   const isProtectedRoute = pathname && !PUBLIC_ROUTES.includes(pathname);
-  
+
   // High-level data loading check:
   // Show loader if Auth is strictly loading
   // OR if we are on a protected route and we have NO data yet AND an API call is in progress
-  const isDataFetching = isProtectedRoute && (
-    (accountsCount === 0 && accountsLoading) || 
-    (transactionsCount === 0 && transactionsLoading)
-  );
+  const isDataFetching =
+    isProtectedRoute &&
+    ((accountsCount === 0 && accountsLoading) ||
+      (transactionsCount === 0 && transactionsLoading));
 
   if (authLoading) {
     return <Loading />;
@@ -69,7 +99,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  // If we are authenticated but fetching initial data, return null to let 
+  // If we are authenticated but fetching initial data, return null to let
   // SecurityProvider's splash screen exit naturally or show skeleton in children
   if (isDataFetching) {
     return null;

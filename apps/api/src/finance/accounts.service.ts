@@ -18,14 +18,14 @@ export class AccountsService {
 
   async findAll(userId: string): Promise<Account[]> {
     const snapshot = await this.collection.where('userId', '==', userId).get();
-    return snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() }) as Account,
-    );
+    return snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }) as Account)
+      .filter((account) => !account.deletedAt);
   }
 
   async findOne(id: string): Promise<Account> {
     const doc = await this.collection.doc(id).get();
-    if (!doc.exists) {
+    if (!doc.exists || doc.data()?.deletedAt) {
       throw new NotFoundException(`Account with ID ${id} not found`);
     }
     return { id: doc.id, ...doc.data() } as Account;
@@ -34,6 +34,7 @@ export class AccountsService {
   async create(account: Partial<Account>): Promise<Account> {
     const docRef = await this.collection.add({
       ...account,
+      deletedAt: null,
       lastSyncedAt: new Date().toISOString(),
     });
     const doc = await docRef.get();
@@ -49,9 +50,11 @@ export class AccountsService {
   }
 
   async remove(id: string): Promise<void> {
-    // Cascade delete transactions related to this account
+    // Cascade soft-delete transactions related to this account
     await this.transactionsService.removeByAccountId(id);
-    // Delete the account itself
-    await this.collection.doc(id).delete();
+    // Soft-delete the account itself
+    await this.collection.doc(id).update({
+      deletedAt: new Date().toISOString(),
+    });
   }
 }

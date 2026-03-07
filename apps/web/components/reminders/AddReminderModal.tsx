@@ -13,7 +13,12 @@ interface AddReminderModalProps {
   reminder?: Reminder | null;
 }
 
-export function AddReminderModal({ isOpen, onClose, onSave, reminder }: AddReminderModalProps) {
+export function AddReminderModal({
+  isOpen,
+  onClose,
+  onSave,
+  reminder,
+}: AddReminderModalProps) {
   const [formData, setFormData] = useState<Omit<Reminder, "id">>({
     name: "",
     type: "policy",
@@ -81,7 +86,9 @@ export function AddReminderModal({ isOpen, onClose, onSave, reminder }: AddRemin
     >
       <div className="space-y-6">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Signal Identifier</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Signal Identifier
+          </label>
           <input
             type="text"
             value={formData.name}
@@ -93,10 +100,17 @@ export function AddReminderModal({ isOpen, onClose, onSave, reminder }: AddRemin
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Signal Type</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Signal Type
+            </label>
             <select
               value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as Reminder['type'] })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  type: e.target.value as Reminder["type"],
+                })
+              }
               className="w-full h-12 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl px-4 text-sm font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
             >
               <option value="policy">Policy</option>
@@ -105,12 +119,19 @@ export function AddReminderModal({ isOpen, onClose, onSave, reminder }: AddRemin
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Renewal Magnitude</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Renewal Magnitude
+            </label>
             <div className="relative">
               <input
                 type="number"
                 value={formData.renewalAmount || ""}
-                onChange={(e) => setFormData({ ...formData, renewalAmount: Number(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    renewalAmount: Number(e.target.value),
+                  })
+                }
                 placeholder="0.00"
                 className="w-full h-12 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl pl-10 pr-4 text-sm font-black text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all"
               />
@@ -120,12 +141,16 @@ export function AddReminderModal({ isOpen, onClose, onSave, reminder }: AddRemin
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Horizon Date (Expiration)</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Horizon Date (Expiration)
+          </label>
           <div className="relative">
             <input
               type="date"
               value={formData.expiryDate}
-              onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, expiryDate: e.target.value })
+              }
               className="w-full h-12 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl pl-10 pr-4 text-sm font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all"
             />
             <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

@@ -57,7 +57,9 @@ export class AuthService {
       gender,
       dob,
       role: 'user',
+      hasOnboarded: false,
       createdAt: new Date().toISOString(),
+      deletedAt: null,
     };
 
     await userRef.set(newUser);
@@ -88,7 +90,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const userData = userDoc.data() as StoredUser;
+    const userData = userDoc.data() as StoredUser & {
+      deletedAt?: string | null;
+    };
+    if (userData.deletedAt) {
+      throw new UnauthorizedException('Identity has been terminated');
+    }
     const isPasswordValid = await bcrypt.compare(password, userData.password);
 
     if (!isPasswordValid) {

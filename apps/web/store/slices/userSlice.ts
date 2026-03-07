@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface User {
   uid: string;
@@ -13,6 +13,7 @@ export interface User {
     wants: number;
     savings: number;
   };
+  hasOnboarded?: boolean;
 }
 
 export interface UserState {
@@ -24,7 +25,7 @@ const initialState: UserState = {
 };
 
 export const userSlice = createSlice({
-  name: 'user',
+  name: "user",
   initialState,
   reducers: {
     setUser: (state, action: PayloadAction<User | null>) => {
@@ -34,7 +35,7 @@ export const userSlice = createSlice({
       if (state.profile) {
         state.profile = { ...state.profile, ...action.payload };
       }
-    }
+    },
   },
 });
 

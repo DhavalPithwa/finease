@@ -8,12 +8,22 @@ import { Button } from "@/components/ui/Button";
 interface AddAssetTypeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { id?: string; name: string; color: string }) => Promise<void> | void;
+  onSave: (data: {
+    id?: string;
+    name: string;
+    color: string;
+  }) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
   assetType?: { id: string; name: string; color: string } | null;
 }
 
-export function AddAssetTypeModal({ isOpen, onClose, onSave, onDelete, assetType }: AddAssetTypeModalProps) {
+export function AddAssetTypeModal({
+  isOpen,
+  onClose,
+  onSave,
+  onDelete,
+  assetType,
+}: AddAssetTypeModalProps) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("bg-indigo-500");
   const [isSaving, setIsSaving] = useState(false);
@@ -39,7 +49,7 @@ export function AddAssetTypeModal({ isOpen, onClose, onSave, onDelete, assetType
     "bg-emerald-500",
     "bg-purple-500",
     "bg-rose-500",
-    "bg-amber-500"
+    "bg-amber-500",
   ];
 
   const handleSave = async () => {
@@ -101,7 +111,9 @@ export function AddAssetTypeModal({ isOpen, onClose, onSave, onDelete, assetType
     >
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Class Label</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Class Label
+          </label>
           <input
             type="text"
             value={name}
@@ -113,7 +125,9 @@ export function AddAssetTypeModal({ isOpen, onClose, onSave, onDelete, assetType
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Visual Identity</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Visual Identity
+          </label>
           <div className="flex flex-wrap gap-2.5 px-1 py-1">
             {colors.map((c) => (
               <button
@@ -121,10 +135,14 @@ export function AddAssetTypeModal({ isOpen, onClose, onSave, onDelete, assetType
                 disabled={isSaving || isDeleting}
                 onClick={() => setColor(c)}
                 className={`w-6 h-6 rounded-full ${c} transition-all active:scale-90 flex items-center justify-center ${
-                  color === c ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900 shadow-lg" : ""
+                  color === c
+                    ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900 shadow-lg"
+                    : ""
                 }`}
               >
-                {color === c && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                {color === c && (
+                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                )}
               </button>
             ))}
           </div>

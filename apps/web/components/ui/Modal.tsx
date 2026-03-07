@@ -72,7 +72,9 @@ export function Modal({
             )}
 
             {/* Content Swiper / Scrollable Body */}
-            <div className={`p-4 overflow-y-auto flex-1 ${!footer ? 'pb-10 sm:pb-4' : ''}`}>
+            <div
+              className={`p-4 overflow-y-auto flex-1 ${!footer ? "pb-10 sm:pb-4" : ""}`}
+            >
               {children}
             </div>
 

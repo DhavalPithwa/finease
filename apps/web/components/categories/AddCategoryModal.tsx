@@ -8,12 +8,28 @@ import { Button } from "@/components/ui/Button";
 interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { id?: string; name: string; color: string; parentType?: string }) => Promise<void> | void;
+  onSave: (data: {
+    id?: string;
+    name: string;
+    color: string;
+    parentType?: string;
+  }) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
-  category?: { id: string; name: string; color: string; parentType?: string } | null;
+  category?: {
+    id: string;
+    name: string;
+    color: string;
+    parentType?: string;
+  } | null;
 }
 
-export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }: AddCategoryModalProps) {
+export function AddCategoryModal({
+  isOpen,
+  onClose,
+  onSave,
+  onDelete,
+  category,
+}: AddCategoryModalProps) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("bg-indigo-500");
   const [parentType, setParentType] = useState("needs");
@@ -42,7 +58,7 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
     "bg-emerald-500",
     "bg-purple-500",
     "bg-rose-500",
-    "bg-amber-500"
+    "bg-amber-500",
   ];
 
   const handleSave = async () => {
@@ -104,7 +120,9 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
     >
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Label</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Label
+          </label>
           <input
             type="text"
             value={name}
@@ -116,7 +134,9 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Spending Bucket</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Spending Bucket
+          </label>
           <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl ring-1 ring-slate-100 dark:ring-white/5">
             {["needs", "wants", "savings"].map((type) => (
               <button
@@ -124,9 +144,9 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
                 disabled={isSaving || isDeleting}
                 onClick={() => setParentType(type)}
                 className={`py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
-                  parentType === type 
-                  ? "bg-white dark:bg-slate-800 text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10" 
-                  : "text-slate-500"
+                  parentType === type
+                    ? "bg-white dark:bg-slate-800 text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                    : "text-slate-500"
                 } disabled:opacity-50`}
               >
                 {type}
@@ -136,7 +156,9 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Theme Color</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Theme Color
+          </label>
           <div className="flex flex-wrap gap-2.5 px-1 py-1">
             {colors.map((c) => (
               <button
@@ -144,10 +166,14 @@ export function AddCategoryModal({ isOpen, onClose, onSave, onDelete, category }
                 disabled={isSaving || isDeleting}
                 onClick={() => setColor(c)}
                 className={`w-6 h-6 rounded-full ${c} transition-all active:scale-90 flex items-center justify-center ${
-                  color === c ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900 shadow-lg" : ""
+                  color === c
+                    ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900 shadow-lg"
+                    : ""
                 } disabled:opacity-50`}
               >
-                {color === c && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                {color === c && (
+                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                )}
               </button>
             ))}
           </div>

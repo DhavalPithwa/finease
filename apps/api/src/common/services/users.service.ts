@@ -9,20 +9,24 @@ export class UsersService {
 
   constructor(private readonly firebaseAdmin: FirebaseAdminService) {}
 
+  getFirestore() {
+    return this.firebaseAdmin.getFirestore();
+  }
+
   private get collection() {
     return this.firebaseAdmin.getFirestore().collection(this.collectionName);
   }
 
   async findOne(uid: string): Promise<User> {
     const doc = await this.collection.doc(uid).get();
-    if (!doc.exists) {
+    if (!doc.exists || doc.data()?.deletedAt) {
       throw new NotFoundException(`User with UID ${uid} not found`);
     }
     return { id: doc.id, ...doc.data() } as User;
   }
 
   async findAll(): Promise<User[]> {
-    const snapshot = await this.collection.get();
+    const snapshot = await this.collection.where('deletedAt', '==', null).get();
     return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as User);
   }
 
