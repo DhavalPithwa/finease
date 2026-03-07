@@ -7,10 +7,10 @@ import { Reminder } from '@repo/types';
 export class RemindersService {
   private readonly collectionName = 'reminders';
 
-  private readonly collection: admin.firestore.CollectionReference<Reminder>;
+  constructor(private readonly firebaseAdmin: FirebaseAdminService) {}
 
-  constructor(private readonly firebaseAdmin: FirebaseAdminService) {
-    this.collection = this.firebaseAdmin
+  private get collection(): admin.firestore.CollectionReference<Reminder> {
+    return this.firebaseAdmin
       .getFirestore()
       .collection(
         this.collectionName,
