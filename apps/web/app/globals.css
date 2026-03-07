@@ -7,9 +7,9 @@
   --color-primary: #135bec;
   --color-primary-dark: #0e45b5;
   --color-background-light: #f6f6f8;
-  --color-background-dark: #0f1115;
-  --color-surface-dark: #181b21;
-  --color-border-dark: #2a2f3a;
+  --color-background-dark: #020408;
+    --color-surface-dark: #0d1117;
+    --color-border-dark: #1f2937;
 
   --color-emerald-accent: #10b981;
   --color-red-accent: #ef4444;
@@ -28,7 +28,7 @@
   }
 
   .dark {
-    --background: #0f1115;
+    --background: #020408;
     --foreground: #f8fafc;
   }
 
@@ -49,6 +49,28 @@
   }
 }
 
+/* Global Scrollbar Removal - Robust */
+html,
+body,
+* {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
 @layer components {
   .finease-card {
     @apply rounded-xl border bg-white shadow-sm transition-all hover:shadow-md dark:bg-surface-dark dark:border-border-dark;

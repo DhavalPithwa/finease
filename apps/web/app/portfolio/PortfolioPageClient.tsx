@@ -11,7 +11,7 @@ import { AddAssetModal } from "@/components/portfolio/AddAssetModal";
 
 import { addAssetClassAction, updateAssetClassAction, removeAssetClassAction } from "@/store/slices/assetClassesSlice";
 import { Account } from "@repo/types";
-import { Edit2, Trash2, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Trash2, Edit2, Plus, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 export default function PortfolioPageClient() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
   
   useEffect(() => {
@@ -43,6 +43,8 @@ export default function PortfolioPageClient() {
   
   const accounts = useSelector((state: RootState) => state.accounts.items);
   const assetTypes = useSelector((state: RootState) => state.assetClasses.items);
+  const loading = useSelector((state: RootState) => state.accounts.loading);
+  const [showAllAssetClasses, setShowAllAssetClasses] = useState(false);
 
   const [investmentPage, setInvestmentPage] = useState(1);
   const [liabilityPage, setLiabilityPage] = useState(1);
@@ -62,6 +64,20 @@ export default function PortfolioPageClient() {
   const totalCapitalInvested = investments.reduce((sum, item) => sum + (item.investedAmount || item.balance), 0);
   const liabilities = Math.abs(debts.reduce((sum, item) => sum + item.balance, 0));
   const netWorth = assets - liabilities;
+
+  if (authLoading || (loading && accounts.length === 0)) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-6 pb-20 animate-pulse">
+        <div className="h-10 w-48 bg-slate-100 dark:bg-slate-800 rounded-lg" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 rounded-2xl" />)}
+        </div>
+        <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-3xl" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 sm:space-y-6 pb-20 lg:pb-8 pt-0">
@@ -105,24 +121,36 @@ export default function PortfolioPageClient() {
           </div>
         }
       >
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-          {assetTypes.map(c => (
-            <div key={c.id} className="relative group/asset shrink-0">
-              <button 
-                onClick={() => { setEditingAssetType(c); setIsAssetTypeModalOpen(true); }}
-                className="whitespace-nowrap flex items-center gap-2 pl-3 pr-7 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 shadow-sm transition-all"
-              >
-                <div className={`w-1.5 h-1.5 rounded-full ${c.color}`} />
-                <span className="font-bold text-[9px] uppercase tracking-widest text-slate-600 dark:text-slate-400">{c.name}</span>
-              </button>
-              <button 
-                onClick={(e) => { e.stopPropagation(); setEditingAssetType(c); setIsAssetTypeModalOpen(true); }}
-                className="absolute top-1/2 -translate-y-1/2 right-1.5 p-1 bg-white dark:bg-slate-800 rounded-full shadow-lg opacity-100 lg:opacity-0 lg:group-hover/asset:opacity-100 transition-opacity border border-slate-100 dark:border-white/5 z-10 hover:scale-110 active:scale-90"
-              >
-                <Edit2 className="w-2.5 h-2.5 text-primary" />
-              </button>
-            </div>
-          ))}
+        <div className={`flex items-center gap-2 py-0.5 ${showAllAssetClasses ? 'flex-wrap' : 'overflow-x-auto overflow-y-hidden no-scrollbar'}`}>
+           <button 
+             onClick={() => { setEditingAssetType(null); setIsAssetTypeModalOpen(true); }}
+             className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-primary transition-all active:scale-90"
+           >
+             <Plus className="w-3.5 h-3.5" />
+           </button>
+            {(showAllAssetClasses ? assetTypes : assetTypes.slice(0, 5)).map(c => (
+              <div key={c.id} className="relative group/cat shrink-0">
+                <div className="flex items-center gap-2 pl-3 pr-7 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-white/5 transition-all">
+                  <div className={`w-1.5 h-1.5 rounded-full ${c.color}`} />
+                  <span className="font-bold text-[9px] uppercase tracking-widest text-slate-500">{c.name}</span>
+                </div>
+                <button 
+                  onClick={() => { setEditingAssetType(c); setIsAssetTypeModalOpen(true); }}
+                  className="absolute top-1/2 -translate-y-1/2 right-1.5 p-1 bg-white dark:bg-slate-800 rounded-full shadow-lg opacity-100 lg:opacity-0 lg:group-hover/cat:opacity-100 transition-opacity border border-slate-100 dark:border-white/5 z-10 hover:scale-110 active:scale-90"
+                >
+                  <Edit2 className="w-2.5 h-2.5 text-primary" />
+                </button>
+              </div>
+           ))}
+           {assetTypes.length > 5 && (
+             <button 
+               onClick={() => setShowAllAssetClasses(!showAllAssetClasses)}
+               className="flex-shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-primary transition-all border border-transparent hover:border-primary/20"
+             >
+               {showAllAssetClasses ? 'Less' : `+${assetTypes.length - 5} More`}
+               {showAllAssetClasses ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+             </button>
+           )}
         </div>
       </PageHeader>
 

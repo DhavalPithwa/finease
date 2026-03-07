@@ -16,8 +16,8 @@ export function BottomNav() {
 
   const userLinks = [
     { href: "/dashboard", label: "Dashboard", Icon: Home },
-    { href: "/transactions", label: "Transact", Icon: IndianRupee },
     { href: "/goals", label: "Goals", Icon: Target },
+    { href: "/transactions", label: "Transact", Icon: IndianRupee },
     { href: "/portfolio", label: "Portfolio", Icon: TrendingUp },
     { href: "/reports", label: "Reports", Icon: FileText },
   ];

@@ -35,7 +35,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 };
 
 export function NetWorthChart({ data, currentNetWorth, percentageChange }: NetWorthChartProps) {
-  const [period, setPeriod] = useState("1Y");
+  const [period, setPeriod] = useState("1M");
 
   return (
     <Card 

@@ -23,7 +23,23 @@ export function SignalProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const requestPermission = async () => {
-    if (!isSupported) return;
+    if (typeof window === "undefined") return;
+    
+    // Detection for iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window);
+    const isStandalone = ('standalone' in window.navigator) && (window.navigator as Navigator & { standalone: boolean }).standalone;
+
+    if (!isSupported) {
+      if (isIOS && !isStandalone) {
+        toast("To enable signals on iOS: \n1. Share (up arrow) \n2. 'Add to Home Screen' \n3. Open from Home Screen", {
+          duration: 6000,
+          icon: '📱',
+        });
+      } else {
+        toast.error("Signals not supported on this browser.");
+      }
+      return;
+    }
 
     try {
       const result = await Notification.requestPermission();
@@ -31,7 +47,11 @@ export function SignalProvider({ children }: { children: React.ReactNode }) {
       if (result === "granted") {
         toast.success("Signals enabled. You will receive intelligent reminders.");
       } else if (result === "denied") {
-        toast.error("Signals blocked. Enable notifications in settings for reminders.");
+        if (isIOS) {
+          toast.error("Signals blocked. Go to Settings > Notifications > FinEase to enable.", { duration: 5000 });
+        } else {
+          toast.error("Signals blocked. Enable notifications in browser settings.");
+        }
       }
     } catch (error) {
       console.error("Error requesting notification permission:", error);

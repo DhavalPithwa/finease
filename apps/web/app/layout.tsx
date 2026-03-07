@@ -11,6 +11,7 @@ import { ReduxProvider } from "@/components/providers/ReduxProvider";
 import { Toaster } from "react-hot-toast";
 import { SecurityProvider } from "@/components/providers/SecurityProvider";
 import { SignalProvider } from "@/components/providers/SignalProvider";
+import { GlobalLoadingBar } from "@/components/ui/GlobalLoadingBar";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -68,6 +69,7 @@ export default function RootLayout({
       <body className={`${inter.variable} min-h-[100dvh] flex flex-col font-body bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ReduxProvider>
+            <GlobalLoadingBar />
             <AuthProvider>
               <SignalProvider>
                 <SecurityProvider>

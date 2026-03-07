@@ -44,25 +44,35 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   });
   const [isChecking, setIsChecking] = useState(true);
   const [enteredPin, setEnteredPin] = useState("");
+  const [authenticating, setAuthenticating] = useState(false);
+  const isAuthenticatingRef = React.useRef(false);
 
   const authenticate = useCallback(async (): Promise<boolean> => {
-    if (lockType === "pin") return false;
+    if (lockType === "pin" || isAuthenticatingRef.current) return false;
 
     try {
+      isAuthenticatingRef.current = true;
+      setAuthenticating(true);
+
       if (typeof window === "undefined" || !window.PublicKeyCredential) {
         setIsLocked(false);
+        isAuthenticatingRef.current = false;
+        setAuthenticating(false);
         return true;
       }
 
       const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
       if (!available) {
         setIsLocked(false);
+        isAuthenticatingRef.current = false;
+        setAuthenticating(false);
         return true;
       }
 
       const credentialId = localStorage.getItem("finease_credential_id");
       if (!credentialId) {
-        // No stored biometric credentials found. User must re-enroll.
+        isAuthenticatingRef.current = false;
+        setAuthenticating(false);
         return false;
       }
 
@@ -87,12 +97,17 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       if (assertion) {
         setIsLocked(false);
         sessionStorage.setItem("finease_session_authenticated", "true");
+        isAuthenticatingRef.current = false;
+        setAuthenticating(false);
         return true;
       }
       
+      isAuthenticatingRef.current = false;
+      setAuthenticating(false);
       return false;
     } catch {
-      // Authentication failure. Handled via false return.
+      isAuthenticatingRef.current = false;
+      setAuthenticating(false);
       return false;
     }
   }, [lockType]);
@@ -296,14 +311,15 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
                 </div>
               ) : (
                 <button 
+                  disabled={authenticating}
                   onClick={async () => {
                     const success = await authenticate();
                     if (!success) toast.error("Authentication Failed");
                   }}
-                  className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all"
+                  className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
                 >
                   <Fingerprint className="w-5 h-5" />
-                  Authenticate
+                  {authenticating ? 'Verifying...' : 'Authenticate'}
                 </button>
               )}
               

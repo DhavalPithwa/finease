@@ -59,6 +59,7 @@ export default function TransactionsPageClient() {
   const [showFilters, setShowFilters] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const itemsPerPage = 10;
 
   const pendingAutomatedCount = useMemo(() => {
@@ -313,14 +314,14 @@ export default function TransactionsPageClient() {
           </div>
         }
       >
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+        <div className={`flex items-center gap-2 py-0.5 ${showAllCategories ? 'flex-wrap' : 'overflow-x-auto overflow-y-hidden no-scrollbar'}`}>
            <button 
              onClick={() => { setEditingCategory(null); setIsCategoryModalOpen(true); }}
              className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-primary transition-all active:scale-90"
            >
              <Plus className="w-3.5 h-3.5" />
            </button>
-            {categories.map(c => (
+            {(showAllCategories ? categories : categories.slice(0, 5)).map(c => (
               <div key={c.id} className="relative group/cat shrink-0">
                 <button 
                   onClick={() => { setFilterCategory(filterCategory === c.id ? 'all' : c.id); setCurrentPage(1); }}
@@ -337,6 +338,15 @@ export default function TransactionsPageClient() {
                 </button>
               </div>
            ))}
+           {categories.length > 5 && (
+             <button 
+               onClick={() => setShowAllCategories(!showAllCategories)}
+               className="flex-shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-primary transition-all border border-transparent hover:border-primary/20"
+             >
+               {showAllCategories ? 'Less' : `+${categories.length - 5} More`}
+               {showAllCategories ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+             </button>
+           )}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
