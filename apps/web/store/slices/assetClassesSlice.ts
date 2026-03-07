@@ -6,20 +6,35 @@ export interface AssetClassesState {
   items: AssetClass[];
   loading: boolean;
   error: string | null;
+  lastFetched: number | null;
 }
 
 const initialState: AssetClassesState = {
   items: [],
   loading: false,
   error: null,
+  lastFetched: null,
 };
 
-export const fetchAssetClasses = createAsyncThunk(
+export const fetchAssetClasses = createAsyncThunk<
+  AssetClass[],
+  { force?: boolean } | void
+>(
   "assetClasses/fetchAll",
   async () => {
     const response = await api.get<AssetClass[]>("/finance/asset-classes");
     return response.data;
   },
+  {
+    condition: (arg, { getState }) => {
+      if (arg?.force) return true;
+      const state = getState() as { assetClasses: AssetClassesState };
+      if (state.assetClasses.lastFetched !== null || state.assetClasses.loading) {
+        return false;
+      }
+      return true;
+    },
+  }
 );
 
 export const addAssetClassAction = createAsyncThunk(
@@ -64,6 +79,7 @@ export const assetClassesSlice = createSlice({
       .addCase(fetchAssetClasses.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload;
+        state.lastFetched = Date.now();
       })
       .addCase(fetchAssetClasses.rejected, (state, action) => {
         state.loading = false;

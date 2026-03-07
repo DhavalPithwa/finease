@@ -612,7 +612,7 @@ export default function TransactionsPageClient() {
 
       <div className="block lg:hidden space-y-4">
         {paginatedTransactions.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-slate-100 dark:border-white/5 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-12 text-center border border-slate-100 dark:border-white/5 shadow-sm mx-4 sm:mx-0">
             <div className="flex flex-col items-center gap-4">
               <span className="material-symbols-outlined text-4xl text-slate-200">
                 history

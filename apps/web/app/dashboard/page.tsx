@@ -240,32 +240,64 @@ export default function Home() {
       />
 
       <div className="space-y-4">
-        {regularAccounts.length > 0 && (
-          <div className="space-y-2">
-            <div className="bg-slate-50 dark:bg-white/5 -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-              <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                Liquid Capital
-              </h3>
-              <span className="text-[8px] font-black text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded tracking-[0.1em]">
-                {regularAccounts.length} Units
+        {accounts.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-12 text-center border border-slate-100 dark:border-white/5 shadow-sm mx-4 sm:mx-0">
+            <div className="flex flex-col items-center gap-4">
+              <span className="material-symbols-outlined text-4xl text-slate-200 dark:text-slate-700">
+                account_balance
               </span>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                No accounts configured
+              </p>
+              <Button size="sm" onClick={() => setIsAccountModalOpen(true)}>
+                Add your first account
+              </Button>
             </div>
-            <AccountList accounts={regularAccounts} />
           </div>
-        )}
+        ) : (
+          <>
+            {regularAccounts.length > 0 && (
+              <div className="space-y-2">
+                <div className="bg-slate-50 dark:bg-white/5 -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                  <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                    Liquid Capital
+                  </h3>
+                  <span className="text-[8px] font-black text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded tracking-[0.1em]">
+                    {regularAccounts.length} Units
+                  </span>
+                </div>
+                <AccountList accounts={regularAccounts} />
+              </div>
+            )}
 
-        {investmentAccounts.length > 0 && (
-          <div className="space-y-2">
-            <div className="bg-slate-50 dark:bg-white/5 -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-              <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                Investment Portfolio
-              </h3>
-              <span className="text-[8px] font-black text-indigo-500 uppercase bg-indigo-500/10 px-1.5 py-0.5 rounded tracking-[0.1em]">
-                {investmentAccounts.length} Assets
-              </span>
-            </div>
-            <AccountList accounts={investmentAccounts} />
-          </div>
+            {investmentAccounts.length > 0 && (
+              <div className="space-y-2">
+                <div className="bg-slate-50 dark:bg-white/5 -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                  <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                    Investment Portfolio
+                  </h3>
+                  <span className="text-[8px] font-black text-indigo-500 uppercase bg-indigo-500/10 px-1.5 py-0.5 rounded tracking-[0.1em]">
+                    {investmentAccounts.length} Assets
+                  </span>
+                </div>
+                <AccountList accounts={investmentAccounts} />
+              </div>
+            )}
+            
+            {debts.length > 0 && (
+              <div className="space-y-2">
+                <div className="bg-slate-50 dark:bg-white/5 -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                  <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                    Liabilities
+                  </h3>
+                  <span className="text-[8px] font-black text-rose-500 uppercase bg-rose-500/10 px-1.5 py-0.5 rounded tracking-[0.1em]">
+                    {debts.length} Debts
+                  </span>
+                </div>
+                <AccountList accounts={debts} />
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -357,9 +389,9 @@ export default function Home() {
 
           <div className="flex-1 space-y-3">
             {goals.length === 0 ? (
-              <div className="h-full p-10 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center gap-3">
+              <div className="h-full p-6 sm:p-10 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center gap-3">
                 <TargetIcon className="w-8 h-8 text-slate-300 dark:text-slate-700 opacity-50" />
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest text-center">
                   No goals defined
                 </p>
               </div>

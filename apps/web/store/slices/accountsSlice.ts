@@ -6,17 +6,31 @@ export interface AccountsState {
   items: Account[];
   loading: boolean;
   error: string | null;
+  lastFetched: number | null;
 }
 
 const initialState: AccountsState = {
   items: [],
   loading: false,
   error: null,
+  lastFetched: null,
 };
 
-export const fetchAccounts = createAsyncThunk("accounts/fetchAll", async () => {
+export const fetchAccounts = createAsyncThunk<
+  Account[],
+  { force?: boolean } | void
+>("accounts/fetchAll", async () => {
   const response = await api.get<Account[]>("/finance/accounts");
   return response.data;
+}, {
+  condition: (arg, { getState }) => {
+    if (arg?.force) return true;
+    const state = getState() as { accounts: AccountsState };
+    if (state.accounts.lastFetched !== null || state.accounts.loading) {
+      return false;
+    }
+    return true;
+  }
 });
 
 export const createAccount = createAsyncThunk(
@@ -55,6 +69,7 @@ export const accountsSlice = createSlice({
       .addCase(fetchAccounts.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload;
+        state.lastFetched = Date.now();
       })
       .addCase(fetchAccounts.rejected, (state, action) => {
         state.loading = false;

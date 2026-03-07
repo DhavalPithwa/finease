@@ -6,20 +6,35 @@ export interface CategoriesState {
   items: Category[];
   loading: boolean;
   error: string | null;
+  lastFetched: number | null;
 }
 
 const initialState: CategoriesState = {
   items: [],
   loading: false,
   error: null,
+  lastFetched: null,
 };
 
-export const fetchCategories = createAsyncThunk(
+export const fetchCategories = createAsyncThunk<
+  Category[],
+  { force?: boolean } | void
+>(
   "categories/fetchAll",
   async () => {
     const response = await api.get<Category[]>("/finance/categories");
     return response.data;
   },
+  {
+    condition: (arg, { getState }) => {
+      if (arg?.force) return true;
+      const state = getState() as { categories: CategoriesState };
+      if (state.categories.lastFetched !== null || state.categories.loading) {
+        return false;
+      }
+      return true;
+    },
+  }
 );
 
 export const addCategoryAction = createAsyncThunk(
@@ -58,6 +73,7 @@ export const categoriesSlice = createSlice({
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload;
+        state.lastFetched = Date.now();
       })
       .addCase(fetchCategories.rejected, (state, action) => {
         state.loading = false;

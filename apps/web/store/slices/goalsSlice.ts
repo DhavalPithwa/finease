@@ -6,18 +6,36 @@ export interface GoalsState {
   items: FinancialGoal[];
   loading: boolean;
   error: string | null;
+  lastFetched: number | null;
 }
 
 const initialState: GoalsState = {
   items: [],
   loading: false,
   error: null,
+  lastFetched: null,
 };
 
-export const fetchGoals = createAsyncThunk("goals/fetchAll", async () => {
-  const response = await api.get<FinancialGoal[]>("/finance/goals");
-  return response.data;
-});
+export const fetchGoals = createAsyncThunk<
+  FinancialGoal[],
+  { force?: boolean } | void
+>(
+  "goals/fetchAll",
+  async () => {
+    const response = await api.get<FinancialGoal[]>("/finance/goals");
+    return response.data;
+  },
+  {
+    condition: (arg, { getState }) => {
+      if (arg?.force) return true;
+      const state = getState() as { goals: GoalsState };
+      if (state.goals.lastFetched !== null || state.goals.loading) {
+        return false;
+      }
+      return true;
+    },
+  }
+);
 
 export const addGoalAction = createAsyncThunk(
   "goals/add",
@@ -55,6 +73,7 @@ export const goalsSlice = createSlice({
       .addCase(fetchGoals.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload;
+        state.lastFetched = Date.now();
       })
       .addCase(fetchGoals.rejected, (state, action) => {
         state.loading = false;
