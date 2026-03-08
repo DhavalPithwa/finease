@@ -1,5 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { DashboardStats, AdminStats, User } from '@repo/types';
+import {
+  DashboardStats,
+  AdminStats,
+  User,
+  Account,
+  FinancialGoal,
+  AssetClass,
+  Transaction,
+} from '@repo/types';
 import { FirebaseAdminService } from '../common/services/firebase-admin.service';
 
 @Injectable()
@@ -14,50 +22,212 @@ export class AnalyticsService {
       throw new Error('userId is required');
     }
 
-    // Fixed: return a resolved promise to satisfy async lint if no awaits are present
-    // but usually this would have awaits. Adding a small await to simulate DB call
-    await Promise.resolve();
+    const db = this.firebaseAdmin.getFirestore();
 
-    const netWorthHistory = [
-      { month: 'Jan', value: 95000 },
-      { month: 'Feb', value: 98000 },
-      { month: 'Mar', value: 103000 },
-      { month: 'Apr', value: 110000 },
-      { month: 'May', value: 115000 },
-      { month: 'Jun', value: 125430 },
+    // 1. Fetch Accounts
+    const accountsSnapshot = await db
+      .collection('accounts')
+      .where('userId', '==', userId)
+      .where('deletedAt', '==', null)
+      .get();
+
+    const accounts = accountsSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Record<string, any>),
+    })) as unknown as Account[];
+
+    // 2. Fetch Goals (for stats and pacing)
+    const goalsSnapshot = await db
+      .collection('goals')
+      .where('userId', '==', userId)
+      .where('deletedAt', '==', null)
+      .get();
+    const goals = goalsSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Record<string, any>),
+    })) as unknown as FinancialGoal[];
+
+    // Calculate current stats
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+
+    accounts.forEach((acc: Account) => {
+      const balance = Number(acc.balance) || 0;
+      if (balance > 0) {
+        totalAssets += balance;
+      } else {
+        totalLiabilities += Math.abs(balance);
+      }
+    });
+
+    // Add goal money to assets (if stored separately)
+    goals.forEach((goal: FinancialGoal) => {
+      totalAssets += Number(goal.currentAmount) || 0;
+    });
+
+    const netWorth = totalAssets - totalLiabilities;
+
+    // 3. Asset Allocation
+    const assetClassesSnapshot = await db
+      .collection('assetClasses')
+      .where('userId', '==', userId)
+      .where('deletedAt', '==', null)
+      .get();
+    const assetClasses = assetClassesSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Record<string, any>),
+    })) as unknown as AssetClass[];
+
+    const allocationMap = new Map<string, { value: number; color: string }>();
+
+    accounts.forEach((acc) => {
+      if (acc.balance > 0) {
+        let className = 'Other';
+        let color = '#94a3b8';
+
+        if (acc.assetType) {
+          const ac = assetClasses.find((c) => c.id === acc.assetType);
+          if (ac) {
+            className = ac.name;
+            color = ac.color;
+          }
+        } else {
+          className = acc.type.charAt(0).toUpperCase() + acc.type.slice(1);
+        }
+
+        const existing = allocationMap.get(className) || { value: 0, color };
+        allocationMap.set(className, {
+          value: existing.value + Number(acc.balance),
+          color: existing.color,
+        });
+      }
+    });
+
+    const assetAllocation = Array.from(allocationMap.entries()).map(
+      ([name, { value, color }]) => ({
+        name,
+        value,
+        color,
+      }),
+    );
+
+    // 4. Goal Pacing
+    const goalPacing = goals.map((goal: FinancialGoal) => {
+      const targetAmt = Number(goal.targetAmount) || 1;
+      const currentAmt = Number(goal.currentAmount) || 0;
+      const actualPercentage = Math.round(
+        Math.min(100, (currentAmt / targetAmt) * 100),
+      );
+
+      const startDate = new Date(goal.startDate || new Date().toISOString());
+      const targetDate = new Date(goal.targetDate);
+      const totalDuration = targetDate.getTime() - startDate.getTime();
+      const elapsed = Date.now() - startDate.getTime();
+      const expectedPercentage = Math.round(
+        Math.min(
+          100,
+          Math.max(
+            0,
+            totalDuration > 0 ? (elapsed / totalDuration) * 100 : 100,
+          ),
+        ),
+      );
+
+      return {
+        goalId: goal.id,
+        goalName: goal.name,
+        actualPercentage,
+        expectedPercentage,
+        status:
+          actualPercentage >= expectedPercentage
+            ? ('ahead' as const)
+            : ('behind' as const),
+      };
+    });
+
+    // 5. Net Worth History (Last 6 months)
+    const netWorthHistory: { month: string; value: number }[] = [];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
 
-    const assetAllocation = [
-      { name: 'Equity', value: 7650000, color: '#135bec' },
-      { name: 'Debt', value: 2780000, color: '#10b981' },
-      { name: 'Gold', value: 1390000, color: '#f59e0b' },
-      { name: 'Liquid', value: 630000, color: '#ef4444' },
-    ];
+    // Fetch all transactions since 6 months ago to calculate historical net worth accurately
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    sixMonthsAgo.setDate(1); // Start of month
 
-    const goalPacing = [
-      {
-        goalId: 'goal-1',
-        goalName: 'Retirement',
-        actualPercentage: 65,
-        expectedPercentage: 62,
-        status: 'ahead' as const,
-      },
-      {
-        goalId: 'goal-2',
-        goalName: 'Child Education',
-        actualPercentage: 42,
-        expectedPercentage: 48,
-        status: 'behind' as const,
-      },
-    ];
+    const txSnapshot = await db
+      .collection('transactions')
+      .where('userId', '==', userId)
+      .where('deletedAt', '==', null)
+      .where('status', '==', 'completed')
+      .where('date', '>=', sixMonthsAgo.toISOString())
+      .get();
 
-    const MOCK_TOTAL_ASSETS = 13250000;
-    const MOCK_TOTAL_LIABILITIES = 800000;
+    const transactions = txSnapshot.docs.map(
+      (doc) => doc.data() as Transaction,
+    );
+
+    let rollingNetWorth = netWorth;
+    const now = new Date();
+
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = months[d.getMonth()];
+
+      // Calculate net worth at the end of this month
+      // month_end_net_worth = current_net_worth - (net_change_since_that_month)
+      // but easier is: we go backwards.
+      // Net Worth for current month is `netWorth`.
+      // For previous month: netWorth - sum(incomes this month) + sum(expenses this month).
+
+      if (i === 0) {
+        netWorthHistory.unshift({
+          month: monthName ?? 'Jan',
+          value: Math.round(netWorth),
+        });
+      } else {
+        const targetMonthStart = new Date(
+          now.getFullYear(),
+          now.getMonth() - i + 1,
+          1,
+        );
+        const thisMonthTxs = transactions.filter((tx) => {
+          const txDate = new Date(tx.date);
+          return txDate >= targetMonthStart;
+        });
+
+        // Calculate net change specifically affecting net worth
+        let netChange = 0;
+        thisMonthTxs.forEach((tx) => {
+          if (tx.type === 'income') netChange += Number(tx.amount);
+          if (tx.type === 'expense') netChange -= Number(tx.amount);
+          // Transfer between internal accounts/goals doesn't change net worth
+        });
+
+        rollingNetWorth -= netChange;
+        netWorthHistory.unshift({
+          month: monthName ?? 'Jan',
+          value: Math.round(rollingNetWorth),
+        });
+      }
+    }
 
     return {
-      netWorth: MOCK_TOTAL_ASSETS - MOCK_TOTAL_LIABILITIES,
-      totalAssets: MOCK_TOTAL_ASSETS,
-      totalLiabilities: MOCK_TOTAL_LIABILITIES,
+      netWorth,
+      totalAssets,
+      totalLiabilities,
       netWorthHistory,
       assetAllocation,
       goalPacing,

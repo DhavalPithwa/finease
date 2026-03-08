@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseAdminService } from '../common/services/firebase-admin.service';
-import { Transaction, Account, FinancialGoal } from '@repo/types';
+import { Transaction, Account } from '@repo/types';
 
 @Injectable()
 export class TransactionsService {
@@ -55,125 +55,78 @@ export class TransactionsService {
   async create(transaction: Partial<Transaction>): Promise<Transaction> {
     const batch = this.db.batch();
     const txRef = this.collection.doc();
+
     if (!transaction.accountId) {
       throw new Error('Account ID is required for transaction');
     }
-    const accRef = this.db
-      .collection(this.accountsCollection)
-      .doc(transaction.accountId);
 
     // 1. Calculate and set transaction properties
-    // If a destination is provided, it's effectively a transfer
     const isTransfer = !!transaction.toAccountId;
     const effectiveType = isTransfer
       ? 'transfer'
       : transaction.type || 'expense';
-
     const status =
       transaction.status ||
       (transaction.isAutomated ? 'pending_confirmation' : 'completed');
 
     let balanceAfter: number | undefined;
-    let toBalanceAfter: number | undefined;
 
     // 2. Adjust account balance ONLY IF NOT pending_confirmation
     if (status !== 'pending_confirmation') {
+      const accRef = this.db
+        .collection(this.accountsCollection)
+        .doc(transaction.accountId);
       const accDoc = await accRef.get();
-      if (accDoc.exists) {
-        const accData = accDoc.data() as Account;
-        let balanceChange = Number(transaction.amount);
 
-        if (effectiveType === 'expense' || effectiveType === 'transfer') {
-          balanceChange = -balanceChange;
-        }
-
-        balanceAfter = (Number(accData.balance) || 0) + balanceChange;
-        const accUpdate: Partial<Account> = {
-          balance: balanceAfter,
-          lastSyncedAt: new Date().toISOString(),
-        };
-
-        if (accData.type === 'investment') {
-          accUpdate.investedAmount =
-            (Number(accData.investedAmount) || Number(accData.balance) || 0) +
-            balanceChange;
-        }
-
-        batch.update(accRef, accUpdate);
+      if (!accDoc.exists) {
+        throw new NotFoundException(
+          `Account with ID ${transaction.accountId} not found`,
+        );
       }
 
-      // 3. Handle transfers (To account or Goal)
-      if (transaction.toAccountId) {
-        // First check if it's an account
-        const toAccRef = this.db
-          .collection(this.accountsCollection)
-          .doc(transaction.toAccountId);
-        const toAccDoc = await toAccRef.get();
+      const accData = accDoc.data() as Account;
+      let balanceChange = Number(transaction.amount);
 
-        if (toAccDoc.exists) {
-          const toAccData = toAccDoc.data() as Account;
-          if (toAccData.type === 'debt') {
-            const interest = Number(transaction.interestAmount) || 0;
-            const principal = Number(transaction.amount) - interest;
-
-            toBalanceAfter = (Number(toAccData.balance) || 0) + principal;
-            batch.update(toAccRef, {
-              balance: toBalanceAfter,
-              paidAmount: (Number(toAccData.paidAmount) || 0) + principal,
-              interestPaid: (Number(toAccData.interestPaid) || 0) + interest,
-              lastSyncedAt: new Date().toISOString(),
-            });
-          } else {
-            toBalanceAfter =
-              (Number(toAccData.balance) || 0) + Number(transaction.amount);
-
-            const toAccUpdate: Partial<Account> = {
-              balance: toBalanceAfter,
-              lastSyncedAt: new Date().toISOString(),
-            };
-
-            if (toAccData.type === 'investment') {
-              toAccUpdate.investedAmount =
-                (Number(toAccData.investedAmount) ||
-                  Number(toAccData.balance) ||
-                  0) + Number(transaction.amount);
-            }
-
-            batch.update(toAccRef, toAccUpdate);
-          }
-        } else {
-          // If not found in accounts, check if it's a goal
-          const goalRef = this.db
-            .collection(this.goalsCollection)
-            .doc(transaction.toAccountId);
-          const goalDoc = await goalRef.get();
-
-          if (goalDoc.exists) {
-            const goalData = goalDoc.data() as FinancialGoal;
-            toBalanceAfter =
-              (Number(goalData.currentAmount) || 0) +
-              Number(transaction.amount);
-            batch.update(goalRef, {
-              currentAmount: toBalanceAfter,
-            });
-          }
-        }
+      if (effectiveType === 'expense' || effectiveType === 'transfer') {
+        balanceChange = -balanceChange;
       }
+
+      balanceAfter = (Number(accData.balance) || 0) + balanceChange;
+      const accUpdate: Partial<Account> = {
+        balance: balanceAfter,
+        lastSyncedAt: new Date().toISOString(),
+      };
+
+      if (accData.type === 'investment') {
+        accUpdate.investedAmount =
+          (Number(accData.investedAmount) || Number(accData.balance) || 0) +
+          balanceChange;
+      }
+
+      batch.update(accRef, accUpdate);
     }
 
-    // 4. Create transaction document with calculated balances
+    // 4. Create transaction document
     batch.set(txRef, {
       ...transaction,
       id: txRef.id,
       status,
       type: effectiveType,
       date: transaction.date || new Date().toISOString(),
-      balanceAfter,
-      toBalanceAfter,
       deletedAt: null,
     });
 
     await batch.commit();
+
+    // 5. Async recalculate balances to ensure historical accuracy
+    if (status === 'completed') {
+      await this.recalculateBalances(transaction.accountId);
+      if (transaction.toAccountId) {
+        await this.recalculateBalances(transaction.toAccountId);
+        await this.recalculateGoalProgress(transaction.toAccountId);
+      }
+    }
+
     const createdTx = await txRef.get();
     return createdTx.data() as Transaction;
   }
@@ -191,318 +144,92 @@ export class TransactionsService {
     updateData: Partial<Transaction>,
   ): Promise<Transaction> {
     const oldTx = await this.findOne(id);
-
-    // Simplest way to "update" balance is:
-    // 1. Revert old transaction balances
-    // 2. Clear old status logic
-    // 3. Apply new transaction balances
-
     const batch = this.db.batch();
+    const txRef = this.collection.doc(id);
 
-    // Revert Old
-    if (oldTx.status !== 'pending_confirmation') {
-      const oldAccRef = this.db
-        .collection(this.accountsCollection)
-        .doc(oldTx.accountId);
-      const oldAccDoc = await oldAccRef.get();
-      if (oldAccDoc.exists) {
-        const oldAccData = oldAccDoc.data() as Account;
-        let rev = Number(oldTx.amount);
-        if (oldTx.type !== 'income') {
-          // Revert based on original type
-          rev = -rev; // If it was expense/transfer, add it back. If income, subtract.
-        }
-        const oldAccBalance = (Number(oldAccData.balance) || 0) - rev;
-        const oldAccUpdate: Partial<Account> = {
-          balance: oldAccBalance,
-          lastSyncedAt: new Date().toISOString(),
-        };
-
-        if (oldAccData.type === 'investment') {
-          oldAccUpdate.investedAmount =
-            (Number(oldAccData.investedAmount) ||
-              Number(oldAccData.balance) ||
-              0) - rev;
-        }
-
-        batch.update(oldAccRef, oldAccUpdate);
-      }
-
-      if (oldTx.toAccountId) {
-        // Try account first
-        const toAccRef = this.db
-          .collection(this.accountsCollection)
-          .doc(oldTx.toAccountId);
-        const toAccDoc = await toAccRef.get();
-        if (toAccDoc.exists) {
-          const toAccData = toAccDoc.data() as Account;
-          const revertAmount = Number(oldTx.amount);
-
-          if (toAccData.type === 'debt') {
-            const interest = Number(oldTx.interestAmount) || 0;
-            const principal = revertAmount - interest;
-            batch.update(toAccRef, {
-              balance: (Number(toAccData.balance) || 0) - principal,
-              paidAmount: (Number(toAccData.paidAmount) || 0) - principal,
-              interestPaid: (Number(toAccData.interestPaid) || 0) - interest,
-            });
-          } else {
-            const newToBalance =
-              (Number(toAccData.balance) || 0) - revertAmount;
-            const toAccUpdate: Partial<Account> = {
-              balance: newToBalance,
-            };
-
-            if (toAccData.type === 'investment') {
-              toAccUpdate.investedAmount =
-                (Number(toAccData.investedAmount) ||
-                  Number(toAccData.balance) ||
-                  0) - revertAmount;
-            }
-
-            batch.update(toAccRef, toAccUpdate);
-          }
-        } else {
-          // Check goal
-          const goalRef = this.db
-            .collection(this.goalsCollection)
-            .doc(oldTx.toAccountId);
-          const goalDoc = await goalRef.get();
-          if (goalDoc.exists) {
-            const goalData = goalDoc.data() as FinancialGoal;
-            batch.update(goalRef, {
-              currentAmount:
-                (Number(goalData.currentAmount) || 0) - Number(oldTx.amount),
-            });
-          }
-        }
-      }
-    }
-
-    // Apply New
-    const newTx = { ...oldTx, ...updateData };
-    const isTransfer = !!newTx.toAccountId;
-    const effectiveType = isTransfer ? 'transfer' : newTx.type || 'expense';
-
-    const status =
-      newTx.status ||
-      (newTx.isAutomated ? 'pending_confirmation' : 'completed');
-
-    let balanceAfter: number | undefined;
-    let toBalanceAfter: number | undefined;
-
-    if (status !== 'pending_confirmation') {
-      const newAccRef = this.db
-        .collection(this.accountsCollection)
-        .doc(newTx.accountId);
-      const newAccDoc = await newAccRef.get();
-      if (newAccDoc.exists) {
-        const newAccData = newAccDoc.data() as Account;
-        let change = Number(newTx.amount);
-        if (effectiveType === 'expense' || effectiveType === 'transfer') {
-          change = -change;
-        }
-        balanceAfter = (Number(newAccData.balance) || 0) + change;
-        const newAccUpdate: Partial<Account> = {
-          balance: balanceAfter,
-          lastSyncedAt: new Date().toISOString(),
-        };
-
-        if (newAccData.type === 'investment') {
-          newAccUpdate.investedAmount =
-            (Number(newAccData.investedAmount) ||
-              Number(newAccData.balance) ||
-              0) + change;
-        }
-
-        batch.update(newAccRef, newAccUpdate);
-      }
-
-      if (newTx.toAccountId) {
-        // Try account first
-        const toAccRef = this.db
-          .collection(this.accountsCollection)
-          .doc(newTx.toAccountId);
-        const toAccDoc = await toAccRef.get();
-        if (toAccDoc.exists) {
-          const toAccData = toAccDoc.data() as Account;
-          const applyAmount = Number(newTx.amount);
-
-          if (toAccData.type === 'debt') {
-            const interest = Number(newTx.interestAmount) || 0;
-            const principal = applyAmount - interest;
-            toBalanceAfter = (Number(toAccData.balance) || 0) + principal;
-            batch.update(toAccRef, {
-              balance: toBalanceAfter,
-              paidAmount: (Number(toAccData.paidAmount) || 0) + principal,
-              interestPaid: (Number(toAccData.interestPaid) || 0) + interest,
-            });
-          } else {
-            toBalanceAfter = (Number(toAccData.balance) || 0) + applyAmount;
-            const toAccUpdate: Partial<Account> = {
-              balance: toBalanceAfter,
-            };
-
-            if (toAccData.type === 'investment') {
-              toAccUpdate.investedAmount =
-                (Number(toAccData.investedAmount) ||
-                  Number(toAccData.balance) ||
-                  0) + applyAmount;
-            }
-
-            batch.update(toAccRef, toAccUpdate);
-          }
-        } else {
-          // Check goal
-          const goalRef = this.db
-            .collection(this.goalsCollection)
-            .doc(newTx.toAccountId);
-          const goalDoc = await goalRef.get();
-          if (goalDoc.exists) {
-            const goalData = goalDoc.data() as FinancialGoal;
-            toBalanceAfter =
-              (Number(goalData.currentAmount) || 0) + Number(newTx.amount);
-            batch.update(goalRef, {
-              currentAmount: toBalanceAfter,
-            });
-          }
-        }
-      }
-    }
-
-    batch.update(this.collection.doc(id), {
+    // 1. Update the transaction itself
+    batch.update(txRef, {
       ...updateData,
-      status,
-      type: effectiveType,
-      balanceAfter,
-      toBalanceAfter,
+      lastSyncedAt: new Date().toISOString(),
     });
+
     await batch.commit();
+
+    // 2. Identify affected accounts and goals
+    const affectedAccounts = new Set<string>();
+    const affectedGoals = new Set<string>();
+
+    if (oldTx.accountId) affectedAccounts.add(oldTx.accountId);
+    if (oldTx.toAccountId) {
+      affectedAccounts.add(oldTx.toAccountId);
+      affectedGoals.add(oldTx.toAccountId);
+    }
+
+    if (updateData.accountId) affectedAccounts.add(updateData.accountId);
+    if (updateData.toAccountId) {
+      affectedAccounts.add(updateData.toAccountId);
+      affectedGoals.add(updateData.toAccountId);
+    }
+
+    // 3. Recalculate everything affected
+    for (const accId of affectedAccounts) {
+      await this.recalculateBalances(accId);
+    }
+    for (const goalId of affectedGoals) {
+      await this.recalculateGoalProgress(goalId);
+    }
+
     return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
-    const batch = this.db.batch();
-    const txRef = this.collection.doc(id);
-    const txDoc = await txRef.get();
+    const txDoc = await this.collection.doc(id).get();
 
     if (!txDoc.exists) {
       throw new NotFoundException(`Transaction with ID ${id} not found`);
     }
 
     const txData = txDoc.data() as Transaction;
+    const batch = this.db.batch();
 
-    // 1. Revert main account balance
-    const accRef = this.db
-      .collection(this.accountsCollection)
-      .doc(txData.accountId);
-    const accDoc = await accRef.get();
-
-    if (accDoc.exists) {
-      const accData = accDoc.data() as Account;
-      let balanceReversion = Number(txData.amount);
-
-      // If original was expense (subtracted), we ADD it back.
-      // If original was income (added), we SUBTRACT it.
-      if (txData.type !== 'income') {
-        // Revert based on original type
-        balanceReversion = -balanceReversion; // If it was expense/transfer, add it back. If income, subtract.
-      }
-
-      const newBalance = (Number(accData.balance) || 0) - balanceReversion;
-      const accUpdatePage: Partial<Account> = {
-        balance: newBalance,
-        lastSyncedAt: new Date().toISOString(),
-      };
-
-      if (accData.type === 'investment') {
-        accUpdatePage.investedAmount =
-          (Number(accData.investedAmount) || Number(accData.balance) || 0) -
-          balanceReversion;
-      }
-
-      batch.update(accRef, accUpdatePage);
-    }
-
-    // 2. Revert transfer toAccount balance
-    if (txData.toAccountId) {
-      // First check if it's an account
-      const toAccRef = this.db
-        .collection(this.accountsCollection)
-        .doc(txData.toAccountId);
-      const toAccDoc = await toAccRef.get();
-
-      if (toAccDoc.exists) {
-        const toAccData = toAccDoc.data() as Account;
-        const revertAmount = Number(txData.amount);
-
-        if (toAccData.type === 'debt') {
-          const interest = Number(txData.interestAmount) || 0;
-          const principal = revertAmount - interest;
-
-          batch.update(toAccRef, {
-            balance: (Number(toAccData.balance) || 0) - principal,
-            paidAmount: (Number(toAccData.paidAmount) || 0) - principal,
-            interestPaid: (Number(toAccData.interestPaid) || 0) - interest,
-            lastSyncedAt: new Date().toISOString(),
-          });
-        } else {
-          // Transfer was ADDED to toAccount, so we SUBTRACT.
-          const newToBalance = (Number(toAccData.balance) || 0) - revertAmount;
-          const toAccUpdate: Partial<Account> = {
-            balance: newToBalance,
-            lastSyncedAt: new Date().toISOString(),
-          };
-
-          if (toAccData.type === 'investment') {
-            toAccUpdate.investedAmount =
-              (Number(toAccData.investedAmount) ||
-                Number(toAccData.balance) ||
-                0) - revertAmount;
-          }
-
-          batch.update(toAccRef, toAccUpdate);
-        }
-      } else {
-        // If not found in accounts, check if it's a goal
-        const goalRef = this.db
-          .collection(this.goalsCollection)
-          .doc(txData.toAccountId);
-        const goalDoc = await goalRef.get();
-        if (goalDoc.exists) {
-          const goalData = goalDoc.data() as FinancialGoal;
-          batch.update(goalRef, {
-            currentAmount:
-              (Number(goalData.currentAmount) || 0) - Number(txData.amount),
-          });
-        }
-      }
-    }
-
-    // 3. Soft-delete transaction
-    batch.update(txRef, {
+    // 1. Soft-delete the transaction
+    batch.update(this.collection.doc(id), {
       deletedAt: new Date().toISOString(),
     });
+
     await batch.commit();
+
+    // 2. Recalculate balances for all involved accounts/goals
+    if (txData.status === 'completed') {
+      await this.recalculateBalances(txData.accountId);
+      if (txData.toAccountId) {
+        await this.recalculateBalances(txData.toAccountId);
+        await this.recalculateGoalProgress(txData.toAccountId);
+      }
+    }
   }
 
   async removeByAccountId(accountId: string): Promise<void> {
     const snapshot = await this.collection
       .where('accountId', '==', accountId)
+      .where('deletedAt', '==', null)
       .get();
+
     const batch = this.db.batch();
     const now = new Date().toISOString();
+
     snapshot.docs.forEach((doc) => {
-      const data = doc.data() as { deletedAt?: string | null };
-      if (!data.deletedAt) {
-        batch.update(doc.ref, { deletedAt: now });
-      }
+      batch.update(doc.ref, { deletedAt: now });
     });
+
     await batch.commit();
+    // No need to recalculate balances here because the account itself is being deleted
+    // But we might need to recalculate destination accounts if they were transfers.
+    // However, the user said "do not need to resolved 3. Incomplete Account Purge point",
+    // so we skip systemic destination recalculation for now.
   }
 
   async confirm(id: string): Promise<Transaction> {
-    const batch = this.db.batch();
     const txRef = this.collection.doc(id);
     const txDoc = await txRef.get();
 
@@ -511,104 +238,14 @@ export class TransactionsService {
     }
 
     const txData = txDoc.data() as Transaction;
-    if (txData.status !== 'pending_confirmation') {
-      return txData;
-    }
+    const batch = this.db.batch();
 
     // 1. Update status to completed
-    let balanceAfter: number | undefined;
-    let toBalanceAfter: number | undefined;
-
-    // 2. Adjust primary account balance
-    const accRef = this.db
-      .collection(this.accountsCollection)
-      .doc(txData.accountId);
-    const accDoc = await accRef.get();
-    if (accDoc.exists) {
-      const accData = accDoc.data() as Account;
-      let balanceChange = Number(txData.amount);
-      if (txData.type === 'expense' || txData.type === 'transfer') {
-        balanceChange = -balanceChange;
-      }
-
-      balanceAfter = (Number(accData.balance) || 0) + balanceChange;
-      const confirmAccUpdate: Partial<Account> = {
-        balance: balanceAfter,
-        lastSyncedAt: new Date().toISOString(),
-      };
-
-      if (accData.type === 'investment') {
-        confirmAccUpdate.investedAmount =
-          (Number(accData.investedAmount) || Number(accData.balance) || 0) +
-          balanceChange;
-      }
-
-      batch.update(accRef, confirmAccUpdate);
-    }
-
-    // 3. Handle transfers (Account or Goal)
-    if (txData.toAccountId) {
-      const toAccRef = this.db
-        .collection(this.accountsCollection)
-        .doc(txData.toAccountId);
-      const toAccDoc = await toAccRef.get();
-
-      if (toAccDoc.exists) {
-        const toAccData = toAccDoc.data() as Account;
-        const applyAmount = Number(txData.amount);
-
-        if (toAccData.type === 'debt') {
-          const interest = Number(txData.interestAmount) || 0;
-          const principal = applyAmount - interest;
-
-          toBalanceAfter = (Number(toAccData.balance) || 0) + principal;
-          batch.update(toAccRef, {
-            balance: toBalanceAfter,
-            paidAmount: (Number(toAccData.paidAmount) || 0) + principal,
-            interestPaid: (Number(toAccData.interestPaid) || 0) + interest,
-            lastSyncedAt: new Date().toISOString(),
-          });
-        } else {
-          toBalanceAfter = (Number(toAccData.balance) || 0) + applyAmount;
-          const confirmToAccUpdate: Partial<Account> = {
-            balance: toBalanceAfter,
-            lastSyncedAt: new Date().toISOString(),
-          };
-
-          if (toAccData.type === 'investment') {
-            confirmToAccUpdate.investedAmount =
-              (Number(toAccData.investedAmount) ||
-                Number(toAccData.balance) ||
-                0) + applyAmount;
-          }
-
-          batch.update(toAccRef, confirmToAccUpdate);
-        }
-      } else {
-        // Goal?
-        const goalRef = this.db
-          .collection(this.goalsCollection)
-          .doc(txData.toAccountId);
-        const goalDoc = await goalRef.get();
-        if (goalDoc.exists) {
-          const goalData = goalDoc.data() as FinancialGoal;
-          toBalanceAfter =
-            (Number(goalData.currentAmount) || 0) + Number(txData.amount);
-          batch.update(goalRef, {
-            currentAmount: toBalanceAfter,
-          });
-        }
-      }
-    }
-
-    // 4. Update status and store balances
     batch.update(txRef, {
       status: 'completed',
-      balanceAfter,
-      toBalanceAfter,
     });
 
-    // 4. Generate next occurrence if automated
+    // 2. Generate next occurrence if automated
     if (txData.isAutomated && txData.frequency) {
       const currentCount = Number(txData.recurringCount);
       if (!isNaN(currentCount) && currentCount > 1) {
@@ -637,6 +274,153 @@ export class TransactionsService {
     }
 
     await batch.commit();
+
+    // 3. Recalculate balances
+    await this.recalculateBalances(txData.accountId);
+    if (txData.toAccountId) {
+      await this.recalculateBalances(txData.toAccountId);
+      await this.recalculateGoalProgress(txData.toAccountId);
+    }
+
     return { ...txData, status: 'completed' } as Transaction;
+  }
+
+  /**
+   * Recalculates all historical balances for a specific account.
+   * This is heavy but ensures 100% accuracy if historical data is modified.
+   */
+  public async recalculateBalances(accountId: string): Promise<void> {
+    const accRef = this.db.collection(this.accountsCollection).doc(accountId);
+    const accDoc = await accRef.get();
+    if (!accDoc.exists) return;
+    const accData = accDoc.data() as Account;
+
+    // 1. Fetch ALL transactions where this account is either source or destination
+    const [fromSnapshot, toSnapshot] = await Promise.all([
+      this.collection
+        .where('accountId', '==', accountId)
+        .where('deletedAt', '==', null)
+        .where('status', '==', 'completed')
+        .get(),
+      this.collection
+        .where('toAccountId', '==', accountId)
+        .where('deletedAt', '==', null)
+        .where('status', '==', 'completed')
+        .get(),
+    ]);
+
+    const txs: Transaction[] = [
+      ...fromSnapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() }) as Transaction,
+      ),
+      ...toSnapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() }) as Transaction,
+      ),
+    ];
+
+    // 2. Sort by date ASC
+    txs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // 3. Replay from initial amount
+    let rollingBalance = Number(accData.initialAmount) || 0;
+    let rollingInvested = Number(accData.initialAmount) || 0;
+    const batch = this.db.batch();
+
+    for (const tx of txs) {
+      const amount = Number(tx.amount);
+      if (tx.accountId === accountId) {
+        // Source
+        if (tx.type === 'income') {
+          rollingBalance += amount;
+        } else {
+          rollingBalance -= amount;
+        }
+
+        // Capital tracking for investment accounts
+        if (accData.type === 'investment' && tx.type !== 'income') {
+          rollingInvested -= amount;
+        }
+
+        batch.update(this.collection.doc(tx.id), {
+          balanceAfter: rollingBalance,
+        });
+      } else if (tx.toAccountId === accountId) {
+        // Destination of a Transfer
+        if (accData.type === 'debt') {
+          const interest = Number(tx.interestAmount) || 0;
+          const principal = amount - interest;
+          // For debt accounts, balance is negative and we REDUCE the debt (move towards zero) with principal
+          rollingBalance += principal;
+        } else {
+          rollingBalance += amount;
+          if (accData.type === 'investment') {
+            rollingInvested += amount;
+          }
+        }
+        batch.update(this.collection.doc(tx.id), {
+          toBalanceAfter: rollingBalance,
+        });
+      }
+    }
+
+    // 4. Update the account summary
+    const accUpdate: Partial<Account> = {
+      balance: rollingBalance,
+      lastSyncedAt: new Date().toISOString(),
+    };
+    if (accData.type === 'investment') {
+      accUpdate.investedAmount = rollingInvested;
+    }
+
+    batch.update(accRef, accUpdate);
+    await batch.commit();
+  }
+
+  /**
+   * Recalculates a financial goal's current amount from transaction history.
+   */
+  public async recalculateGoalProgress(goalId: string): Promise<void> {
+    const goalRef = this.db.collection(this.goalsCollection).doc(goalId);
+    const goalDoc = await goalRef.get();
+    if (!goalDoc.exists) return;
+
+    const snapshot = await this.collection
+      .where('toAccountId', '==', goalId)
+      .where('deletedAt', '==', null)
+      .where('status', '==', 'completed')
+      .get();
+
+    const amount = snapshot.docs.reduce((sum, doc) => {
+      const data = doc.data() as Transaction;
+      return sum + Number(data.amount);
+    }, 0);
+
+    await goalRef.update({ currentAmount: amount });
+  }
+
+  /**
+   * Triggers recalculation for ALL accounts and goals belonging to a user.
+   * Useful as a "Repair Data" tool.
+   */
+  public async recalculateAllForUser(userId: string): Promise<void> {
+    const db = this.db;
+    const accountsSnapshot = await db
+      .collection(this.accountsCollection)
+      .where('userId', '==', userId)
+      .where('deletedAt', '==', null)
+      .get();
+
+    const goalsSnapshot = await db
+      .collection(this.goalsCollection)
+      .where('userId', '==', userId)
+      .where('deletedAt', '==', null)
+      .get();
+
+    for (const doc of accountsSnapshot.docs) {
+      await this.recalculateBalances(doc.id);
+    }
+    for (const doc of goalsSnapshot.docs) {
+      await this.recalculateGoalProgress(doc.id);
+    }
   }
 }

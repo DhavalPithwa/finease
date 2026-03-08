@@ -44,10 +44,10 @@ export default function Home() {
 
   useEffect(() => {
     if (user) {
-      dispatch(fetchAccounts());
-      dispatch(fetchAssetClasses());
-      dispatch(fetchTransactions());
-      dispatch(fetchGoals());
+      dispatch(fetchAccounts({ force: true }));
+      dispatch(fetchAssetClasses({ force: true }));
+      dispatch(fetchTransactions({ force: true }));
+      dispatch(fetchGoals({ force: true }));
 
       if (permission === "default") {
         requestPermission();

@@ -9,6 +9,9 @@ import {
   updateAccount,
   deleteAccount,
 } from "@/store/slices/accountsSlice";
+import { fetchAssetClasses } from "@/store/slices/assetClassesSlice";
+import { fetchTransactions } from "@/store/slices/transactionsSlice";
+import { fetchGoals } from "@/store/slices/goalsSlice";
 import { AddInvestmentModal } from "@/components/portfolio/AddInvestmentModal";
 import { AddLiabilityModal } from "@/components/portfolio/AddLiabilityModal";
 import { AddAssetTypeModal } from "@/components/portfolio/AddAssetTypeModal";
@@ -41,7 +44,10 @@ export default function PortfolioPageClient() {
 
   useEffect(() => {
     if (user) {
-      dispatch(fetchAccounts());
+      dispatch(fetchAccounts({ force: true }));
+      dispatch(fetchAssetClasses({ force: true }));
+      dispatch(fetchTransactions({ force: true }));
+      dispatch(fetchGoals({ force: true }));
     }
   }, [dispatch, user]);
 
@@ -863,6 +869,10 @@ export default function PortfolioPageClient() {
               }),
             ).unwrap();
           }
+          dispatch(fetchAccounts({ force: true }));
+          dispatch(fetchAssetClasses({ force: true }));
+          dispatch(fetchTransactions({ force: true }));
+          dispatch(fetchGoals({ force: true }));
         }}
       />
 
@@ -907,6 +917,10 @@ export default function PortfolioPageClient() {
               }),
             ).unwrap();
           }
+          dispatch(fetchAccounts({ force: true }));
+          dispatch(fetchAssetClasses({ force: true }));
+          dispatch(fetchTransactions({ force: true }));
+          dispatch(fetchGoals({ force: true }));
         }}
       />
 
@@ -939,6 +953,10 @@ export default function PortfolioPageClient() {
               }),
             ).unwrap();
           }
+          dispatch(fetchAccounts({ force: true }));
+          dispatch(fetchAssetClasses({ force: true }));
+          dispatch(fetchTransactions({ force: true }));
+          dispatch(fetchGoals({ force: true }));
         }}
       />
 
@@ -968,6 +986,10 @@ export default function PortfolioPageClient() {
             ).unwrap();
             toast.success("Asset Class added");
           }
+          dispatch(fetchAccounts({ force: true }));
+          dispatch(fetchAssetClasses({ force: true }));
+          dispatch(fetchTransactions({ force: true }));
+          dispatch(fetchGoals({ force: true }));
         }}
         onDelete={async (id) => {
           setItemToDelete({ id, type: "assetClass" });
@@ -989,6 +1011,10 @@ export default function PortfolioPageClient() {
             await dispatch(removeAssetClassAction(itemToDelete.id)).unwrap();
             toast.success("Asset class decommissioned");
           }
+          dispatch(fetchAccounts({ force: true }));
+          dispatch(fetchAssetClasses({ force: true }));
+          dispatch(fetchTransactions({ force: true }));
+          dispatch(fetchGoals({ force: true }));
           setIsDeleteModalOpen(false);
           setItemToDelete(null);
         }}

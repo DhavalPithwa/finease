@@ -104,6 +104,14 @@ export function TransactionModal({
       toast.error("Please select a primary account");
       return;
     }
+    if (formData.type === "transfer" && !formData.toAccountId) {
+      toast.error("Please select a destination account for the transfer");
+      return;
+    }
+    if (formData.accountId === formData.toAccountId) {
+      toast.error("Source and destination accounts cannot be the same");
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -168,7 +176,7 @@ export function TransactionModal({
               </button>
               <button
                 disabled={isSaving}
-                onClick={() => setFormData({ ...formData, type: "income" })}
+                onClick={() => setFormData({ ...formData, type: "income", toAccountId: "" })}
                 className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.type === "income" ? "bg-white dark:bg-slate-800 text-emerald-500 shadow-sm" : "text-slate-500"} disabled:opacity-50`}
               >
                 In
@@ -228,9 +236,14 @@ export function TransactionModal({
                 <div className="relative">
                   <select
                     value={formData.accountId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, accountId: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const newAccId = e.target.value;
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        accountId: newAccId,
+                        toAccountId: prev.toAccountId === newAccId ? "" : prev.toAccountId
+                      }));
+                    }}
                     disabled={isSaving}
                     className="w-full p-2.5 pr-10 appearance-none bg-slate-50 dark:bg-[#0b0d12] border border-slate-200 dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-xs text-slate-900 dark:text-white font-medium disabled:opacity-50"
                   >

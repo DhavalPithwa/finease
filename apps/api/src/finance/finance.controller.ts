@@ -130,6 +130,14 @@ export class FinanceController {
     return this.transactionsService.confirm(id);
   }
 
+  @ApiOperation({
+    summary: 'Recalculate all balances for the user (Repair Tool)',
+  })
+  @Post('recalculate')
+  recalculateAll(@Req() req: RequestWithUser) {
+    return this.transactionsService.recalculateAllForUser(req.user.uid);
+  }
+
   // --- Goals ---
 
   @ApiOperation({ summary: 'List all financial goals for user' })

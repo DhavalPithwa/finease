@@ -12,6 +12,8 @@ import {
   Save,
   CheckCircle2,
   AlertTriangle,
+  Database,
+  RefreshCw,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -104,6 +106,33 @@ export default function SettingsPage() {
     setTimeout(() => {
       router.push("/dashboard");
     }, 1000);
+  };
+
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const handleRecalculate = async () => {
+    setIsRecalculating(true);
+    try {
+      const token = localStorage.getItem("finease_token");
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/finance/recalculate`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      if (response.ok) {
+        toast.success("Global Audit Complete!");
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        throw new Error("Failed to recalculate");
+      }
+    } catch {
+      toast.error("Calculation Conflict");
+    } finally {
+      setIsRecalculating(false);
+    }
   };
 
   const handlePinAction = (num: string) => {
@@ -600,6 +629,38 @@ export default function SettingsPage() {
                 100 && (
                 <span className="hidden sm:inline">(Must equal 100%)</span>
               )}
+            </div>
+          </div>
+
+          <div className="pt-8 border-t border-slate-100 dark:border-white/5 mt-8">
+            <div className="flex items-center gap-2 mb-6">
+              <Database className="w-5 h-5 text-indigo-500" />
+              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">
+                Maintenance Protocol
+              </h3>
+            </div>
+            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                    Recalculate Architecture
+                  </p>
+                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest max-w-sm leading-relaxed">
+                    Force a complete systemic audit of all transaction ledgers
+                    to synchronize account balances and goal progress.
+                  </p>
+                </div>
+                <button
+                  onClick={handleRecalculate}
+                  disabled={isRecalculating}
+                  className="h-10 px-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${isRecalculating ? "animate-spin" : ""}`}
+                  />
+                  {isRecalculating ? "Analyzing Ledgers..." : "Execute Audit"}
+                </button>
+              </div>
             </div>
           </div>
 

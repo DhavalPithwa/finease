@@ -10,6 +10,12 @@ import {
   deleteGoalAction,
 } from "@/store/slices/goalsSlice";
 import {
+  fetchAccounts,
+} from "@/store/slices/accountsSlice";
+import {
+  fetchTransactions,
+} from "@/store/slices/transactionsSlice";
+import {
   fetchReminders,
   createReminder,
   Reminder,
@@ -48,8 +54,10 @@ export default function GoalsPageClient() {
 
   useEffect(() => {
     if (user) {
-      dispatch(fetchGoals());
+      dispatch(fetchGoals({ force: true }));
       dispatch(fetchReminders());
+      dispatch(fetchAccounts({ force: true }));
+      dispatch(fetchTransactions({ force: true }));
     }
   }, [dispatch, user]);
 
@@ -288,6 +296,9 @@ export default function GoalsPageClient() {
             ).unwrap();
             toast.success("Goal created");
           }
+          dispatch(fetchAccounts({ force: true }));
+          dispatch(fetchTransactions({ force: true }));
+          dispatch(fetchGoals({ force: true }));
         }}
       />
 
@@ -308,6 +319,9 @@ export default function GoalsPageClient() {
             toast.success(
               `Invested ₹${amount.toLocaleString()} in ${topUpGoal.name}`,
             );
+            dispatch(fetchAccounts({ force: true }));
+            dispatch(fetchTransactions({ force: true }));
+            dispatch(fetchGoals({ force: true }));
           }
         }}
       />
@@ -335,6 +349,9 @@ export default function GoalsPageClient() {
           if (!goalToDelete) return;
           await dispatch(deleteGoalAction(goalToDelete.id)).unwrap();
           toast.success("Milestone decommissioned");
+          dispatch(fetchAccounts({ force: true }));
+          dispatch(fetchTransactions({ force: true }));
+          dispatch(fetchGoals({ force: true }));
           setIsDeleteModalOpen(false);
           setGoalToDelete(null);
         }}

@@ -19,6 +19,7 @@ import {
   updateCategoryAction,
   removeCategoryAction,
 } from "@/store/slices/categoriesSlice";
+import { fetchGoals } from "@/store/slices/goalsSlice";
 import { AddCategoryModal } from "@/components/categories/AddCategoryModal";
 import { Transaction } from "@repo/types";
 import {
@@ -683,8 +684,9 @@ export default function TransactionsPageClient() {
                         onClick={(e) => {
                           e.stopPropagation();
                           dispatch(confirmTransaction(tx.id)).then(() => {
-                            dispatch(fetchAccounts());
-                            dispatch(fetchTransactions());
+                            dispatch(fetchAccounts({ force: true }));
+                            dispatch(fetchTransactions({ force: true }));
+                            dispatch(fetchGoals({ force: true }));
                           });
                           toast.success("Confirmed");
                         }}
@@ -908,8 +910,9 @@ export default function TransactionsPageClient() {
                                 await dispatch(
                                   confirmTransaction(tx.id),
                                 ).unwrap();
-                                dispatch(fetchAccounts());
-                                dispatch(fetchTransactions());
+                                dispatch(fetchAccounts({ force: true }));
+                                dispatch(fetchTransactions({ force: true }));
+                                dispatch(fetchGoals({ force: true }));
                                 toast.success("Transaction Confirmed");
                               }}
                               leftIcon={<CheckCircle2 className="w-3 h-3" />}
@@ -1024,8 +1027,9 @@ export default function TransactionsPageClient() {
               }),
             ).unwrap();
           }
-          dispatch(fetchAccounts());
-          dispatch(fetchTransactions());
+          dispatch(fetchAccounts({ force: true }));
+          dispatch(fetchTransactions({ force: true }));
+          dispatch(fetchGoals({ force: true }));
         }}
       />
 
@@ -1108,8 +1112,9 @@ export default function TransactionsPageClient() {
         onConfirm={async () => {
           if (transactionToDelete) {
             await dispatch(deleteTransaction(transactionToDelete.id)).unwrap();
-            dispatch(fetchAccounts());
-            dispatch(fetchTransactions());
+            dispatch(fetchAccounts({ force: true }));
+            dispatch(fetchTransactions({ force: true }));
+            dispatch(fetchGoals({ force: true }));
             toast.success("Record destroyed");
             setTransactionToDelete(null);
           }
