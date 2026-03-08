@@ -1,6 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import {
+  Users,
+  BarChart3,
+  Trash2,
+  FileText, // Added FileText as it's used in adminLinks
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -20,9 +26,10 @@ export function TopNav() {
   ];
 
   const adminLinks = [
-    { href: "/admin/dashboard", label: "Command Room" },
-    { href: "/admin/users", label: "Governance" },
-    { href: "/admin/reports", label: "Institutional" },
+    { href: "/admin/dashboard", label: "Admin", Icon: BarChart3 },
+    { href: "/admin/users", label: "Users", Icon: Users },
+    { href: "/admin/purge", label: "Purge", Icon: Trash2 },
+    { href: "/admin/reports", label: "Reports", Icon: FileText },
   ];
 
   const navLinks = isAdmin ? adminLinks : userLinks;

@@ -8,7 +8,7 @@ import { useState } from "react";
 interface ConfirmModalProps {
   isOpen: boolean;
   title: string;
-  message: string;
+  message: string | React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   onConfirm: () => Promise<void> | void;

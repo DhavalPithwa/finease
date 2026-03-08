@@ -65,48 +65,16 @@ export class TransactionsService {
     const effectiveType = isTransfer
       ? 'transfer'
       : transaction.type || 'expense';
+    // status calculation
     const status =
       transaction.status ||
       (transaction.isAutomated ? 'pending_confirmation' : 'completed');
 
-    let balanceAfter: number | undefined;
-
-    // 2. Adjust account balance ONLY IF NOT pending_confirmation
-    if (status !== 'pending_confirmation') {
-      const accRef = this.db
-        .collection(this.accountsCollection)
-        .doc(transaction.accountId);
-      const accDoc = await accRef.get();
-
-      if (!accDoc.exists) {
-        throw new NotFoundException(
-          `Account with ID ${transaction.accountId} not found`,
-        );
-      }
-
-      const accData = accDoc.data() as Account;
-      let balanceChange = Number(transaction.amount);
-
-      if (effectiveType === 'expense' || effectiveType === 'transfer') {
-        balanceChange = -balanceChange;
-      }
-
-      balanceAfter = (Number(accData.balance) || 0) + balanceChange;
-      const accUpdate: Partial<Account> = {
-        balance: balanceAfter,
-        lastSyncedAt: new Date().toISOString(),
-      };
-
-      if (accData.type === 'investment') {
-        accUpdate.investedAmount =
-          (Number(accData.investedAmount) || Number(accData.balance) || 0) +
-          balanceChange;
-      }
-
-      batch.update(accRef, accUpdate);
-    }
-
-    // 4. Create transaction document
+    // 1. Create transaction document
+    // We DON'T manually update account balance here anymore.
+    // We rely on recalculateBalances to do it based on full history.
+    // This prevents the "it set that amount" bug where manual and
+    // recalculated balances fought each other.
     batch.set(txRef, {
       ...transaction,
       id: txRef.id,
@@ -118,8 +86,8 @@ export class TransactionsService {
 
     await batch.commit();
 
-    // 5. Async recalculate balances to ensure historical accuracy
-    if (status === 'completed') {
+    // 2. Trigger recalculation immediately
+    if (status === 'completed' || status === 'approved') {
       await this.recalculateBalances(transaction.accountId);
       if (transaction.toAccountId) {
         await this.recalculateBalances(transaction.toAccountId);
@@ -300,12 +268,12 @@ export class TransactionsService {
       this.collection
         .where('accountId', '==', accountId)
         .where('deletedAt', '==', null)
-        .where('status', '==', 'completed')
+        .where('status', 'in', ['completed', 'approved'])
         .get(),
       this.collection
         .where('toAccountId', '==', accountId)
         .where('deletedAt', '==', null)
-        .where('status', '==', 'completed')
+        .where('status', 'in', ['completed', 'approved'])
         .get(),
     ]);
 
@@ -321,9 +289,18 @@ export class TransactionsService {
     // 2. Sort by date ASC
     txs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    // 3. Replay from initial amount
-    let rollingBalance = Number(accData.initialAmount) || 0;
-    let rollingInvested = Number(accData.initialAmount) || 0;
+    // 3. Replay from initial amount.
+    // CRITICAL: If initialAmount is missing, use current balance as baseline
+    // IF there are no transactions yet.
+    let rollingBalance = Number(accData.initialAmount);
+
+    if (isNaN(rollingBalance)) {
+      // If history exists but no initialAmount, we start at 0 (legacy)
+      // If no history, we keep the current balance
+      rollingBalance = txs.length > 0 ? 0 : Number(accData.balance) || 0;
+    }
+
+    let rollingInvested = Number(accData.investedAmount) || rollingBalance;
     const batch = this.db.batch();
 
     for (const tx of txs) {

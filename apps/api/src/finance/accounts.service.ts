@@ -32,8 +32,10 @@ export class AccountsService {
   }
 
   async create(account: Partial<Account>): Promise<Account> {
+    const initialAmount = Number(account.balance) || 0;
     const docRef = await this.collection.add({
       ...account,
+      initialAmount,
       deletedAt: null,
       lastSyncedAt: new Date().toISOString(),
     });

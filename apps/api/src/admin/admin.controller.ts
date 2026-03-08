@@ -1,4 +1,12 @@
-import { Controller, Get, Put, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Put,
+  Body,
+  Param,
+  UseGuards,
+  Delete,
+} from '@nestjs/common';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { AdminGuard } from '../common/guards/admin.guard';
 import { UsersService } from '../common/services/users.service';
@@ -39,6 +47,52 @@ export class AdminController {
   @Put('users/:uid/reset-onboarding')
   async resetUserOnboarding(@Param('uid') uid: string) {
     return this.usersService.update(uid, { hasOnboarded: false });
+  }
+
+  @Get('users/:uid/deleted-items')
+  async getDeletedItems(
+    @Param('uid') uid: string,
+  ): Promise<Record<string, any>[]> {
+    const db = this.usersService.getFirestore();
+    const collections = [
+      'accounts',
+      'transactions',
+      'goals',
+      'categories',
+      'asset_classes',
+      'reminders',
+    ];
+    const results: Record<string, any>[] = [];
+
+    for (const collectionName of collections) {
+      const snapshot = await db
+        .collection(collectionName)
+        .where('userId', '==', uid)
+        .get();
+
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.deletedAt) {
+          results.push({
+            id: doc.id,
+            collection: collectionName,
+            ...data,
+          });
+        }
+      });
+    }
+
+    return results;
+  }
+
+  @Delete('purge/:collection/:id')
+  async purgeItem(
+    @Param('collection') collection: string,
+    @Param('id') id: string,
+  ) {
+    const db = this.usersService.getFirestore();
+    await db.collection(collection).doc(id).delete();
+    return { message: `Item ${id} purged from ${collection}` };
   }
 
   @Put('bulk-soft-delete-migration')

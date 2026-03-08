@@ -12,6 +12,7 @@ import {
   FileText,
   Users,
   BarChart3,
+  Trash2,
 } from "lucide-react";
 
 export function BottomNav() {
@@ -33,6 +34,7 @@ export function BottomNav() {
   const adminLinks = [
     { href: "/admin/dashboard", label: "Admin", Icon: BarChart3 },
     { href: "/admin/users", label: "Users", Icon: Users },
+    { href: "/admin/purge", label: "Purge", Icon: Trash2 },
     { href: "/admin/reports", label: "Reports", Icon: FileText },
   ];
 
