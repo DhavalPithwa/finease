@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@/components/auth/AuthProvider";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import type { AxiosError } from "axios";
@@ -10,8 +10,11 @@ import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 
-export default function LoginPage() {
+function LoginContent() {
   const { loginWithGoogle, user, resetPassword } = useAuth();
+  const searchParams = useSearchParams();
+  const isAddMode = searchParams.get("mode") === "add";
+  
   const [userEmail, setUserEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,12 +27,24 @@ export default function LoginPage() {
   const [isResetting, setIsResetting] = useState(false);
 
   const router = useRouter();
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated || !user) return;
+
+    // Check URL directly to avoid race conditions with useSearchParams hydration
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get("mode");
+    
+    // Only redirect if NOT explicitly in add mode
+    if (mode !== "add") {
       router.push("/dashboard");
     }
-  }, [user, router]);
+  }, [user, router, isHydrated]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,12 +87,23 @@ export default function LoginPage() {
         <div className="flex flex-col items-center mb-2 gap-3 text-center">
           <Logo className="w-12 h-12 mb-2" />
           <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-            Welcome back.
+            {isAddMode ? "Authorize New Node" : "Welcome back."}
           </h1>
           <p className="text-sm font-medium text-slate-500">
-            Sign in to your FinEase command center.
+            {isAddMode 
+              ? "Link another identity to your local bridge." 
+              : "Sign in to your FinEase command center."}
           </p>
         </div>
+
+        {isAddMode && (
+             <button 
+                onClick={() => router.push('/dashboard')}
+                className="text-[10px] font-black uppercase text-primary hover:underline -mt-4 text-center"
+             >
+                Cancel & Return to Dashboard
+             </button>
+        )}
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           {error && (
@@ -124,7 +150,7 @@ export default function LoginPage() {
             isLoading={isLoading}
             className="w-full mt-2 h-10"
           >
-            Sign In Securely
+            {isAddMode ? "Authorize Identity" : "Sign In Securely"}
           </Button>
         </form>
 
@@ -198,4 +224,12 @@ export default function LoginPage() {
       )}
     </div>
   );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <LoginContent />
+        </Suspense>
+    );
 }

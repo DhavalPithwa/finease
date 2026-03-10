@@ -21,6 +21,7 @@ interface AuthUser {
   gender?: string;
   dob?: string;
   phone?: string;
+  monthStartDate?: number;
   role?: string;
   budgetTargets?: {
     needs: number;
@@ -39,6 +40,8 @@ interface ApiUserResponse {
   photoURL?: string;
   gender?: string;
   dob?: string;
+  phone?: string;
+  monthStartDate?: number;
   budgetTargets?: {
     needs: number;
     wants: number;
@@ -63,6 +66,9 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<AuthUser>) => void;
   resetPassword: (email: string, newPassword: string) => Promise<void>;
+  accounts: AuthUser[];
+  switchAccount: (uid: string) => Promise<void>;
+  authorizeSubNode: (uid: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,6 +84,8 @@ function buildUser(userData: ApiUserResponse): AuthUser {
       `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userData.displayName || "User")}`,
     gender: userData.gender,
     dob: userData.dob,
+    phone: userData.phone,
+    monthStartDate: userData.monthStartDate,
     budgetTargets: userData.budgetTargets,
     hasOnboarded: userData.hasOnboarded,
   };
@@ -86,15 +94,34 @@ function buildUser(userData: ApiUserResponse): AuthUser {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.user.profile);
+  const [accounts, setAccounts] = useState<AuthUser[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem("finease_token");
+      const storedAccounts = localStorage.getItem("finease_multi_accounts");
+      
+      if (storedAccounts) {
+        setAccounts(JSON.parse(storedAccounts));
+      }
+
       if (token) {
         try {
           const res = await api.get<ApiUserResponse>("/finance/profile");
-          dispatch(setUser(buildUser(res.data)));
+          const activeUser = buildUser(res.data);
+          dispatch(setUser(activeUser));
+          
+          // Sync accounts list
+          setAccounts(prev => {
+            const exists = prev.find(a => a.uid === activeUser.uid);
+            const updated = exists 
+              ? prev.map(a => a.uid === activeUser.uid ? { ...a, ...activeUser } : a)
+              : [...prev, activeUser];
+            localStorage.setItem("finease_multi_accounts", JSON.stringify(updated));
+            return updated;
+          });
+
           void dispatch(fetchCategories());
           void dispatch(fetchAssetClasses());
           void dispatch(fetchGoals());
@@ -122,8 +149,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const res = await api.post<ApiAuthResponse>(endpoint, payload);
     const { user: userData, token } = res.data;
 
+    const loggedUser = buildUser(userData);
     localStorage.setItem("finease_token", token);
-    dispatch(setUser(buildUser(userData)));
+    
+    // Store token-mapping for switching
+    const tokenMap = JSON.parse(localStorage.getItem("finease_token_map") || "{}");
+    tokenMap[loggedUser.uid] = token;
+    localStorage.setItem("finease_token_map", JSON.stringify(tokenMap));
+
+    dispatch(setUser(loggedUser));
+    setAccounts(prev => {
+        const updated = prev.find(a => a.uid === loggedUser.uid) 
+            ? prev.map(a => a.uid === loggedUser.uid ? loggedUser : a)
+            : [...prev, loggedUser];
+        localStorage.setItem("finease_multi_accounts", JSON.stringify(updated));
+        return updated;
+    });
 
     void dispatch(fetchCategories());
     void dispatch(fetchAssetClasses());
@@ -131,9 +172,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    const currentUid = user?.uid;
     localStorage.removeItem("finease_token");
+    
+    if (currentUid) {
+      const tokenMap = JSON.parse(localStorage.getItem("finease_token_map") || "{}");
+      delete tokenMap[currentUid];
+      localStorage.setItem("finease_token_map", JSON.stringify(tokenMap));
+      
+      const remainingUids = Object.keys(tokenMap);
+      if (remainingUids.length > 0) {
+        // Switch to the next available account
+        const nextUid = remainingUids[0];
+        const nextToken = tokenMap[nextUid!];
+        localStorage.setItem("finease_token", nextToken);
+        
+        setAccounts(prev => {
+          const updated = prev.filter(a => a.uid !== currentUid);
+          localStorage.setItem("finease_multi_accounts", JSON.stringify(updated));
+          return updated;
+        });
+        
+        window.location.reload();
+        return;
+      }
+    }
+
+    // Full sign out if no other accounts
+    setAccounts([]);
+    localStorage.removeItem("finease_multi_accounts");
+    localStorage.removeItem("finease_token_map");
     dispatch({ type: "USER_LOGOUT" });
     dispatch(setUser(null));
+  };
+
+  const switchAccount = async (uid: string) => {
+    const tokenMap = JSON.parse(
+      localStorage.getItem("finease_token_map") || "{}",
+    );
+    const token = tokenMap[uid];
+    if (token) {
+      localStorage.setItem("finease_token", token);
+      window.location.reload(); // Simplest way to re-init everything with new token
+    }
+  };
+
+  const authorizeSubNode = async (uid: string) => {
+    try {
+      const res = await api.post<{ token: string }>(`/admin/impersonate/${uid}`);
+      const { token } = res.data;
+
+      // Temporarily swap tokens to fetch the new profile
+      const originalToken = localStorage.getItem("finease_token");
+      localStorage.setItem("finease_token", token);
+      const profileRes = await api.get<ApiUserResponse>("/finance/profile");
+      const subUser = buildUser(profileRes.data);
+
+      // Restore original token
+      if (originalToken) localStorage.setItem("finease_token", originalToken);
+      else localStorage.removeItem("finease_token");
+
+      // Store in token map
+      const tokenMap = JSON.parse(
+        localStorage.getItem("finease_token_map") || "{}",
+      );
+      tokenMap[subUser.uid] = token;
+      localStorage.setItem("finease_token_map", JSON.stringify(tokenMap));
+
+      // Add to accounts
+      setAccounts((prev) => {
+        const updated = prev.find((a) => a.uid === subUser.uid)
+          ? prev.map((a) => (a.uid === subUser.uid ? subUser : a))
+          : [...prev, subUser];
+        localStorage.setItem("finease_multi_accounts", JSON.stringify(updated));
+        return updated;
+      });
+    } catch (err) {
+      console.error("Sub-Node Authorization Failed", err);
+      throw err;
+    }
   };
 
   const updateProfile = async (updates: Partial<AuthUser>) => {
@@ -159,6 +276,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         updateProfile,
         resetPassword,
+        accounts,
+        switchAccount,
+        authorizeSubNode,
       }}
     >
       {children}

@@ -239,7 +239,8 @@ export function AccountList({ accounts }: AccountListProps) {
         onSave={async (data) => {
           if (editingAccount) {
             const totalLoan = parseFloat(data.initialAmount) || 0;
-            const paidAmt = parseFloat(data.paidAmount) || 0;
+            const paidAmt = parseFloat(data.repaidCapital) || 0;
+            const intPaid = parseFloat(data.burnedInterest) || 0;
             const remainingBalance = totalLoan - paidAmt;
 
             await dispatch(
@@ -249,7 +250,8 @@ export function AccountList({ accounts }: AccountListProps) {
                   name: data.name,
                   type: data.type as "debt",
                   initialAmount: totalLoan,
-                  paidAmount: paidAmt,
+                  repaidCapital: paidAmt,
+                  burnedInterest: intPaid,
                   balance: -remainingBalance,
                 },
               }),

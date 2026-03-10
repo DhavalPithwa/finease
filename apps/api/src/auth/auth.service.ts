@@ -79,6 +79,10 @@ export class AuthService {
   async login(data: LoginDto) {
     const { email, password } = data;
 
+    if (!email) {
+      throw new UnauthorizedException('Email is required');
+    }
+
     const snapshot = await this.collection.where('email', '==', email).get();
 
     if (snapshot.empty) {
@@ -146,5 +150,17 @@ export class AuthService {
     });
 
     return { message: 'Password reset successfully' };
+  }
+
+  async generateTokenForUser(uid: string) {
+    const doc = await this.collection.doc(uid).get();
+    if (!doc.exists) throw new ConflictException('User not found');
+    const userData = doc.data() as StoredUser;
+
+    return this.jwtService.sign({
+      uid: doc.id,
+      email: userData.email,
+      role: userData.role || 'user',
+    });
   }
 }

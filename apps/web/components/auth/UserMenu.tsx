@@ -1,12 +1,12 @@
 "use client";
 
 import { useAuth } from "./AuthProvider";
-import { LogIn, LogOut, User as UserIcon, Settings } from "lucide-react";
+import { LogIn, LogOut, User as UserIcon, Settings, Zap } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 export function UserMenu() {
-  const { user, logout, loading } = useAuth();
+  const { user, logout, loading, accounts, switchAccount } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -69,15 +69,41 @@ export function UserMenu() {
               </p>
             </div>
 
-            {user.role !== "admin" && (
               <Link
                 href="/settings"
                 onClick={() => setIsOpen(false)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 <Settings className="w-4 h-4" />
-                Account Settings
+                Control Center
               </Link>
+
+            {accounts.length > 1 && (
+                <div className="mt-2 py-2 border-t border-slate-100 dark:border-border-dark">
+                    <p className="px-4 text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Switch Identity</p>
+                    <div className="space-y-0.5">
+                        {accounts.map(acc => (
+                            <button
+                                key={acc.uid}
+                                onClick={() => {
+                                    if (acc.uid !== user.uid) {
+                                        setIsOpen(false);
+                                        switchAccount(acc.uid);
+                                    }
+                                }}
+                                disabled={acc.uid === user.uid}
+                                className={`w-full flex items-center gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${acc.uid === user.uid ? "bg-primary/5 text-primary cursor-default" : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
+                            >
+                                <div className={`size-5 rounded-md flex items-center justify-center font-black text-[8px] shrink-0 ${acc.uid === user.uid ? "bg-primary/10 text-primary" : "bg-slate-100 dark:bg-white/5"}`}>
+                                    {acc.displayName?.charAt(0) || "U"}
+                                </div>
+                                <span className="truncate flex-1 text-left">{acc.displayName}</span>
+                                {acc.uid === user.uid && <div className="size-1.5 rounded-full bg-primary animate-pulse" />}
+                                {acc.uid !== user.uid && <Zap className="size-3 opacity-20" />}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             )}
 
             <button

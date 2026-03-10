@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   User as UserIcon,
   Phone,
@@ -12,19 +13,22 @@ import {
   Save,
   CheckCircle2,
   AlertTriangle,
-  Database,
-  RefreshCw,
+  Calendar,
+  Shield,
+  Fingerprint,
+  Key,
+  X,
+  Delete,
+  Plus,
+  Zap,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
-
 import { useSecurity } from "@/components/providers/SecurityProvider";
-import { Shield, Fingerprint, Key, X, Delete } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function SettingsPage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, accounts, switchAccount } = useAuth();
   const { isLockEnabled, toggleLock, lockType } = useSecurity();
   const router = useRouter();
 
@@ -34,24 +38,26 @@ export default function SettingsPage() {
     savingsTarget: 20,
     name: "",
     email: "",
-    phone: "+91 ",
+    phone: "",
     gender: "Not Specified",
-    dob: "",
+    dob: "1990-01-01",
+    monthStartDate: 1,
   });
 
   const [showPinModal, setShowPinModal] = useState(false);
   const [tempPin, setTempPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
-  const [pinStep, setPinStep] = useState(1); // 1 = entry, 2 = confirmation
+  const [pinStep, setPinStep] = useState(1);
 
   useEffect(() => {
     if (user) {
       setFormData({
         name: user.displayName || "",
         email: user.email || "",
-        phone: user.phone || "+91 ",
+        phone: user.phone || "",
         gender: user.gender || "Not Specified",
         dob: user.dob || "1990-01-01",
+        monthStartDate: user.monthStartDate || 1,
         needsTarget: user.budgetTargets?.needs ?? 50,
         wantsTarget: user.budgetTargets?.wants ?? 30,
         savingsTarget: user.budgetTargets?.savings ?? 20,
@@ -59,31 +65,23 @@ export default function SettingsPage() {
     }
   }, [user]);
 
-  const isDirty =
-    String(formData.name || "").trim() !==
-      String(user?.displayName || "").trim() ||
-    String(formData.email || "").trim() !== String(user?.email || "").trim() ||
-    String(formData.phone || "+91 ").trim() !==
-      String(user?.phone || "+91 ").trim() ||
-    String(formData.gender || "Not Specified") !==
-      String(user?.gender || "Not Specified") ||
-    String(formData.dob || "1990-01-01") !==
-      String(user?.dob || "1990-01-01") ||
-    Math.round(Number(formData.needsTarget ?? 50)) !==
-      Math.round(Number(user?.budgetTargets?.needs ?? 50)) ||
-    Math.round(Number(formData.wantsTarget ?? 30)) !==
-      Math.round(Number(user?.budgetTargets?.wants ?? 30)) ||
-    Math.round(Number(formData.savingsTarget ?? 20)) !==
-      Math.round(Number(user?.budgetTargets?.savings ?? 20));
-
-  const handleSave = () => {
-    // Phone validation (Optional but good: 10 digits prefixed with +91)
-    const phoneRegex = /^\+91\s\d{10}$/;
-    if (formData.phone && !phoneRegex.test(formData.phone)) {
-      toast.error("Mobile number must be in '+91 XXXXXXXXXX' format");
+  const saveIdentity = async () => {
+    // Phone validation (Optional but good: 10 digits)
+    if (formData.phone && !/^\+?\d{10,15}$/.test(formData.phone.replace(/\s/g, ""))) {
+      toast.error("Invalid phone number format");
       return;
     }
 
+    await updateProfile({
+      phone: formData.phone,
+      gender: formData.gender,
+      dob: formData.dob,
+      monthStartDate: formData.monthStartDate,
+    });
+    toast.success("Identity profile updated");
+  };
+
+  const saveBudgets = async () => {
     const total =
       formData.needsTarget + formData.wantsTarget + formData.savingsTarget;
     if (total !== 100) {
@@ -91,48 +89,14 @@ export default function SettingsPage() {
       return;
     }
 
-    updateProfile({
-      phone: formData.phone,
-      gender: formData.gender,
-      dob: formData.dob,
+    await updateProfile({
       budgetTargets: {
         needs: formData.needsTarget,
         wants: formData.wantsTarget,
         savings: formData.savingsTarget,
       },
     });
-    toast.success("Profile Updated Successfully!");
-
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 1000);
-  };
-
-  const [isRecalculating, setIsRecalculating] = useState(false);
-  const handleRecalculate = async () => {
-    setIsRecalculating(true);
-    try {
-      const token = localStorage.getItem("finease_token");
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/finance/recalculate`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-      if (response.ok) {
-        toast.success("Global Audit Complete!");
-        setTimeout(() => window.location.reload(), 1500);
-      } else {
-        throw new Error("Failed to recalculate");
-      }
-    } catch {
-      toast.error("Calculation Conflict");
-    } finally {
-      setIsRecalculating(false);
-    }
+    toast.success("Budget Strategy Synchronized");
   };
 
   const handlePinAction = (num: string) => {
@@ -148,9 +112,10 @@ export default function SettingsPage() {
         setConfirmPin(next);
         if (next.length === 4) {
           if (next === tempPin) {
-            toggleLock(true, "pin", next);
-            setShowPinModal(false);
-            resetPinModal();
+            toggleLock(true, "pin", next).then(() => {
+                setShowPinModal(false);
+                resetPinModal();
+            });
           } else {
             toast.error("PINs do not match");
             setConfirmPin("");
@@ -169,513 +134,472 @@ export default function SettingsPage() {
   if (!user) return null;
 
   return (
-    <div className="mx-auto max-w-3xl w-full px-4 sm:px-6 space-y-4 sm:space-y-6 pb-20 lg:pb-8 pt-0">
-      {/* Sticky Header */}
+    <div className="mx-auto max-w-4xl w-full px-4 sm:px-6 space-y-8 pb-32 lg:pb-12">
       <PageHeader
-        title="Architect Settings"
-        subtitle="Configure your financial engine"
-        className="space-y-1 mb-4"
+        title="Protocol Settings"
+        subtitle="Manage your financial operating system"
+        className="space-y-1"
       />
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 md:p-8 shadow-2xl shadow-slate-200/50 dark:shadow-none dark:border-white/5 dark:bg-slate-900 space-y-6 md:space-y-8">
-        <div className="flex items-center gap-4 border-b border-slate-100 dark:border-white/5 pb-6 md:pb-8">
-          <div className="size-14 md:size-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0 relative overflow-hidden group">
-            {formData.gender === "Male" ? (
-              <UserIcon className="w-6 h-6 md:w-8 md:h-8" />
-            ) : formData.gender === "Female" ? (
-              <UserIcon className="w-6 h-6 md:w-8 md:h-8" />
-            ) : (
-              <UserIcon className="w-6 h-6 md:w-8 md:h-8" />
-            )}
-            <div className="absolute inset-0 bg-primary/20 scale-0 group-hover:scale-150 transition-transform duration-500" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-black text-slate-900 dark:text-white truncate tracking-tight">
-              {formData.name}
-            </h2>
-            <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-0.5">
-              Primary Node
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 mb-4">
-            <UserCog className="w-5 h-5 text-primary" />
-            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">
-              Profile Core
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
-                Legal Identity
-              </label>
-              <div className="relative">
-                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={formData.name}
-                  disabled
-                  className="w-full h-12 pl-11 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl text-slate-400 dark:text-slate-500 opacity-60 cursor-not-allowed text-xs font-black ring-1 ring-slate-100 dark:ring-white/5"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
-                Communication Node
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="email"
-                  value={formData.email}
-                  disabled
-                  className="w-full h-12 pl-11 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl text-slate-400 dark:text-slate-500 opacity-60 cursor-not-allowed text-xs font-black ring-1 ring-slate-100 dark:ring-white/5"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
-                Mobile Uplink
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                  placeholder="+91 9876543210"
-                  className="w-full h-12 pl-11 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
-                Gender Identity
-              </label>
-              <div className="relative">
-                <select
-                  value={formData.gender}
-                  onChange={(e) =>
-                    setFormData({ ...formData, gender: e.target.value })
-                  }
-                  className="w-full h-12 px-4 pr-10 appearance-none bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all min-w-0"
-                >
-                  <option>Not Specified</option>
-                  <option>Male</option>
-                  <option>Female</option>
-                  <option>Other</option>
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
-                Biological Horizon (DOB)
-              </label>
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <select
-                    value={formData.dob.split("-")[2] || "01"}
-                    onChange={(e) => {
-                      const parts = formData.dob.split("-");
-                      parts[2] = e.target.value.padStart(2, "0");
-                      setFormData({ ...formData, dob: parts.join("-") });
-                    }}
-                    className="w-full h-12 px-4 appearance-none bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
-                  >
-                    {Array.from({ length: 31 }, (_, i) =>
-                      (i + 1).toString().padStart(2, "0"),
-                    ).map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                </div>
-                <div className="relative flex-[1.5]">
-                  <select
-                    value={formData.dob.split("-")[1] || "01"}
-                    onChange={(e) => {
-                      const parts = formData.dob.split("-");
-                      parts[1] = e.target.value.padStart(2, "0");
-                      setFormData({ ...formData, dob: parts.join("-") });
-                    }}
-                    className="w-full h-12 px-4 appearance-none bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
-                  >
-                    {[
-                      "Jan",
-                      "Feb",
-                      "Mar",
-                      "Apr",
-                      "May",
-                      "Jun",
-                      "Jul",
-                      "Aug",
-                      "Sep",
-                      "Oct",
-                      "Nov",
-                      "Dec",
-                    ].map((m, i) => (
-                      <option
-                        key={m}
-                        value={(i + 1).toString().padStart(2, "0")}
-                      >
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                </div>
-                <div className="relative flex-[1.2]">
-                  <select
-                    value={formData.dob.split("-")[0] || "1990"}
-                    onChange={(e) => {
-                      const parts = formData.dob.split("-");
-                      parts[0] = e.target.value;
-                      setFormData({ ...formData, dob: parts.join("-") });
-                    }}
-                    className="w-full h-12 px-4 appearance-none bg-slate-50 dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
-                  >
-                    {Array.from({ length: 100 }, (_, i) =>
-                      (new Date().getFullYear() - i).toString(),
-                    ).map((y) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-8 border-t border-slate-100 dark:border-white/5 mt-8">
-            <div className="flex items-center gap-2 mb-6">
-              <Shield className="w-5 h-5 text-indigo-500" />
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">
-                Security & Privacy
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Biometrics Toggle */}
-              <div
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${isLockEnabled && lockType === "biometric" ? "border-primary bg-primary/5" : "border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50"}`}
-                onClick={() => {
-                  if (isLockEnabled && lockType === "biometric") {
-                    toggleLock(false);
-                  } else {
-                    toggleLock(true, "biometric");
-                  }
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="size-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-primary shadow-sm">
-                    <Fingerprint className="w-5 h-5" />
-                  </div>
-                  <div
-                    className={`size-5 rounded-full border-2 flex items-center justify-center transition-colors ${isLockEnabled && lockType === "biometric" ? "border-primary bg-primary" : "border-slate-300 dark:border-slate-600"}`}
-                  >
-                    {isLockEnabled && lockType === "biometric" && (
-                      <div className="size-1.5 rounded-full bg-white" />
-                    )}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8">
+        
+        {/* Profile Card */}
+        <div className="md:col-span-8 space-y-6">
+          <SectionCard
+             title="Identity Profile"
+             subtitle="Core personal metadata"
+             icon={<UserCog className="w-4 h-4" />}
+             onSave={saveIdentity}
+             isDirty={
+                formData.phone !== (user.phone || "") ||
+                formData.gender !== (user.gender || "Not Specified") ||
+                formData.dob !== (user.dob || "1990-01-01") ||
+                formData.monthStartDate !== (user.monthStartDate || 1)
+             }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
+                    Identity
+                  </label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={formData.name}
+                      disabled
+                      className="w-full h-11 pl-11 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl text-slate-400 opacity-60 cursor-not-allowed text-xs font-black ring-1 ring-slate-100 dark:ring-white/5"
+                    />
                   </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">
-                    Biometric Lock
-                  </p>
-                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                    FaceID or Fingerprint
-                  </p>
-                </div>
-              </div>
 
-              {/* PIN Toggle */}
-              <div
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${isLockEnabled && lockType === "pin" ? "border-primary bg-primary/5" : "border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50"}`}
-                onClick={() => {
-                  if (isLockEnabled && lockType === "pin") {
-                    toggleLock(false);
-                  } else {
-                    setShowPinModal(true);
-                  }
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="size-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-indigo-500 shadow-sm">
-                    <Key className="w-5 h-5" />
-                  </div>
-                  <div
-                    className={`size-5 rounded-full border-2 flex items-center justify-center transition-colors ${isLockEnabled && lockType === "pin" ? "border-primary bg-primary" : "border-slate-300 dark:border-slate-600"}`}
-                  >
-                    {isLockEnabled && lockType === "pin" && (
-                      <div className="size-1.5 rounded-full bg-white" />
-                    )}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
+                    Communication
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="email"
+                      value={formData.email}
+                      disabled
+                      className="w-full h-11 pl-11 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl text-slate-400 opacity-60 cursor-not-allowed text-xs font-black ring-1 ring-slate-100 dark:ring-white/5"
+                    />
                   </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">
-                    PIN Lock
-                  </p>
-                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                    4-Digit Security Code
-                  </p>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
+                    Mobile Uplink
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="+91 9876543210"
+                      className="w-full h-11 pl-11 bg-white dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
-            {isLockEnabled && (
-              <div className="mt-4">
-                <button
-                  onClick={() => toggleLock(false)}
-                  className="w-full p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-900/10 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/20 transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px]"
-                >
-                  <Shield className="w-4 h-4" />
-                  Turn Off Security and Privacy
-                </button>
-              </div>
-            )}
-          </div>
 
-          {/* PIN Modal */}
-          <AnimatePresence>
-            {showPinModal && (
-              <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 backdrop-blur-md bg-black/40">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  className="bg-white dark:bg-[#0f1115] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl overflow-hidden relative"
-                >
-                  <button
-                    onClick={() => {
-                      setShowPinModal(false);
-                      resetPinModal();
-                    }}
-                    className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
+                    Gender Identity
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formData.gender}
+                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                      className="w-full h-11 px-4 pr-10 appearance-none bg-white dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
+                    >
+                      <option>Not Specified</option>
+                      <option>Male</option>
+                      <option>Female</option>
+                      <option>Other</option>
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
 
-                  <div className="flex flex-col items-center">
-                    <div className="size-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-6">
-                      <Key className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">
-                      {pinStep === 1
-                        ? "Set Security PIN"
-                        : "Confirm Security PIN"}
-                    </h3>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-10">
-                      {pinStep === 1
-                        ? "Enter a 4-digit code"
-                        : "Re-enter your 4-digit code"}
-                    </p>
-
-                    <div className="flex gap-4 mb-12">
-                      {[0, 1, 2, 3].map((idx) => (
-                        <div
-                          key={idx}
-                          className={`size-3 rounded-full border-2 transition-all ${
-                            (pinStep === 1 ? tempPin : confirmPin).length > idx
-                              ? "bg-indigo-500 border-indigo-500 scale-125"
-                              : "border-slate-200 dark:border-white/10"
-                          }`}
-                        />
+                <div className="space-y-1.5 sm:col-span-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
+                    Fiscal Start Date
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <select
+                      value={formData.monthStartDate}
+                      onChange={(e) => setFormData({ ...formData, monthStartDate: parseInt(e.target.value) })}
+                      className="w-full h-11 pl-11 appearance-none bg-white dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
+                    >
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                        <option key={d} value={d}>Day {d}</option>
                       ))}
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3 w-full">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                        <button
-                          key={num}
-                          onClick={() => handlePinAction(num.toString())}
-                          className="h-14 rounded-2xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white font-black text-lg hover:bg-slate-100 dark:hover:bg-white/10 active:scale-90 transition-all"
-                        >
-                          {num}
-                        </button>
-                      ))}
-                      <div />
-                      <button
-                        onClick={() => handlePinAction("0")}
-                        className="h-14 rounded-2xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white font-black text-lg hover:bg-slate-100 dark:hover:bg-white/10 active:scale-90 transition-all"
-                      >
-                        0
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (pinStep === 1) setTempPin(tempPin.slice(0, -1));
-                          else setConfirmPin(confirmPin.slice(0, -1));
-                        }}
-                        className="h-14 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors"
-                      >
-                        <Delete className="w-5 h-5" />
-                      </button>
-                    </div>
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                   </div>
-                </motion.div>
-              </div>
-            )}
-          </AnimatePresence>
+                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1 pl-1">
+                    Sets the first day of your financial month
+                  </p>
+                </div>
 
-          <div className="pt-8 border-t border-slate-100 dark:border-white/5 mt-8">
-            <div className="flex items-center gap-2 mb-6">
-              <Target className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">
-                Budget Protocol Targets
-              </h3>
+                <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
+                        Biological Origin
+                    </label>
+                    <input 
+                        type="date"
+                        value={formData.dob}
+                        onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                        className="w-full h-11 px-4 bg-white dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
+                    />
+                </div>
             </div>
+          </SectionCard>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-indigo-500 uppercase tracking-widest pl-1">
-                  Essential Needs
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={formData.needsTarget}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        needsTarget: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full h-12 px-4 pr-10 bg-indigo-50/30 dark:bg-indigo-500/5 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white text-sm font-black ring-1 ring-indigo-500/20 transition-all font-mono"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-400/50 font-black text-xs">
-                    %
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-pink-500 uppercase tracking-widest pl-1">
-                  Discretionary wants
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={formData.wantsTarget}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        wantsTarget: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full h-12 px-4 pr-10 bg-pink-50/30 dark:bg-pink-500/5 border-none rounded-2xl focus:ring-2 focus:ring-pink-500 outline-none text-slate-900 dark:text-white text-sm font-black ring-1 ring-pink-500/20 transition-all font-mono"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-pink-400/50 font-black text-xs">
-                    %
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest pl-1">
-                  Capital Savings
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={formData.savingsTarget}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        savingsTarget: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full h-12 px-4 pr-10 bg-emerald-50/30 dark:bg-emerald-500/5 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 dark:text-white text-sm font-black ring-1 ring-emerald-500/20 transition-all font-mono"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-400/50 font-black text-xs">
-                    %
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={`mt-4 px-4 py-2 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest flex md:inline-flex items-center justify-center md:justify-start gap-2 ${formData.needsTarget + formData.wantsTarget + formData.savingsTarget === 100 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}
+          {user.role !== "admin" && (
+            <SectionCard
+              title="Budget Protocol"
+              subtitle="Resource allocation targets"
+              icon={<Target className="w-4 h-4" />}
+              onSave={saveBudgets}
+              isDirty={
+                formData.needsTarget !== (user.budgetTargets?.needs ?? 50) ||
+                formData.wantsTarget !== (user.budgetTargets?.wants ?? 30) ||
+                formData.savingsTarget !== (user.budgetTargets?.savings ?? 20)
+              }
             >
-              {formData.needsTarget +
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-indigo-500 uppercase tracking-widest pl-1">
+                    Essentials
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.needsTarget}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          needsTarget: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full h-11 px-4 pr-10 bg-indigo-50/30 dark:bg-indigo-500/5 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-indigo-500/20 transition-all"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-400/50 font-black text-xs">
+                      %
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-pink-500 uppercase tracking-widest pl-1">
+                    Aspirations
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.wantsTarget}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          wantsTarget: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full h-11 px-4 pr-10 bg-pink-50/30 dark:bg-pink-500/5 border-none rounded-2xl focus:ring-2 focus:ring-pink-500 outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-pink-500/20 transition-all"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-pink-400/50 font-black text-xs">
+                      %
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest pl-1">
+                    Capital
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.savingsTarget}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          savingsTarget: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full h-11 px-4 pr-10 bg-emerald-50/30 dark:bg-emerald-500/5 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-emerald-500/20 transition-all"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-400/50 font-black text-xs">
+                      %
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className={`mt-4 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-2 ${formData.needsTarget + formData.wantsTarget + formData.savingsTarget === 100 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}
+              >
+                {formData.needsTarget +
                 formData.wantsTarget +
                 formData.savingsTarget ===
-              100 ? (
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-              ) : (
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              )}
-              <span>
-                Configuration Equilibrium:{" "}
-                {formData.needsTarget +
-                  formData.wantsTarget +
-                  formData.savingsTarget}
-                %{" "}
-              </span>
-              {formData.needsTarget +
-                formData.wantsTarget +
-                formData.savingsTarget !==
-                100 && (
-                <span className="hidden sm:inline">(Must equal 100%)</span>
-              )}
-            </div>
-          </div>
-
-          <div className="pt-8 border-t border-slate-100 dark:border-white/5 mt-8">
-            <div className="flex items-center gap-2 mb-6">
-              <Database className="w-5 h-5 text-indigo-500" />
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">
-                Maintenance Protocol
-              </h3>
-            </div>
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">
-                    Recalculate Architecture
-                  </p>
-                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest max-w-sm leading-relaxed">
-                    Force a complete systemic audit of all transaction ledgers
-                    to synchronize account balances and goal progress.
-                  </p>
-                </div>
-                <button
-                  onClick={handleRecalculate}
-                  disabled={isRecalculating}
-                  className="h-10 px-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <RefreshCw
-                    className={`w-3.5 h-3.5 ${isRecalculating ? "animate-spin" : ""}`}
-                  />
-                  {isRecalculating ? "Analyzing Ledgers..." : "Execute Audit"}
-                </button>
+                100 ? (
+                  <CheckCircle2 className="w-3 h-3" />
+                ) : (
+                  <AlertTriangle className="w-3 h-3" />
+                )}
+                <span>
+                  Equilibrium:{" "}
+                  {formData.needsTarget +
+                    formData.wantsTarget +
+                    formData.savingsTarget}
+                  % / 100%
+                </span>
               </div>
-            </div>
-          </div>
+            </SectionCard>
+          )}
+        </div>
 
-          <div className="pt-6">
-            <button
-              onClick={handleSave}
-              disabled={!isDirty}
-              className="w-full md:w-auto h-11 px-8 bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed disabled:active:scale-100"
-            >
-              <Save className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-              Sync Architecture
-            </button>
-          </div>
+        {/* Sidebar Sections */}
+        <div className="md:col-span-4 space-y-6">
+           <div className="p-6 rounded-3xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 space-y-6">
+                <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-primary" />
+                    <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                        Security Lattice
+                    </h3>
+                </div>
+
+                <div className="space-y-3">
+                    <button
+                        onClick={() => toggleLock(!isLockEnabled || lockType !== "biometric", "biometric")}
+                        className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${isLockEnabled && lockType === "biometric" ? "border-primary bg-primary/5" : "border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50"}`}
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <Fingerprint className={`w-5 h-5 ${isLockEnabled && lockType === "biometric" ? "text-primary" : "text-slate-400"}`} />
+                            <div className={`size-4 rounded-full border-2 flex items-center justify-center ${isLockEnabled && lockType === "biometric" ? "border-primary bg-primary" : "border-slate-300 dark:border-slate-600"}`}>
+                                {isLockEnabled && lockType === "biometric" && <div className="size-1 bg-white rounded-full" />}
+                            </div>
+                        </div>
+                        <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Biometric Access</p>
+                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">FaceID / TouchID</p>
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            if (isLockEnabled && lockType === "pin") toggleLock(false);
+                            else setShowPinModal(true);
+                        }}
+                        className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${isLockEnabled && lockType === "pin" ? "border-indigo-500 bg-indigo-500/5" : "border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50"}`}
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <Key className={`w-5 h-5 ${isLockEnabled && lockType === "pin" ? "text-indigo-500" : "text-slate-400"}`} />
+                            <div className={`size-4 rounded-full border-2 flex items-center justify-center ${isLockEnabled && lockType === "pin" ? "border-indigo-500 bg-indigo-500" : "border-slate-300 dark:border-slate-600"}`}>
+                                {isLockEnabled && lockType === "pin" && <div className="size-1 bg-white rounded-full" />}
+                            </div>
+                        </div>
+                        <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Secure PIN</p>
+                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">4-Digit Verification</p>
+                    </button>
+                </div>
+           </div>
+
+           <div className="p-6 rounded-3xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 space-y-4">
+                <div className="flex items-center gap-2">
+                    <UserIcon className="w-4 h-4 text-emerald-500" />
+                    <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                        Identity Switcher
+                    </h3>
+                </div>
+                
+                <div className="space-y-4">
+                    <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
+                        Authorized Nodes active on this bridge
+                    </p>
+
+                      <div className="space-y-2">
+                        {accounts.map((acc) => (
+                          <button
+                            key={acc.uid}
+                            onClick={() =>
+                              acc.uid !== user?.uid && switchAccount(acc.uid)
+                            }
+                            disabled={acc.uid === user?.uid}
+                            className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all text-left group ${acc.uid === user?.uid ? "bg-primary/5 border-primary/20 cursor-default" : "bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 hover:border-primary/50 hover:bg-primary/5"}`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className={`size-8 rounded-xl flex items-center justify-center font-black text-[10px] shrink-0 ${acc.uid === user?.uid ? "bg-primary/10 text-primary" : "bg-slate-200 dark:bg-white/10 text-slate-500 group-hover:bg-primary/10 group-hover:text-primary transition-colors"}`}
+                              >
+                                {acc.photoURL ? (
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img
+                                    src={acc.photoURL}
+                                    className="size-full rounded-xl object-cover"
+                                    alt=""
+                                  />
+                                ) : (
+                                  (acc.displayName || "U").charAt(0)
+                                )}
+                              </div>
+                              <div className="min-w-0 text-left">
+                                <p
+                                  className={`text-[10px] font-black uppercase truncate ${acc.uid === user?.uid ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400 group-hover:text-primary"}`}
+                                >
+                                  {acc.displayName}
+                                </p>
+                                <p
+                                  className={`text-[7px] font-black uppercase tracking-widest ${acc.uid === user?.uid ? "text-primary" : "text-slate-400"}`}
+                                >
+                                  {acc.uid === user?.uid
+                                    ? "Primary Node"
+                                    : acc.role === "admin"
+                                      ? "Privileged Access"
+                                      : "Authorized Sync"}
+                                </p>
+                              </div>
+                            </div>
+                            {acc.uid === user?.uid ? (
+                              <div className="size-1.5 rounded-full bg-primary animate-pulse mr-1" />
+                            ) : (
+                              <Zap className="size-3 text-slate-300 group-hover:text-primary transition-colors" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+
+                    <button 
+                        onClick={() => router.push('/login?mode=add')}
+                        className="w-full h-10 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-center gap-2 text-[9px] font-black uppercase text-slate-400 hover:text-primary hover:border-primary/50 transition-all font-sans"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        Authorize Sub-Node
+                    </button>
+                </div>
+           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showPinModal && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 backdrop-blur-md bg-black/40">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white dark:bg-[#0f1115] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl overflow-hidden relative"
+            >
+              <button
+                onClick={() => {
+                  setShowPinModal(false);
+                  resetPinModal();
+                }}
+                className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex flex-col items-center">
+                <div className="size-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-6">
+                  <Key className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">
+                  {pinStep === 1 ? "Set Security PIN" : "Confirm Security PIN"}
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-10">
+                  {pinStep === 1 ? "Enter a 4-digit code" : "Re-enter your 4-digit code"}
+                </p>
+
+                <div className="flex gap-4 mb-12">
+                  {[0, 1, 2, 3].map((idx) => (
+                    <div
+                      key={idx}
+                      className={`size-3 rounded-full border-2 transition-all ${
+                        (pinStep === 1 ? tempPin : confirmPin).length > idx
+                           ? "bg-indigo-500 border-indigo-500 scale-125"
+                           : "border-slate-200 dark:border-white/10"
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 w-full">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => handlePinAction(num.toString())}
+                      className="h-14 rounded-2xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white font-black text-lg hover:bg-slate-100 dark:hover:bg-white/10 active:scale-90 transition-all"
+                    >
+                      {num}
+                    </button>
+                  ))}
+                  <div />
+                  <button
+                    onClick={() => handlePinAction("0")}
+                    className="h-14 rounded-2xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white font-black text-lg hover:bg-slate-100 dark:hover:bg-white/10 active:scale-90 transition-all"
+                  >
+                    0
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (pinStep === 1) setTempPin(tempPin.slice(0, -1));
+                      else setConfirmPin(confirmPin.slice(0, -1));
+                    }}
+                    className="h-14 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors"
+                  >
+                    <Delete className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
+}
+
+function SectionCard({ 
+    title, 
+    subtitle, 
+    icon, 
+    children, 
+    onSave, 
+    isDirty 
+}: { 
+    title: string; 
+    subtitle: string; 
+    icon: React.ReactNode; 
+    children: React.ReactNode; 
+    onSave: () => void;
+    isDirty?: boolean;
+}) {
+    return (
+        <div className="rounded-3xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 p-6 sm:p-8 space-y-6 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-all">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-white/5 pb-6">
+                <div className="flex items-center gap-4">
+                    <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        {icon}
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{title}</h3>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{subtitle}</p>
+                    </div>
+                </div>
+                <button
+                    onClick={onSave}
+                    disabled={!isDirty}
+                    className="h-10 px-6 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100 flex items-center justify-center gap-2 group"
+                >
+                    <Save className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
+                    Commit Changes
+                </button>
+            </div>
+            <div className="pt-2">
+                {children}
+            </div>
+        </div>
+    );
 }

@@ -61,6 +61,7 @@ export function TransactionModal({
 
   useEffect(() => {
     if (isOpen) {
+      const defaultCategory = categories?.[0]?.id || "uncategorized";
       if (transaction) {
         setFormData({
           description: transaction.description,
@@ -68,7 +69,7 @@ export function TransactionModal({
           interestAmount: transaction.interestAmount
             ? String(transaction.interestAmount)
             : "",
-          category: transaction.category || "uncategorized",
+          category: transaction.category || defaultCategory,
           date: new Date(transaction.date).toISOString().split("T")[0] ?? "",
           accountId: transaction.accountId || "acc-1",
           toAccountId: transaction.toAccountId || "",
@@ -82,7 +83,7 @@ export function TransactionModal({
           description: "",
           amount: "",
           interestAmount: "",
-          category: "uncategorized",
+          category: defaultCategory,
           date: new Date().toISOString().split("T")[0] ?? "",
           accountId: accounts[0]?.id || "acc-1",
           toAccountId: "",
@@ -93,7 +94,7 @@ export function TransactionModal({
         });
       }
     }
-  }, [transaction, isOpen, accounts]);
+  }, [transaction, isOpen, accounts, categories]);
 
   const handleSave = async () => {
     if (!formData.description || !formData.amount) {
@@ -260,11 +261,6 @@ export function TransactionModal({
                         <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
                       ))}
                     </optgroup>
-                    <optgroup label="Investments">
-                      {accounts.filter(a => a.type === 'investment').map(acc => (
-                        <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
-                      ))}
-                    </optgroup>
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 </div>
@@ -377,11 +373,6 @@ export function TransactionModal({
                     </optgroup>
                     <optgroup label="Cash & Others">
                       {accounts.filter(a => ['cash', 'card'].includes(a.type)).map(acc => (
-                        <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Investments">
-                      {accounts.filter(a => a.type === 'investment').map(acc => (
                         <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
                       ))}
                     </optgroup>

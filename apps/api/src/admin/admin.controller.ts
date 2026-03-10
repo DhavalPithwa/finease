@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Post,
   Body,
   Param,
   UseGuards,
@@ -11,6 +12,7 @@ import { AuthGuard } from '../common/guards/auth.guard';
 import { AdminGuard } from '../common/guards/admin.guard';
 import { UsersService } from '../common/services/users.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { AuthService } from '../auth/auth.service';
 import { User, AdminStats } from '@repo/types';
 
 @Controller('admin')
@@ -19,6 +21,7 @@ export class AdminController {
   constructor(
     private readonly usersService: UsersService,
     private readonly analyticsService: AnalyticsService,
+    private readonly authService: AuthService,
   ) {}
 
   @Get('users')
@@ -132,5 +135,11 @@ export class AdminController {
       message: `Soft delete field initialized for ${totalUpdated} records across ${collections.length} collections.`,
       totalUpdated,
     };
+  }
+
+  @Post('impersonate/:uid')
+  async impersonate(@Param('uid') uid: string) {
+    const token = await this.authService.generateTokenForUser(uid);
+    return { token };
   }
 }

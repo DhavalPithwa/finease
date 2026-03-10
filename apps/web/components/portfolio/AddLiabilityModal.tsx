@@ -15,8 +15,8 @@ interface AddLiabilityModalProps {
     name: string;
     type: string;
     initialAmount: string;
-    paidAmount: string;
-    interestPaid: string;
+    repaidCapital: string;
+    burnedInterest: string;
   }) => Promise<void> | void;
 }
 
@@ -30,8 +30,8 @@ export function AddLiabilityModal({
     name: "",
     type: "debt",
     initialAmount: "",
-    paidAmount: "",
-    interestPaid: "",
+    repaidCapital: "",
+    burnedInterest: "",
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -44,17 +44,17 @@ export function AddLiabilityModal({
           type: liability.type ?? "debt",
           initialAmount:
             liability.initialAmount?.toString() ||
-            (absBalance + (liability.paidAmount ?? 0)).toString(),
-          paidAmount: liability.paidAmount?.toString() ?? "0",
-          interestPaid: liability.interestPaid?.toString() ?? "0",
+            (absBalance + (liability.repaidCapital ?? 0)).toString(),
+          repaidCapital: liability.repaidCapital?.toString() ?? "0",
+          burnedInterest: liability.burnedInterest?.toString() ?? "0",
         });
       } else {
         setFormData({
           name: "",
           type: "debt",
           initialAmount: "",
-          paidAmount: "0",
-          interestPaid: "0",
+          repaidCapital: "0",
+          burnedInterest: "0",
         });
       }
     }
@@ -127,21 +127,21 @@ export function AddLiabilityModal({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest pl-1">
-              Principal (₹)
+              Repaid Capital (₹)
             </label>
             <AmountInput
-              value={formData.paidAmount}
-              onChange={(val) => setFormData({ ...formData, paidAmount: val })}
+              value={formData.repaidCapital}
+              onChange={(val) => setFormData({ ...formData, repaidCapital: val })}
               className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 ring-emerald-500/20 focus:ring-emerald-500"
             />
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-orange-500 uppercase tracking-widest pl-1">
-              Cost (₹)
+              Burned Interest (₹)
             </label>
             <AmountInput
-              value={formData.interestPaid}
-              onChange={(val) => setFormData({ ...formData, interestPaid: val })}
+              value={formData.burnedInterest}
+              onChange={(val) => setFormData({ ...formData, burnedInterest: val })}
               className="bg-orange-50 dark:bg-orange-500/10 text-orange-500 ring-orange-500/20 focus:ring-orange-500"
             />
           </div>

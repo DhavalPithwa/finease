@@ -44,10 +44,59 @@ export class AccountsService {
   }
 
   async update(id: string, account: Partial<Account>): Promise<Account> {
-    await this.collection.doc(id).update({
-      ...account,
-      lastSyncedAt: new Date().toISOString(),
-    });
+    const currentAccount = await this.findOne(id);
+    const newBalance =
+      account.balance !== undefined ? Number(account.balance) : undefined;
+
+    // If balance is being manually updated, create an adjustment transaction
+    // to preserve this change in the historical record.
+    if (
+      newBalance !== undefined &&
+      Math.abs(newBalance - (currentAccount.balance || 0)) > 0.01
+    ) {
+      const delta = newBalance - (currentAccount.balance || 0);
+      const isInvestment = currentAccount.type === 'investment';
+
+      // For investments, Valuation Adjustment is an ABSOLUTE set point.
+      // For others, it's a RELATIVE movement (delta).
+      const finalAmount = isInvestment ? newBalance : Math.abs(delta);
+      const finalType = isInvestment
+        ? 'income'
+        : delta > 0
+          ? 'income'
+          : 'expense';
+
+      await this.transactionsService.create({
+        userId: currentAccount.userId,
+        accountId: id,
+        amount: finalAmount,
+        type: finalType,
+        category: 'Valuation Adjustment',
+        description: `Manual adjustment to match ${newBalance.toLocaleString()} valuation`,
+        date: new Date().toISOString(),
+        status: 'completed',
+        metadata: {
+          isSystemAdjustment: true,
+          isBalanceSync: true, // Explicit flag for Absolute Sync point logic
+          previousBalance: currentAccount.balance,
+          newBalance: newBalance,
+        },
+      });
+
+      // Remove balance from the direct update to avoid overwriting the recalculated value
+      const updateData = { ...account };
+      delete updateData.balance;
+      await this.collection.doc(id).update({
+        ...updateData,
+        lastSyncedAt: new Date().toISOString(),
+      });
+    } else {
+      await this.collection.doc(id).update({
+        ...account,
+        lastSyncedAt: new Date().toISOString(),
+      });
+    }
+
     return this.findOne(id);
   }
 

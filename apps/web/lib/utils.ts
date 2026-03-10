@@ -106,3 +106,19 @@ export function getHexFromTailwind(twClass: string): string {
   };
   return map[twClass] || twClass;
 }
+
+/**
+ * Returns the start date of the fiscal month based on a target day.
+ * If targetDay is 5 and today is 1st, fiscal month started on 5th of last month.
+ */
+export function getFiscalMonthStart(date: Date, startDay: number): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+
+  if (d.getDate() < startDay) {
+    d.setMonth(d.getMonth() - 1);
+  }
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(startDay, lastDay));
+  return d;
+}

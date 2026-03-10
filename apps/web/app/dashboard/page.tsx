@@ -22,7 +22,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { useSignals } from "@/components/providers/SignalProvider";
 import { Button } from "@/components/ui/Button";
 import { FeatureTour } from "@/components/ui/FeatureTour";
-import { getHexFromTailwind } from "@/lib/utils";
+import { getHexFromTailwind, getFiscalMonthStart } from "@/lib/utils";
 
 export default function Home() {
   const { user } = useAuth();
@@ -173,8 +173,11 @@ export default function Home() {
     ];
     const now = new Date();
 
+    const monthStartDate = user?.monthStartDate || 1;
+
     for (let i = 0; i < 6; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const d = getFiscalMonthStart(now, monthStartDate);
+      d.setMonth(d.getMonth() - i);
       history.unshift({
         month: `${months[d.getMonth()]}`,
         value: 0,
@@ -193,8 +196,7 @@ export default function Home() {
         if (tx.status === "pending_confirmation") return false;
         const txDate = new Date(tx.date);
         return (
-          txDate.getMonth() === nextMonth.getMonth() &&
-          txDate.getFullYear() === nextMonth.getFullYear()
+          txDate.getTime() >= nextMonth.getTime()
         );
       });
 
@@ -211,7 +213,7 @@ export default function Home() {
       month: h.month,
       value: h.value > 0 ? h.value : 0,
     }));
-  }, [transactions, realTimeNetWorth]);
+  }, [transactions, realTimeNetWorth, user?.monthStartDate]);
 
   const netWorthChange = useMemo(() => {
     if (computedNetWorthHistory.length < 2) return 0;
@@ -224,12 +226,13 @@ export default function Home() {
   }, [computedNetWorthHistory]);
 
   const insights = useMemo(() => {
+    const monthStartDate = user?.monthStartDate || 1;
+    const currentFiscalStart = getFiscalMonthStart(new Date(), monthStartDate);
+
     const last30Days = transactions.filter((tx) => {
       if (tx.status === "pending_confirmation") return false;
       const d = new Date(tx.date);
-      const diffTime = Math.abs(new Date().getTime() - d.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays <= 30;
+      return d >= currentFiscalStart;
     });
 
     const monthlyIncome = last30Days
@@ -276,7 +279,7 @@ export default function Home() {
       monthlyExpense,
       liquidCapital: regularAccounts.filter(a => a.type !== 'card').reduce((sum, a) => sum + a.balance, 0)
     };
-  }, [transactions, assets, goals, regularAccounts]);
+  }, [transactions, assets, goals, regularAccounts, user?.monthStartDate]);
 
   if (loading && accounts.length === 0) {
     return (
@@ -350,7 +353,7 @@ export default function Home() {
           <div className="mt-2 flex items-center gap-1.5">
             <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-white/10" />
             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-              30 Day Window
+              Current Month Window
             </span>
           </div>
         </div>
@@ -358,7 +361,7 @@ export default function Home() {
         <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all group">
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between">
             Period Outflow
-            <span className="text-[7px] font-medium normal-case tracking-normal text-slate-400">Total 30-day spending</span>
+            <span className="text-[7px] font-medium normal-case tracking-normal text-slate-400">Total period spending</span>
           </div>
           <div className="text-lg font-black text-rose-500 tracking-tighter truncate">
             ₹{insights.monthlyExpense.toLocaleString()}

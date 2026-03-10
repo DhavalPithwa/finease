@@ -510,7 +510,13 @@ export default function PortfolioPageClient() {
                       Balance
                     </span>
                     <span className="text-sm font-black text-rose-500 tracking-tighter">
-                      ₹{Math.abs(debt.balance).toLocaleString()}
+                      ₹
+                      {(
+                        (debt.repaidCapital || 0) +
+                        (debt.burnedInterest || 0) -
+                        (debt.initialAmount ||
+                          Math.abs(debt.balance) + (debt.repaidCapital || 0))
+                      ).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -524,7 +530,7 @@ export default function PortfolioPageClient() {
                         ₹
                         {(
                           debt.initialAmount ||
-                          Math.abs(debt.balance) + (debt.paidAmount || 0)
+                          Math.abs(debt.balance) + (debt.repaidCapital || 0)
                         ).toLocaleString()}
                       </span>
                     </div>
@@ -533,7 +539,7 @@ export default function PortfolioPageClient() {
                         Paid
                       </span>
                       <span className="text-[9px] font-bold text-emerald-500">
-                        ₹{(debt.paidAmount || 0).toLocaleString()}
+                        ₹{(debt.repaidCapital || 0).toLocaleString()}
                       </span>
                     </div>
                     <div className="flex flex-col items-end">
@@ -541,7 +547,7 @@ export default function PortfolioPageClient() {
                         Cost
                       </span>
                       <span className="text-[9px] font-bold text-orange-500">
-                        ₹{(debt.interestPaid || 0).toLocaleString()}
+                        ₹{(debt.burnedInterest || 0).toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -620,23 +626,30 @@ export default function PortfolioPageClient() {
                           ₹
                           {(
                             debt.initialAmount ||
-                            Math.abs(debt.balance) + (debt.paidAmount || 0)
+                            Math.abs(debt.balance) + (debt.repaidCapital || 0)
                           ).toLocaleString()}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-right text-emerald-500">
                         <span className="font-bold">
-                          ₹{(debt.paidAmount || 0).toLocaleString()}
+                          ₹{(debt.repaidCapital || 0).toLocaleString()}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-right text-orange-500">
                         <span className="font-bold">
-                          ₹{(debt.interestPaid || 0).toLocaleString()}
+                          ₹{(debt.burnedInterest || 0).toLocaleString()}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-right">
                         <span className="font-black text-rose-500 text-base tracking-tighter">
-                          ₹{Math.abs(debt.balance).toLocaleString()}
+                          ₹
+                          {(
+                            (debt.repaidCapital || 0) +
+                            (debt.burnedInterest || 0) -
+                            (debt.initialAmount ||
+                              Math.abs(debt.balance) +
+                                (debt.repaidCapital || 0))
+                          ).toLocaleString()}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-right">
@@ -864,6 +877,7 @@ export default function PortfolioPageClient() {
                 type: "investment",
                 assetType: data.assetType ?? "",
                 balance: parseFloat(data.currentAmount) || 0,
+                initialAmount: parseFloat(data.currentAmount) || 0,
                 investedAmount: parseFloat(data.investedAmount) || 0,
                 currency: "INR",
               }),
@@ -885,8 +899,8 @@ export default function PortfolioPageClient() {
         }}
         onSave={async (data) => {
           const totalLoan = parseFloat(data.initialAmount) || 0;
-          const paidAmt = parseFloat(data.paidAmount) || 0;
-          const interestPaidVal = parseFloat(data.interestPaid) || 0;
+          const paidAmt = parseFloat(data.repaidCapital) || 0;
+          const interestPaidVal = parseFloat(data.burnedInterest) || 0;
           const remainingBalance = totalLoan - paidAmt;
 
           if (editingLiability) {
@@ -897,8 +911,8 @@ export default function PortfolioPageClient() {
                   name: data.name,
                   type: data.type as "debt",
                   initialAmount: totalLoan,
-                  paidAmount: paidAmt,
-                  interestPaid: interestPaidVal,
+                  repaidCapital: paidAmt,
+                  burnedInterest: interestPaidVal,
                   balance: -remainingBalance,
                 },
               }),
@@ -910,8 +924,8 @@ export default function PortfolioPageClient() {
                 type: "debt",
                 assetType: "",
                 initialAmount: totalLoan,
-                paidAmount: paidAmt,
-                interestPaid: interestPaidVal,
+                repaidCapital: paidAmt,
+                burnedInterest: interestPaidVal,
                 balance: -remainingBalance,
                 currency: "INR",
               }),
@@ -949,6 +963,7 @@ export default function PortfolioPageClient() {
                 type: "asset",
                 assetType: "",
                 balance: parseFloat(data.balance) || 0,
+                initialAmount: parseFloat(data.balance) || 0,
                 currency: "INR",
               }),
             ).unwrap();

@@ -8,6 +8,7 @@ export interface User {
   gender?: string;
   dob?: string;
   phone?: string;
+  monthStartDate?: number;
   budgetTargets?: {
     needs: number;
     wants: number;

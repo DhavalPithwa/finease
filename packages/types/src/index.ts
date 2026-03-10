@@ -7,6 +7,7 @@ export interface User {
   gender?: "male" | "female" | "other" | "Not Specified";
   dob?: string;
   phone?: string;
+  monthStartDate?: number;
   role: UserRole;
   createdAt: string;
   budgetTargets?: {
@@ -36,8 +37,8 @@ export interface Account {
   balance: number;
   investedAmount?: number;
   initialAmount?: number;
-  paidAmount?: number;
-  interestPaid?: number;
+  repaidCapital?: number;
+  burnedInterest?: number;
   minimumBalance?: number;
   maxLimit?: number;
   currency: string;
@@ -103,6 +104,7 @@ export interface Transaction {
   metadata?: {
     originalInstitutionDescription?: string;
     isCashWithdrawal?: boolean;
+    [key: string]: unknown;
   };
   isAutomated?: boolean;
   frequency?: TransactionFrequency;

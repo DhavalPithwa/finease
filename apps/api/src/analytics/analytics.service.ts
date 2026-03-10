@@ -14,15 +14,16 @@ import { FirebaseAdminService } from '../common/services/firebase-admin.service'
 export class AnalyticsService {
   constructor(private readonly firebaseAdmin: FirebaseAdminService) {}
 
-  /**
-   * Formats raw Firestore transaction and asset data into Recharts-friendly JSON
-   */
   async getDashboardStats(userId: string): Promise<DashboardStats> {
     if (!userId) {
       throw new Error('userId is required');
     }
 
     const db = this.firebaseAdmin.getFirestore();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data() as User;
+    const monthStartDate =
+      (userData as User & { monthStartDate?: number })?.monthStartDate ?? 1;
 
     // 1. Fetch Accounts
     const accountsSnapshot = await db
@@ -163,9 +164,11 @@ export class AnalyticsService {
     ];
 
     // Fetch all transactions since 6 months ago to calculate historical net worth accurately
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    sixMonthsAgo.setDate(1); // Start of month
+    const sixMonthsAgo = this.getFiscalMonthStart(
+      new Date(),
+      Number(monthStartDate),
+    );
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5); // Go back 5 full fiscal months + current
 
     const txSnapshot = await db
       .collection('transactions')
@@ -180,10 +183,10 @@ export class AnalyticsService {
     );
 
     let rollingNetWorth = netWorth;
-    const now = new Date();
 
     for (let i = 0; i < 6; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const d = this.getFiscalMonthStart(new Date(), Number(monthStartDate));
+      d.setMonth(d.getMonth() - i);
       const monthName = months[d.getMonth()];
 
       // Calculate net worth at the end of this month
@@ -198,11 +201,11 @@ export class AnalyticsService {
           value: Math.round(netWorth),
         });
       } else {
-        const targetMonthStart = new Date(
-          now.getFullYear(),
-          now.getMonth() - i + 1,
-          1,
+        const targetMonthStart = this.getFiscalMonthStart(
+          new Date(),
+          Number(monthStartDate),
         );
+        targetMonthStart.setMonth(targetMonthStart.getMonth() - i + 1);
         const thisMonthTxs = transactions.filter((tx) => {
           const txDate = new Date(tx.date);
           return txDate >= targetMonthStart;
@@ -210,7 +213,7 @@ export class AnalyticsService {
 
         // Calculate net change specifically affecting net worth
         let netChange = 0;
-        thisMonthTxs.forEach((tx) => {
+        thisMonthTxs.forEach((tx: Transaction) => {
           if (tx.type === 'income') netChange += Number(tx.amount);
           if (tx.type === 'expense') netChange -= Number(tx.amount);
           // Transfer between internal accounts/goals doesn't change net worth
@@ -338,5 +341,17 @@ export class AnalyticsService {
     if (diffInSeconds < 86400)
       return `${Math.floor(diffInSeconds / 3600)}h ago`;
     return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  }
+
+  private getFiscalMonthStart(date: Date, startDay: number): Date {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+
+    if (d.getDate() < startDay) {
+      d.setMonth(d.getMonth() - 1);
+    }
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(startDay, lastDay));
+    return d;
   }
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ThemeProvider } from "@/components/navigation/ThemeProvider";
@@ -89,7 +90,9 @@ export default function RootLayout({
                 <SecurityProvider>
                   <ClientHeader />
                   <main className="flex flex-col flex-1 w-full">
-                    <RequireAuth>{children}</RequireAuth>
+                    <Suspense fallback={null}>
+                      <RequireAuth>{children}</RequireAuth>
+                    </Suspense>
                   </main>
                   <BottomNav />
                   <PWAInstallGuide />

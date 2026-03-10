@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "./AuthProvider";
-import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import Loading from "@/app/loading";
 
 
@@ -12,10 +12,17 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (authLoading || !isHydrated) return;
+
     if (
-      !authLoading &&
       !user &&
       pathname &&
       !PUBLIC_ROUTES.includes(pathname)
@@ -26,7 +33,6 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
     // Admin route protection: Kicking non-admins out of /admin routes
     if (
-      !authLoading &&
       user &&
       pathname?.startsWith("/admin") &&
       user.role !== "admin"
@@ -42,10 +48,8 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
       "/accounts",
       "/portfolio",
       "/goals",
-      "/settings",
     ];
     if (
-      !authLoading &&
       user &&
       user.role === "admin" &&
       USER_ONLY_ROUTES.some((route) => pathname?.startsWith(route))
@@ -55,26 +59,35 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     }
 
     // Auto-redirect logged-in users from public routes to their respective dashboards
-    if (!authLoading && user && pathname && PUBLIC_ROUTES.includes(pathname)) {
+    if (user && pathname && PUBLIC_ROUTES.includes(pathname)) {
+      // Special case: /login?mode=add allows logged-in users to add another account
+      if (pathname === "/login" && searchParams.get("mode") === "add") {
+        return;
+      }
+
       if (user.role === "admin") {
         router.push("/admin/dashboard");
       } else {
         router.push("/dashboard");
       }
     }
-  }, [user, authLoading, pathname, router]);
+  }, [user, authLoading, pathname, router, searchParams, isHydrated]);
 
-  if (authLoading) {
+  if (authLoading || !isHydrated) {
     return <Loading />;
   }
 
-  // If not loading, not user, and is not public route, it will redirect, but meanwhile return null to prevent flash
+  // If not user, and is not public route, it will redirect, but meanwhile return null to prevent flash
   if (!user && pathname && !PUBLIC_ROUTES.includes(pathname)) {
     return null;
   }
 
   // If logged in and on a public route, prevent flashing public content while redirecting
+  // EXCEPT for /login?mode=add which is allowed for logged-in users
   if (user && pathname && PUBLIC_ROUTES.includes(pathname)) {
+    if (pathname === "/login" && searchParams.get("mode") === "add") {
+      return <>{children}</>;
+    }
     return null;
   }
 

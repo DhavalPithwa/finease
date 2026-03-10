@@ -115,9 +115,16 @@ export class TransactionsService {
     const batch = this.db.batch();
     const txRef = this.collection.doc(id);
 
-    // 1. Update the transaction itself
+    // 1. Calculate and set transaction properties
+    const isTransfer = !!(updateData.toAccountId || oldTx.toAccountId);
+    const effectiveType = isTransfer
+      ? 'transfer'
+      : updateData.type || oldTx.type;
+
+    // 2. Update the transaction itself
     batch.update(txRef, {
       ...updateData,
+      type: effectiveType,
       lastSyncedAt: new Date().toISOString(),
     });
 
@@ -289,46 +296,73 @@ export class TransactionsService {
     // 2. Sort by date ASC
     txs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    // 3. Replay from initial amount.
-    // CRITICAL: If initialAmount is missing, use current balance as baseline
-    // IF there are no transactions yet.
-    let rollingBalance = Number(accData.initialAmount);
+    // 3. Replay from baseline.
+    let rollingBalance =
+      accData.initialAmount !== undefined && accData.initialAmount !== null
+        ? Number(accData.initialAmount)
+        : Number(accData.balance) || 0;
 
-    if (isNaN(rollingBalance)) {
-      // If history exists but no initialAmount, we start at 0 (legacy)
-      // If no history, we keep the current balance
-      rollingBalance = txs.length > 0 ? 0 : Number(accData.balance) || 0;
+    if (
+      txs.length > 0 &&
+      (accData.initialAmount === undefined || accData.initialAmount === null)
+    ) {
+      // Trust current balance as baseline if no initialAmount is found
     }
 
-    let rollingInvested = Number(accData.investedAmount) || rollingBalance;
+    if (accData.type === 'debt' && rollingBalance > 0) {
+      rollingBalance = -rollingBalance;
+    }
+
+    let rollingInvested = rollingBalance;
+    let totalRepaidCapital = 0;
+    let totalBurnedInterest = 0;
+
     const batch = this.db.batch();
 
     for (const tx of txs) {
       const amount = Number(tx.amount);
-      if (tx.accountId === accountId) {
-        // Source
-        if (tx.type === 'income') {
-          rollingBalance += amount;
-        } else {
-          rollingBalance -= amount;
-        }
+      const isBalanceSync = !!(tx.metadata as Record<string, any>)
+        ?.isBalanceSync;
 
-        // Capital tracking for investment accounts
-        if (accData.type === 'investment' && tx.type !== 'income') {
-          rollingInvested -= amount;
+      if (tx.accountId === accountId) {
+        // Source Account
+        if (tx.type === 'income') {
+          if (accData.type === 'investment' && isBalanceSync) {
+            // SET Valuation: Absolute sync point (driven by metadata flag)
+            rollingBalance = amount;
+          } else {
+            // RELATIVE Income: Add gain (does not affect invested capital)
+            rollingBalance += amount;
+          }
+        } else if (tx.type === 'expense') {
+          if (accData.type === 'investment' && isBalanceSync) {
+            // SET Valuation: Absolute sync point for market loss
+            rollingBalance = amount;
+          } else {
+            // RELATIVE Expense: Subtract cost
+            rollingBalance -= amount;
+          }
+        } else {
+          // Transfer OUT (Move Out): Relative withdrawal from cost basis
+          rollingBalance -= amount;
+          if (accData.type === 'investment') {
+            rollingInvested -= amount;
+          }
         }
 
         batch.update(this.collection.doc(tx.id), {
           balanceAfter: rollingBalance,
         });
       } else if (tx.toAccountId === accountId) {
-        // Destination of a Transfer
+        // Destination Account (Transfer IN / Move IN)
         if (accData.type === 'debt') {
           const interest = Number(tx.interestAmount) || 0;
           const principal = amount - interest;
-          // For debt accounts, balance is negative and we REDUCE the debt (move towards zero) with principal
           rollingBalance += principal;
+          totalRepaidCapital += principal;
+          totalBurnedInterest += interest;
         } else {
+          // Relative Addition for capital contribution
           rollingBalance += amount;
           if (accData.type === 'investment') {
             rollingInvested += amount;
@@ -347,6 +381,9 @@ export class TransactionsService {
     };
     if (accData.type === 'investment') {
       accUpdate.investedAmount = rollingInvested;
+    } else if (accData.type === 'debt') {
+      accUpdate.repaidCapital = totalRepaidCapital;
+      accUpdate.burnedInterest = totalBurnedInterest;
     }
 
     batch.update(accRef, accUpdate);

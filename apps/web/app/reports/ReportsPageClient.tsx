@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
 import { Transaction, Account, Category } from "@repo/types";
 import { Card } from "@/components/ui/Card";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getFiscalMonthStart } from "@/lib/utils";
 import { IncomeExpenseChart } from "@/components/dashboard/IncomeExpenseChart";
 import { SavingsVelocityChart } from "@/components/dashboard/SavingsVelocityChart";
 import { TrendingDown, ArrowUpRight, Activity, Percent } from "lucide-react";
@@ -93,27 +93,19 @@ export default function ReportsPageClient() {
   const computedNetWorthHistory = useMemo(() => {
     const history: { month: string; value: number; dateObj: Date }[] = [];
     const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ];
 
+    const monthStartDate = user?.monthStartDate || 1;
     for (let i = 0; i < 6; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      history.unshift({
-        month: `${monthNames[d.getMonth()]}`,
-        value: 0,
-        dateObj: d,
-      });
+        const d = getFiscalMonthStart(now, monthStartDate);
+        d.setMonth(d.getMonth() - i);
+        history.unshift({
+            month: `${monthNames[d.getMonth()]}`,
+            value: 0,
+            dateObj: d,
+        });
     }
 
     let runningNW = netWorth;
@@ -130,10 +122,7 @@ export default function ReportsPageClient() {
       const txInNextMonth = transactions.filter((tx) => {
         if (tx.status === "pending_confirmation") return false;
         const txDate = new Date(tx.date);
-        return (
-          txDate.getMonth() === nextMonth.getMonth() &&
-          txDate.getFullYear() === nextMonth.getFullYear()
-        );
+        return txDate.getTime() >= nextMonth.getTime();
       });
 
       const netFlowNextMonth = txInNextMonth.reduce((acc, tx) => {
@@ -148,7 +137,7 @@ export default function ReportsPageClient() {
     }
 
     return history;
-  }, [transactions, netWorth, now]);
+  }, [transactions, netWorth, now, user?.monthStartDate]);
 
   // Calculate Net Worth Change percentage
   const netWorthChange = useMemo(() => {
@@ -170,23 +159,14 @@ export default function ReportsPageClient() {
   const trendData = useMemo(() => {
     const data = [];
     const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ];
 
     if (viewType === "Monthly") {
       const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
       for (let i = 1; i <= daysInMonth; i++) {
+        // Find transactions for this specific day OR since fiscal start if it's the current period
         const dayTx = transactions.filter((tx) => {
           if (tx.status === "pending_confirmation") return false;
           const d = new Date(tx.date);
@@ -265,27 +245,26 @@ export default function ReportsPageClient() {
   }, [transactions, viewType, currentYear, currentMonth, currentQuarter]);
 
   // Filtering logic based on viewType
-  const filteredTx = useMemo(
-    () =>
-      transactions.filter((tx: Transaction) => {
+  const filteredTx = useMemo(() => {
+      const monthStartDate = user?.monthStartDate || 1;
+      const currentFiscalStart = getFiscalMonthStart(now, monthStartDate);
+
+      return transactions.filter((tx: Transaction) => {
         if (tx.status === "pending_confirmation") return false;
         const d = new Date(tx.date);
-        const txYear = d.getFullYear();
-        const txMonth = d.getMonth();
-
-        if (txYear !== currentYear) return false;
-
+        
         if (viewType === "Monthly") {
-          return txMonth === currentMonth;
+          return d.getTime() >= currentFiscalStart.getTime();
         } else if (viewType === "Quarterly") {
+          const txYear = d.getFullYear();
+          const txMonth = d.getMonth();
           const txQuarter = Math.floor(txMonth / 3);
-          return txQuarter === currentQuarter;
+          return txYear === currentYear && txQuarter === currentQuarter;
         } else {
-          return true;
+          return d.getFullYear() === currentYear;
         }
-      }),
-    [transactions, currentYear, currentMonth, currentQuarter, viewType],
-  );
+      });
+  }, [transactions, currentYear, currentQuarter, viewType, now, user?.monthStartDate]);
 
   const inflow = useMemo(
     () =>
@@ -415,7 +394,6 @@ export default function ReportsPageClient() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 sm:space-y-6 pb-20 lg:pb-8 pt-0">
-      {/* Sticky Header Group */}
       <PageHeader
         title="Intelligence"
         subtitle="Unified analytics & predictive insights"

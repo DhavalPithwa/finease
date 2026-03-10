@@ -44,7 +44,6 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 
 const liquidTypes = ["bank", "cash", "card"];
@@ -384,13 +383,13 @@ export default function TransactionsPageClient() {
                 </div>
               )}
             </div>
-            <Link
-              href=""
+            <button
+              onClick={() => toast.success("Ledger Import coming soon", { icon: "🚀" })}
               className="inline-flex items-center justify-center h-8 rounded-xl border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm dark:border-white/5 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-white/10 transition-all duration-200"
             >
               <FileUp className="w-3.5 h-3.5 mr-1.5" />
               Import
-            </Link>
+            </button>
             <Button
               size="sm"
               onClick={() => {
