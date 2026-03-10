@@ -2,6 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseAdminService } from '../common/services/firebase-admin.service';
 import { Transaction, Account } from '@repo/types';
 
+// =============================================================================
+// TransactionsService
+//
+// All balance mutations MUST go through recalculateBalances().
+// Never update account.balance directly outside of that method.
+// See TRANSACTION_LOGIC.md for full design documentation.
+// =============================================================================
+
 @Injectable()
 export class TransactionsService {
   private readonly collectionName = 'transactions';
@@ -18,6 +26,11 @@ export class TransactionsService {
     return this.db.collection(this.collectionName);
   }
 
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+
+  /** Returns the next occurrence date based on a recurring frequency. */
   private calculateNextDate(currentDate: string, frequency: string): string {
     const date = new Date(currentDate);
     switch (frequency) {
@@ -27,76 +40,27 @@ export class TransactionsService {
       case 'weekly':
         date.setDate(date.getDate() + 7);
         break;
-      case 'monthly':
-        date.setMonth(date.getMonth() + 1);
-        break;
       case 'yearly':
         date.setFullYear(date.getFullYear() + 1);
         break;
+      case 'monthly':
       default:
         date.setMonth(date.getMonth() + 1);
+        break;
     }
     return date.toISOString();
   }
 
+  // ---------------------------------------------------------------------------
+  // CRUD
+  // ---------------------------------------------------------------------------
+
   async findAll(userId: string): Promise<Transaction[]> {
     const snapshot = await this.collection.where('userId', '==', userId).get();
-    const transactions = snapshot.docs
+    return snapshot.docs
       .map((doc) => ({ id: doc.id, ...doc.data() }) as Transaction)
-      .filter((tx) => !tx.deletedAt);
-    // Sort in-memory to bypass index requirement
-    return transactions.sort((a, b) => {
-      const dateA = a.date ? new Date(a.date).getTime() : 0;
-      const dateB = b.date ? new Date(b.date).getTime() : 0;
-      return dateB - dateA;
-    });
-  }
-
-  async create(transaction: Partial<Transaction>): Promise<Transaction> {
-    const batch = this.db.batch();
-    const txRef = this.collection.doc();
-
-    if (!transaction.accountId) {
-      throw new Error('Account ID is required for transaction');
-    }
-
-    // 1. Calculate and set transaction properties
-    const isTransfer = !!transaction.toAccountId;
-    const effectiveType = isTransfer
-      ? 'transfer'
-      : transaction.type || 'expense';
-    // status calculation
-    const status =
-      transaction.status ||
-      (transaction.isAutomated ? 'pending_confirmation' : 'completed');
-
-    // 1. Create transaction document
-    // We DON'T manually update account balance here anymore.
-    // We rely on recalculateBalances to do it based on full history.
-    // This prevents the "it set that amount" bug where manual and
-    // recalculated balances fought each other.
-    batch.set(txRef, {
-      ...transaction,
-      id: txRef.id,
-      status,
-      type: effectiveType,
-      date: transaction.date || new Date().toISOString(),
-      deletedAt: null,
-    });
-
-    await batch.commit();
-
-    // 2. Trigger recalculation immediately
-    if (status === 'completed' || status === 'approved') {
-      await this.recalculateBalances(transaction.accountId);
-      if (transaction.toAccountId) {
-        await this.recalculateBalances(transaction.toAccountId);
-        await this.recalculateGoalProgress(transaction.toAccountId);
-      }
-    }
-
-    const createdTx = await txRef.get();
-    return createdTx.data() as Transaction;
+      .filter((tx) => !tx.deletedAt)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
   async findOne(id: string): Promise<Transaction> {
@@ -107,46 +71,76 @@ export class TransactionsService {
     return { id: doc.id, ...doc.data() } as Transaction;
   }
 
+  async create(transaction: Partial<Transaction>): Promise<Transaction> {
+    if (!transaction.accountId) {
+      throw new Error('accountId is required');
+    }
+
+    const txRef = this.collection.doc();
+
+    // A transaction with a destination account is always a transfer.
+    const effectiveType = transaction.toAccountId
+      ? 'transfer'
+      : (transaction.type ?? 'expense');
+
+    // Automated transactions start as pending_confirmation.
+    const status =
+      transaction.status ??
+      (transaction.isAutomated ? 'pending_confirmation' : 'completed');
+
+    await txRef.set({
+      ...transaction,
+      id: txRef.id,
+      type: effectiveType,
+      status,
+      date: transaction.date ?? new Date().toISOString(),
+      deletedAt: null,
+    });
+
+    // Trigger recalculation after persisting.
+    if (status === 'completed' || status === 'approved') {
+      await this.recalculateBalances(transaction.accountId);
+      if (transaction.toAccountId) {
+        await this.recalculateBalances(transaction.toAccountId);
+        await this.recalculateGoalProgress(transaction.toAccountId);
+      }
+    }
+
+    return (await txRef.get()).data() as Transaction;
+  }
+
   async update(
     id: string,
     updateData: Partial<Transaction>,
   ): Promise<Transaction> {
     const oldTx = await this.findOne(id);
-    const batch = this.db.batch();
     const txRef = this.collection.doc(id);
 
-    // 1. Calculate and set transaction properties
-    const isTransfer = !!(updateData.toAccountId || oldTx.toAccountId);
-    const effectiveType = isTransfer
-      ? 'transfer'
-      : updateData.type || oldTx.type;
+    // Re-evaluate whether this is a transfer based on merged state.
+    const effectiveType =
+      (updateData.toAccountId ?? oldTx.toAccountId)
+        ? 'transfer'
+        : (updateData.type ?? oldTx.type);
 
-    // 2. Update the transaction itself
-    batch.update(txRef, {
+    await txRef.update({
       ...updateData,
       type: effectiveType,
       lastSyncedAt: new Date().toISOString(),
     });
 
-    await batch.commit();
+    // Recalculate all accounts that were or are now involved.
+    const affectedAccounts = new Set<string>([
+      ...([oldTx.accountId, oldTx.toAccountId].filter(Boolean) as string[]),
+      ...([updateData.accountId, updateData.toAccountId].filter(
+        Boolean,
+      ) as string[]),
+    ]);
+    const affectedGoals = new Set<string>([
+      ...([oldTx.toAccountId, updateData.toAccountId].filter(
+        Boolean,
+      ) as string[]),
+    ]);
 
-    // 2. Identify affected accounts and goals
-    const affectedAccounts = new Set<string>();
-    const affectedGoals = new Set<string>();
-
-    if (oldTx.accountId) affectedAccounts.add(oldTx.accountId);
-    if (oldTx.toAccountId) {
-      affectedAccounts.add(oldTx.toAccountId);
-      affectedGoals.add(oldTx.toAccountId);
-    }
-
-    if (updateData.accountId) affectedAccounts.add(updateData.accountId);
-    if (updateData.toAccountId) {
-      affectedAccounts.add(updateData.toAccountId);
-      affectedGoals.add(updateData.toAccountId);
-    }
-
-    // 3. Recalculate everything affected
     for (const accId of affectedAccounts) {
       await this.recalculateBalances(accId);
     }
@@ -159,23 +153,16 @@ export class TransactionsService {
 
   async remove(id: string): Promise<void> {
     const txDoc = await this.collection.doc(id).get();
-
     if (!txDoc.exists) {
       throw new NotFoundException(`Transaction with ID ${id} not found`);
     }
 
     const txData = txDoc.data() as Transaction;
-    const batch = this.db.batch();
+    await this.collection
+      .doc(id)
+      .update({ deletedAt: new Date().toISOString() });
 
-    // 1. Soft-delete the transaction
-    batch.update(this.collection.doc(id), {
-      deletedAt: new Date().toISOString(),
-    });
-
-    await batch.commit();
-
-    // 2. Recalculate balances for all involved accounts/goals
-    if (txData.status === 'completed') {
+    if (txData.status === 'completed' || txData.status === 'approved') {
       await this.recalculateBalances(txData.accountId);
       if (txData.toAccountId) {
         await this.recalculateBalances(txData.toAccountId);
@@ -192,22 +179,12 @@ export class TransactionsService {
 
     const batch = this.db.batch();
     const now = new Date().toISOString();
-
-    snapshot.docs.forEach((doc) => {
-      batch.update(doc.ref, { deletedAt: now });
-    });
-
+    snapshot.docs.forEach((doc) => batch.update(doc.ref, { deletedAt: now }));
     await batch.commit();
-    // No need to recalculate balances here because the account itself is being deleted
-    // But we might need to recalculate destination accounts if they were transfers.
-    // However, the user said "do not need to resolved 3. Incomplete Account Purge point",
-    // so we skip systemic destination recalculation for now.
   }
 
   async confirm(id: string): Promise<Transaction> {
-    const txRef = this.collection.doc(id);
-    const txDoc = await txRef.get();
-
+    const txDoc = await this.collection.doc(id).get();
     if (!txDoc.exists) {
       throw new NotFoundException(`Transaction with ID ${id} not found`);
     }
@@ -215,19 +192,14 @@ export class TransactionsService {
     const txData = txDoc.data() as Transaction;
     const batch = this.db.batch();
 
-    // 1. Update status to completed
-    batch.update(txRef, {
-      status: 'completed',
-    });
+    batch.update(this.collection.doc(id), { status: 'completed' });
 
-    // 2. Generate next occurrence if automated
+    // If recurring, schedule the next occurrence.
     if (txData.isAutomated && txData.frequency) {
-      const currentCount = Number(txData.recurringCount);
-      if (!isNaN(currentCount) && currentCount > 1) {
+      const remaining = Number(txData.recurringCount);
+      if (!isNaN(remaining) && remaining > 1) {
         const nextDate = this.calculateNextDate(txData.date, txData.frequency);
-
-        // Check if a transaction for this next occurrence already exists
-        const existingNextTx = await this.collection
+        const existing = await this.collection
           .where('userId', '==', txData.userId)
           .where('accountId', '==', txData.accountId)
           .where('description', '==', txData.description)
@@ -235,14 +207,14 @@ export class TransactionsService {
           .limit(1)
           .get();
 
-        if (existingNextTx.empty) {
-          const nextTxRef = this.collection.doc();
-          batch.set(nextTxRef, {
+        if (existing.empty) {
+          const nextRef = this.collection.doc();
+          batch.set(nextRef, {
             ...txData,
-            id: nextTxRef.id,
+            id: nextRef.id,
             date: nextDate,
             status: 'pending_confirmation',
-            recurringCount: currentCount - 1,
+            recurringCount: remaining - 1,
           });
         }
       }
@@ -250,7 +222,6 @@ export class TransactionsService {
 
     await batch.commit();
 
-    // 3. Recalculate balances
     await this.recalculateBalances(txData.accountId);
     if (txData.toAccountId) {
       await this.recalculateBalances(txData.toAccountId);
@@ -260,18 +231,31 @@ export class TransactionsService {
     return { ...txData, status: 'completed' } as Transaction;
   }
 
-  /**
-   * Recalculates all historical balances for a specific account.
-   * This is heavy but ensures 100% accuracy if historical data is modified.
-   */
+  // ---------------------------------------------------------------------------
+  // Balance Recalculation Engine
+  //
+  // Replays the full chronological transaction history for an account starting
+  // from its `initialAmount`, then updates the account's balance summary.
+  //
+  // Rules:
+  //   OUT  (expense)  → balance -= amount. For investments, invested -= amount.
+  //   IN   (income)   → balance += amount. For investments, invested += amount.
+  //                     Special: if metadata.isBalanceSync == true on an investment,
+  //                     balance = amount (absolute set, for market valuation sync).
+  //   MOVE (transfer) → as source: balance -= amount (+ invested for investments)
+  //                     as destination: balance += amount (+ invested for investments)
+  //                     Special: if destination is debt, tracks principal/interest split.
+  // ---------------------------------------------------------------------------
+
   public async recalculateBalances(accountId: string): Promise<void> {
     const accRef = this.db.collection(this.accountsCollection).doc(accountId);
     const accDoc = await accRef.get();
     if (!accDoc.exists) return;
-    const accData = accDoc.data() as Account;
 
-    // 1. Fetch ALL transactions where this account is either source or destination
-    const [fromSnapshot, toSnapshot] = await Promise.all([
+    const acc = accDoc.data() as Account;
+
+    // Fetch all non-deleted completed transactions involving this account.
+    const [asSourceSnap, asDestSnap] = await Promise.all([
       this.collection
         .where('accountId', '==', accountId)
         .where('deletedAt', '==', null)
@@ -284,119 +268,117 @@ export class TransactionsService {
         .get(),
     ]);
 
-    const txs: Transaction[] = [
-      ...fromSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() }) as Transaction,
-      ),
-      ...toSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() }) as Transaction,
-      ),
-    ];
+    // Merge and de-duplicate (a transfer appears in both queries).
+    const txMap = new Map<string, Transaction>();
+    [...asSourceSnap.docs, ...asDestSnap.docs].forEach((doc) => {
+      txMap.set(doc.id, { id: doc.id, ...doc.data() } as Transaction);
+    });
+    const txs = Array.from(txMap.values()).sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
 
-    // 2. Sort by date ASC
-    txs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    // 3. Replay from baseline.
-    let rollingBalance =
-      accData.initialAmount !== undefined && accData.initialAmount !== null
-        ? Number(accData.initialAmount)
-        : Number(accData.balance) || 0;
-
-    if (
-      txs.length > 0 &&
-      (accData.initialAmount === undefined || accData.initialAmount === null)
-    ) {
-      // Trust current balance as baseline if no initialAmount is found
+    // Starting balance = initialAmount when the account was created.
+    // If initialAmount is missing (legacy account) and transactions exist,
+    // start from 0 to avoid double-counting the already-applied history.
+    let balance: number;
+    if (acc.initialAmount !== undefined && acc.initialAmount !== null) {
+      balance = Number(acc.initialAmount);
+    } else {
+      balance = txs.length > 0 ? 0 : Number(acc.balance) || 0;
     }
 
-    if (accData.type === 'debt' && rollingBalance > 0) {
-      rollingBalance = -rollingBalance;
-    }
+    // Debt balances are always stored as negative.
+    if (acc.type === 'debt' && balance > 0) balance = -balance;
 
-    let rollingInvested = rollingBalance;
-    let totalRepaidCapital = 0;
-    let totalBurnedInterest = 0;
+    // Tracks actual capital contributed to investment accounts.
+    let invested = balance;
+
+    // Tracks how much has been repaid on debt accounts.
+    let repaidCapital = 0;
+    let burnedInterest = 0;
 
     const batch = this.db.batch();
 
     for (const tx of txs) {
       const amount = Number(tx.amount);
-      const isBalanceSync = !!(tx.metadata as Record<string, any>)
-        ?.isBalanceSync;
 
       if (tx.accountId === accountId) {
-        // Source Account
+        // -----------------------------------------------------------------
+        // This account is the SOURCE of the transaction.
+        // -----------------------------------------------------------------
         if (tx.type === 'income') {
-          if (accData.type === 'investment' && isBalanceSync) {
-            // SET Valuation: Absolute sync point (driven by metadata flag)
-            rollingBalance = amount;
+          // IN flow: money arrives at this account.
+          const isSync = !!(tx.metadata as Record<string, unknown>)
+            ?.isBalanceSync;
+          if (acc.type === 'investment' && isSync) {
+            // Valuation Sync: set balance to exact market value.
+            balance = amount;
+            // invested is intentionally unchanged — preserves cost basis.
           } else {
-            // RELATIVE Income: Add gain (does not affect invested capital)
-            rollingBalance += amount;
+            balance += amount;
+            // Fix: direct income (dividend/yield) does NOT increase cost basis.
+            // Only MOVE transfers (toAccountId block below) increase invested.
           }
         } else if (tx.type === 'expense') {
-          if (accData.type === 'investment' && isBalanceSync) {
-            // SET Valuation: Absolute sync point for market loss
-            rollingBalance = amount;
-          } else {
-            // RELATIVE Expense: Subtract cost
-            rollingBalance -= amount;
-          }
+          // OUT flow: money leaves to an external party.
+          balance -= amount;
+          if (acc.type === 'investment') invested -= amount;
         } else {
-          // Transfer OUT (Move Out): Relative withdrawal from cost basis
-          rollingBalance -= amount;
-          if (accData.type === 'investment') {
-            rollingInvested -= amount;
+          // MOVE (transfer) OUT: money moves to another internal account.
+          balance -= amount;
+          if (acc.type === 'investment') invested -= amount;
+        }
+
+        batch.update(this.collection.doc(tx.id), { balanceAfter: balance });
+      } else if (tx.toAccountId === accountId) {
+        // -----------------------------------------------------------------
+        // This account is the DESTINATION of the transaction.
+        // -----------------------------------------------------------------
+        if (acc.type === 'debt') {
+          // Debt repayment: split amount into principal + interest.
+          // Triggered for both 'transfer' (MOVE) and 'expense' (OUT + CreditTo).
+          const interest = Number(tx.interestAmount) || 0;
+          const principal = amount - interest;
+          balance += principal; // Reduces what is owed (moves toward 0)
+          repaidCapital += principal;
+          burnedInterest += interest;
+        } else {
+          // Standard credit: add to balance.
+          balance += amount;
+          // Only MOVE (transfer) into investment increases cost basis.
+          // This prevents dividends credited as income from inflating invested.
+          if (acc.type === 'investment' && tx.type === 'transfer') {
+            invested += amount;
           }
         }
 
-        batch.update(this.collection.doc(tx.id), {
-          balanceAfter: rollingBalance,
-        });
-      } else if (tx.toAccountId === accountId) {
-        // Destination Account (Transfer IN / Move IN)
-        if (accData.type === 'debt') {
-          const interest = Number(tx.interestAmount) || 0;
-          const principal = amount - interest;
-          rollingBalance += principal;
-          totalRepaidCapital += principal;
-          totalBurnedInterest += interest;
-        } else {
-          // Relative Addition for capital contribution
-          rollingBalance += amount;
-          if (accData.type === 'investment') {
-            rollingInvested += amount;
-          }
-        }
-        batch.update(this.collection.doc(tx.id), {
-          toBalanceAfter: rollingBalance,
-        });
+        batch.update(this.collection.doc(tx.id), { toBalanceAfter: balance });
       }
     }
 
-    // 4. Update the account summary
+    // Write the final account summary.
     const accUpdate: Partial<Account> = {
-      balance: rollingBalance,
+      balance,
       lastSyncedAt: new Date().toISOString(),
     };
-    if (accData.type === 'investment') {
-      accUpdate.investedAmount = rollingInvested;
-    } else if (accData.type === 'debt') {
-      accUpdate.repaidCapital = totalRepaidCapital;
-      accUpdate.burnedInterest = totalBurnedInterest;
+    if (acc.type === 'investment') accUpdate.investedAmount = invested;
+    if (acc.type === 'debt') {
+      accUpdate.repaidCapital = repaidCapital;
+      accUpdate.burnedInterest = burnedInterest;
     }
 
     batch.update(accRef, accUpdate);
     await batch.commit();
   }
 
-  /**
-   * Recalculates a financial goal's current amount from transaction history.
-   */
+  // ---------------------------------------------------------------------------
+  // Goal Progress
+  // ---------------------------------------------------------------------------
+
+  /** Recalculates a goal's currentAmount as the sum of all transfers into it. */
   public async recalculateGoalProgress(goalId: string): Promise<void> {
     const goalRef = this.db.collection(this.goalsCollection).doc(goalId);
-    const goalDoc = await goalRef.get();
-    if (!goalDoc.exists) return;
+    if (!(await goalRef.get()).exists) return;
 
     const snapshot = await this.collection
       .where('toAccountId', '==', goalId)
@@ -404,36 +386,37 @@ export class TransactionsService {
       .where('status', '==', 'completed')
       .get();
 
-    const amount = snapshot.docs.reduce((sum, doc) => {
-      const data = doc.data() as Transaction;
-      return sum + Number(data.amount);
-    }, 0);
+    const total = snapshot.docs.reduce(
+      (sum, doc) => sum + Number((doc.data() as Transaction).amount),
+      0,
+    );
 
-    await goalRef.update({ currentAmount: amount });
+    await goalRef.update({ currentAmount: total });
   }
 
-  /**
-   * Triggers recalculation for ALL accounts and goals belonging to a user.
-   * Useful as a "Repair Data" tool.
-   */
+  // ---------------------------------------------------------------------------
+  // Bulk Repair
+  // ---------------------------------------------------------------------------
+
+  /** Recalculates all accounts and goals for a user. Use as a "Repair Data" tool. */
   public async recalculateAllForUser(userId: string): Promise<void> {
-    const db = this.db;
-    const accountsSnapshot = await db
-      .collection(this.accountsCollection)
-      .where('userId', '==', userId)
-      .where('deletedAt', '==', null)
-      .get();
+    const [accountsSnap, goalsSnap] = await Promise.all([
+      this.db
+        .collection(this.accountsCollection)
+        .where('userId', '==', userId)
+        .where('deletedAt', '==', null)
+        .get(),
+      this.db
+        .collection(this.goalsCollection)
+        .where('userId', '==', userId)
+        .where('deletedAt', '==', null)
+        .get(),
+    ]);
 
-    const goalsSnapshot = await db
-      .collection(this.goalsCollection)
-      .where('userId', '==', userId)
-      .where('deletedAt', '==', null)
-      .get();
-
-    for (const doc of accountsSnapshot.docs) {
+    for (const doc of accountsSnap.docs) {
       await this.recalculateBalances(doc.id);
     }
-    for (const doc of goalsSnapshot.docs) {
+    for (const doc of goalsSnap.docs) {
       await this.recalculateGoalProgress(doc.id);
     }
   }

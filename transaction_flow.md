@@ -1,131 +1,195 @@
-# FinEase Transaction Engine: Technical Flow Documentation
+# FinEase Transaction Engine — Complete Flow Documentation
 
-This document defines the core architecture, logic, and permutations of the FinEase transaction engine. It serves as the single source of truth for how data moves within the system.
-
----
-
-## 🏗️ Core Architecture: The "Ledger-First" Strategy
-
-FinEase uses a **Recalculated Ledger** approach rather than simple incremental updates.
-
-- **Why?** To prevent "Balance Drift." If a transaction from 3 months ago is edited or deleted, the system re-runs the entire history of the affected account(s) to ensure the current balance is 100% accurate.
-- **Trigger:** Any Create, Update, or Delete operation on a transaction triggers a [recalculateBalances(accountId)](file:///Users/dpithwa/Documents/SHIV-DEV/finease/apps/api/src/finance/transactions.service.ts#256-365) event.
+> **Single source of truth** for how every transaction type moves money.
+> Last updated: 10 Mar 2026
 
 ---
 
-## 🔄 Transaction Types & Flows
+## 🏗️ Core Architecture: Ledger-First Recalculation
 
-### 1. Standard Income & Expense
+FinEase never updates a balance directly. Instead, it **replays every completed transaction** for an account from its `initialAmount` baseline. This guarantees accuracy even when past records are edited or deleted.
 
-_Most common flow: Simple addition or subtraction from a single account._
+### Trigger
 
-| Feature     | Income Flow                  | Expense Flow                 |
-| :---------- | :--------------------------- | :--------------------------- |
-| **Logic**   | `Balance = Balance + Amount` | `Balance = Balance - Amount` |
-| **Status**  | `completed`                  | `completed`                  |
-| **Example** | Salary Deposit: +$5,000      | Grocery Purchase: -$150      |
+Any Create / Update / Delete on a transaction triggers [`recalculateBalances(accountId)`](file:///Users/dpithwa/Documents/SHIV-DEV/finease/apps/api/src/finance/transactions.service.ts#L250) for all affected accounts.
 
----
+### Baseline
 
-### 2. Internal Transfers
-
-_Moving money between two accounts owned by the user._
-
-- **Logic:**
-  - **Source Account:** `BalanceRaw = BalanceRaw - Amount`
-  - **Destination Account:** `BalanceRaw = BalanceRaw + Amount`
-- **Example:** Transfer from "Savings Account" to "Wallet".
-  - _Action:_ Move $500.
-  - _Result:_ Savings -$500, Wallet +$500.
+| Condition | Starting Balance |
+|-----------|-----------------|
+| `initialAmount` is set | `Number(initialAmount)` (set at account creation) |
+| `initialAmount` missing + transactions exist | `0` (prevents double-counting) |
+| `initialAmount` missing + no transactions | Current `balance` (legacy fallback) |
 
 ---
 
-### 3. Debt Repayment (Loan/Credit Card)
+## 📊 Account Types
 
-_A specialized transfer where the destination account type is "Debt"._
-
-- **Logic:**
-  - Source (Bank) is deducted by the full `amount`.
-  - Destination (Debt) parses the `amount` into **Repaid Capital** and **Burned Interest**.
-  - `Debt Balance = Debt Balance + Repaid Capital` (reduces negative debt).
-  - `Total Burned Interest` is tracked separately.
-- **Example:** $1,200 Mortgage Payment ($1,000 Repaid Capital + $200 Burned Interest).
-  - _Source (Bank):_ Balance - $1,200.
-  - _Destination (Debt):_ Balance improves by +$1,000. Interest tracked: $200.
+| Type         | Description                               | Balance Sign |
+|--------------|-------------------------------------------|--------------|
+| `bank`       | Savings / current account                 | Positive     |
+| `cash`       | Physical cash / digital wallet            | Positive     |
+| `card`       | Credit card / debit card                  | Positive     |
+| `investment` | Growth Index, mutual funds, stocks        | Positive     |
+| `debt`       | Loans, EMIs, mortgages (money you owe)    | **Negative** |
+| `asset`      | Fixed assets (land, gold, vehicle)        | Positive     |
 
 ---
 
-### 4. Goal Contributions
+## 🔄 The Three Flow Types
 
-_Directing funds towards a specific Financial Goal (treated as a virtual sub-account)._
+### 1. OUT (Expense)
 
-- **Logic:**
-  - Deducts from the source account.
-  - Increases `currentAmount` of the [Goal](file:///Users/dpithwa/Documents/SHIV-DEV/finease/apps/api/src/finance/finance.controller.ts#166-169) entity.
-- **Example:** "Emergency Fund" Goal.
-  - _Action:_ Transfer $200 from Checkings.
-  - _Result:_ Checkings -$200, Goal Progress +$200.
+> Money **leaves** the system to an external party (rent, grocery, EMI).
 
----
+**Source account (`accountId`) is deducted:**
 
-### 5. Automated & Recurring (Smart Logic)
+| Source Account Type | Balance Effect | Invested Effect |
+|---------------------|----------------|-----------------|
+| Bank                | `balance -= amount` | — |
+| Cash                | `balance -= amount` | — |
+| Card                | `balance -= amount` | — |
+| Investment          | `balance -= amount` | `invested -= amount` |
 
-_Transactions flagged with `isAutomated: true`._
+**Optional "Credit To" (`toAccountId`):**
 
-- **Initial State:** Created with status `pending_confirmation`.
-- **Confirmation Flow:**
-  1. User confirms the transaction.
-  2. Status changes to `completed`.
-  3. [recalculateBalances](file:///Users/dpithwa/Documents/SHIV-DEV/finease/apps/api/src/finance/transactions.service.ts#256-365) triggers.
-  4. **Chain Creation:** If `recurringCount > 1`, a new `pending_confirmation` transaction is automatically generated for the next period (Daily/Weekly/Monthly/Yearly) using [calculateNextDate](file:///Users/dpithwa/Documents/SHIV-DEV/finease/apps/api/src/finance/transactions.service.ts#21-41).
-- **Example:** Monthly Rent of $2,000 (Recurring for 12 months).
-  - _Month 1:_ User confirms. Months remaining drops to 11.
-  - _Month 2:_ New $2,000 "Pending" item appears on the dashboard automatically.
+If the user selects a "Credit To" destination (e.g. a Debt account), the transaction has **both** a source deduction AND a destination credit. The backend automatically converts this to a `transfer` type.
 
----
+| Destination (Credit To) | Balance Effect | Tracked Metrics |
+|--------------------------|----------------|-----------------|
+| Debt account             | `balance += principal` | `repaidCapital += principal`, `burnedInterest += interest` |
+| Bank / Cash / Card       | `balance += amount` | — |
+| Investment               | `balance += amount` | `invested += amount` |
+| Financial Goal           | — | `currentAmount += amount` |
 
-### 6. Investment Flows (Valuation vs. Cash)
-
-_Special handling for investment accounts to separate performance from contributions._
-
-- **Standard Contribution:** Increases both [Balance](file:///Users/dpithwa/Documents/SHIV-DEV/finease/apps/api/src/finance/transactions.service.ts#256-365) and `InvestedAmount`.
-  - _Example:_ Buy $1,000 of Stock. Invested: $1,000, Value: $1,000.
-- **Valuation Adjustment:** Increases [Balance](file:///Users/dpithwa/Documents/SHIV-DEV/finease/apps/api/src/finance/transactions.service.ts#256-365) but **NOT** `InvestedAmount`. Used to track market gains.
-  - _Example:_ Stock grows by $200.
-  - _Transaction Type:_ Income. _Category:_ `Valuation Adjustment`.
-  - _Result:_ Balance becomes $1,200. Invested stays $1,000. (Performance = +20%).
+**Net Worth Impact:** Decreases (unless Credit To is used, making it an internal move).
 
 ---
 
-## 🧩 Lifecycle Status Table
+### 2. IN (Income)
 
-| Status                   | Meaning                                | Balance Impact |
-| :----------------------- | :------------------------------------- | :------------- |
-| **Completed**            | Finalized transaction.                 | **YES**        |
-| **Approved**             | Admin/System verified.                 | **YES**        |
-| **Pending Confirmation** | Automated suggestion waiting for user. | **NO**         |
-| **Canceled**             | User-rejected automated item.          | **NO**         |
-| **Draft**                | Incomplete entry.                      | **NO**         |
+> Money **enters** the system from an external source (salary, dividend, gift).
+
+**Destination account (`accountId`) is credited:**
+
+| Destination Account Type | Balance Effect | Invested Effect |
+|--------------------------|----------------|-----------------|
+| Bank                     | `balance += amount` | — |
+| Cash                     | `balance += amount` | — |
+| Card                     | `balance += amount` | — |
+| Investment               | `balance += amount` | **No change** (income is yield, not capital) |
+
+**Special: Valuation Sync (Investment Only)**
+
+When a transaction has `metadata.isBalanceSync = true`, the engine **sets** the balance to the exact amount instead of adding:
+
+```
+balance = amount          ← absolute set (replaces previous value)
+invested = unchanged      ← preserves cost basis for P&L calculation
+```
+
+This is triggered automatically when you manually edit an investment account's balance in the Portfolio page. It lets you reconcile your portfolio to the real market value without calculating deltas.
+
+**Net Worth Impact:** Increases.
 
 ---
 
-| Scenario | Source Balance | Dest Balance | Goal Progress | Metric Updated | Automated Chain |
-| :--- | :---: | :---: | :---: | :--- | :---: |
-| **Salary / Yield** | `+` | N/A | N/A | `balance` | N/A |
-| **General Expense** | `-` | N/A | N/A | `balance` | If Recurring |
-| **Bank Transfer** | `-` | `+` | N/A | `balance` (Both) | N/A |
-| **Goal Funding** | `-` | N/A | `+` | `currentAmount` | N/A |
-| **Investment Buy** | `-` | `+` | N/A | `balance` + `invested` | N/A |
-| **Valuation Gain** | `+` | N/A | N/A | `balance` (Only) | N/A |
-| **Debt Repayment** | `-` | `+` | N/A | `repaidCapital` + `burnedInterest` | N/A |
-| **Card Payment** | `-` | `+` | N/A | `balance` (Limit) | N/A |
-| **Subscription** | `-` | N/A | N/A | `balance` | Triggers Next |
-| **Asset Purchase** | `-` | `+` | N/A | `balance` | N/A |
+### 3. MOVE (Transfer)
+
+> Money moves between two internal accounts. **Net worth is unchanged.**
+
+**Source account (`accountId`) is deducted:**
+
+| Source Type   | Balance Effect | Invested Effect |
+|---------------|----------------|-----------------|
+| Bank          | `balance -= amount` | — |
+| Cash          | `balance -= amount` | — |
+| Card          | `balance -= amount` | — |
+| Investment    | `balance -= amount` | `invested -= amount` |
+
+**Destination account (`toAccountId`) is credited:**
+
+| Destination Type | Balance Effect | Invested Effect | Other Metrics |
+|------------------|----------------|-----------------|---------------|
+| Bank             | `balance += amount` | — | — |
+| Cash             | `balance += amount` | — | — |
+| Card             | `balance += amount` | — | — |
+| Investment       | `balance += amount` | `invested += amount` | — |
+| Debt             | `balance += principal` | — | `repaidCapital += principal`, `burnedInterest += interest` |
+| Financial Goal   | — | — | `currentAmount += amount` |
+
+**Key Rule:** Only MOVE (transfer) into an investment account increases the `investedAmount` (cost basis). This is how the system differentiates between "money you put in" vs "money the market gave you."
+
+**Net Worth Impact:** Zero (internal movement).
+
+---
+
+## 📋 Complete Scenario Matrix
+
+| Scenario | Flow | Source Balance | Dest Balance | investedAmount | repaidCapital | burnedInterest | Net Worth |
+|---|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Salary** | IN | — | `+amount` | — | — | — | ↑ |
+| **Grocery** | OUT | `-amount` | — | — | — | — | ↓ |
+| **Bank → Bank** | MOVE | `-amount` | `+amount` | — | — | — | = |
+| **Bank → Investment** | MOVE | `-amount` | `+amount` | `+amount` | — | — | = |
+| **Investment → Bank** | MOVE | `-amount` | `+amount` | `-amount` (src) | — | — | = |
+| **Dividend (to Investment)** | IN | — | `+amount` | **unchanged** | — | — | ↑ |
+| **Valuation Sync** | IN + flag | — | `= amount` | **unchanged** | — | — | ↑/↓ |
+| **EMI Payment** | OUT + CreditTo Debt | `-amount` | `+principal` | — | `+principal` | `+interest` | ↓ (by interest) |
+| **Loan Repayment** | MOVE to Debt | `-amount` | `+principal` | — | `+principal` | `+interest` | = |
+| **Goal Funding** | MOVE/OUT to Goal | `-amount` | — | — | — | — | = |
+| **Subscription** | OUT + Recur | `-amount` | — | — | — | — | ↓ |
+
+---
+
+## ⚡ Automated & Recurring Transactions
+
+Transactions flagged with `isAutomated: true` follow a chain pattern:
+
+1. **Created** with status `pending_confirmation`.
+2. **User confirms** → status changes to `completed` → balance recalculates.
+3. **Chain creation:** If `recurringCount > 1`, a new `pending_confirmation` transaction is automatically generated for the next period.
+
+| Frequency | Next Date Calculation |
+|-----------|----------------------|
+| `daily`   | `+1 day` |
+| `weekly`  | `+7 days` |
+| `monthly` | `+1 month` |
+| `yearly`  | `+1 year` |
+
+Duplicate prevention: The system checks if a matching transaction already exists for the next date before creating one.
+
+---
+
+## 🧩 Transaction Lifecycle
+
+| Status | Meaning | Balance Impact |
+|--------|---------|:--------------:|
+| `completed` | Finalized transaction | ✅ YES |
+| `approved` | Admin/system verified | ✅ YES |
+| `pending_confirmation` | Automated suggestion awaiting user | ❌ NO |
+| `rejected` | User-rejected automated item | ❌ NO |
 
 ---
 
 ## 🛡️ Data Integrity Guards
 
-1. **Soft Delete:** Transactions are never truly deleted from the DB; they are marked with `deletedAt`. The engine filters these out before recalculation.
-2. **Batch Processing:** All balance updates happen in atomic Firestore batches to prevent partial updates.
-3. **Ghost Prevention:** Deleting an account also triggers a recursive soft-delete of all associated transactions.
+1. **Soft Delete** — Transactions are never hard-deleted; they're marked with `deletedAt`. The engine filters these out before replay.
+2. **Atomic Batches** — All balance updates happen in Firestore batch writes to prevent partial updates.
+3. **De-duplication** — The engine uses a `Map` to de-duplicate transactions that appear in both source and destination queries (transfers).
+4. **Account Cascade** — Deleting an account soft-deletes all its transactions automatically.
+5. **Multi-Account Recalc** — On update/delete, the engine recalculates ALL affected accounts and goals (old + new source/destination).
+
+---
+
+## 🔑 Key Invariants
+
+1. **Balances are NEVER updated directly** — always via `recalculateBalances()`.
+2. **`initialAmount`** is the starting floor for every account, set at creation.
+3. **Debt accounts** always carry a negative balance (representing what is owed).
+4. **`isBalanceSync`** (metadata flag) is the ONLY way to trigger an absolute valuation set. It is set only by the system during manual portfolio edits.
+5. **`investedAmount`** tracks actual capital contributed, not market value.
+   - Market value = `balance`
+   - Profit/Loss = `balance - investedAmount`
+6. **Income (IN flow)** to investment accounts is treated as yield/dividend — it does NOT inflate your cost basis.
+7. **Only MOVE (transfer)** into an investment account increases your cost basis (`investedAmount`).

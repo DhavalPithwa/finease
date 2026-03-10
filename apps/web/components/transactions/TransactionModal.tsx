@@ -441,6 +441,11 @@ export function TransactionModal({
                       <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
                     ))}
                   </optgroup>
+                  <optgroup label="Investments">
+                    {accounts.filter(a => a.type === 'investment').map(acc => (
+                      <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
+                    ))}
+                  </optgroup>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
