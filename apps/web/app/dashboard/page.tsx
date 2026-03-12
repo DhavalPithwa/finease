@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { NetWorthChart } from "@/components/dashboard/NetWorthChart";
 import { AssetAllocationDonut } from "@/components/dashboard/AssetLiabilityDonut";
 import { GoalProgressCard } from "@/components/dashboard/GoalProgressCard";
+import { DashboardStatCard } from "@/components/dashboard/DashboardStatCard";
 import { AccountList } from "@/components/accounts/AccountList";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
@@ -64,7 +65,7 @@ export default function Home() {
   }, [accounts]);
 
   const cards = useMemo(() => accounts.filter(acc => acc.type === 'card'), [accounts]);
-  
+
   const investmentAccounts = accounts.filter(
     (acc) => acc.type === "investment",
   );
@@ -252,8 +253,8 @@ export default function Home() {
     const goalScore =
       goals.length > 0
         ? (goals.reduce((sum, g) => sum + g.currentAmount / g.targetAmount, 0) /
-            goals.length) *
-          25
+          goals.length) *
+        25
         : 0;
 
     const freedomScore = (runwayScore + savingsScore + goalScore).toFixed(1);
@@ -304,7 +305,7 @@ export default function Home() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 w-full pb-20 lg:pb-8 pt-0">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 pb-20 lg:pb-8 pt-0">
       <FeatureTour />
       <PageHeader
         title="Command Center"
@@ -323,72 +324,52 @@ export default function Home() {
         }
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* ... big 4 cards ... */}
-        <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all group">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between">
-            Net Worth
-            <span className="text-[7px] font-medium normal-case tracking-normal text-slate-400">Total assets minus debt</span>
-          </div>
-          <div className="text-lg font-black text-slate-900 dark:text-white tracking-tighter truncate">
-            ₹{realTimeNetWorth.toLocaleString()}
-          </div>
-          <div className="mt-2 flex items-center gap-1.5">
-            <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">
-              {netWorthChange >= 0 ? "+" : ""}
-              {netWorthChange}%
-            </span>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <DashboardStatCard
+          label="Net Worth"
+          subtitle="Total assets minus debt"
+          value={realTimeNetWorth}
+          trend={{
+            label: `${netWorthChange >= 0 ? "+" : ""}${netWorthChange}%`,
+            color: "bg-emerald-500",
+            showPulse: true,
+          }}
+        />
 
-        <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all group">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between">
-            Period Inflow
-            <span className="text-[7px] font-medium normal-case tracking-normal text-slate-400">Total 30-day income</span>
-          </div>
-          <div className="text-lg font-black text-emerald-500 tracking-tighter truncate">
-            ₹{insights.monthlyIncome.toLocaleString()}
-          </div>
-          <div className="mt-2 flex items-center gap-1.5">
-            <div className={`w-1 h-1 rounded-full ${parseFloat(insights.savingsRate) >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-            <span className={`text-[8px] font-black ${parseFloat(insights.savingsRate) >= 0 ? 'text-emerald-500' : 'text-rose-500'} uppercase tracking-widest`}>
-              {insights.savingsRate}% Savings Rate
-            </span>
-          </div>
-        </div>
+        <DashboardStatCard
+          label="Period Inflow"
+          subtitle="Total 30-day income"
+          value={insights.monthlyIncome}
+          valueColor="text-emerald-500"
+          trend={{
+            label: `${insights.savingsRate}% Savings Rate`,
+            color: parseFloat(insights.savingsRate) >= 0 ? "bg-emerald-500" : "bg-rose-500",
+            showPulse: true,
+          }}
+        />
 
-        <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all group">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between">
-            Period Outflow
-            <span className="text-[7px] font-medium normal-case tracking-normal text-slate-400">Total period spending</span>
-          </div>
-          <div className="text-lg font-black text-rose-500 tracking-tighter truncate">
-            ₹{insights.monthlyExpense.toLocaleString()}
-          </div>
-          <div className="mt-2 flex items-center gap-1.5">
-            <div className="w-1 h-1 rounded-full bg-rose-500/20" />
-            <span className="text-[8px] font-black text-rose-400 uppercase tracking-widest">
-              Efficiency 100%
-            </span>
-          </div>
-        </div>
+        <DashboardStatCard
+          label="Period Outflow"
+          subtitle="Total period spending"
+          value={insights.monthlyExpense}
+          valueColor="text-rose-500"
+          trend={{
+            label: "Efficiency 100%",
+            color: "bg-rose-500",
+          }}
+        />
 
-        <div className="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-100 dark:ring-white/5 p-4 rounded-2xl shadow-sm transition-all group">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between">
-            Liquid Capital
-            <span className="text-[7px] font-medium normal-case tracking-normal text-slate-400">Bank & Cash reserves</span>
-          </div>
-          <div className="text-lg font-black text-primary tracking-tighter truncate">
-            ₹{insights.liquidCapital.toLocaleString()}
-          </div>
-          <div className="mt-2 flex items-center gap-1.5">
-            <div className="w-1 h-1 rounded-full bg-primary animate-pulse" />
-            <span className="text-[8px] font-black text-primary uppercase tracking-widest">
-              Fluid Assets
-            </span>
-          </div>
-        </div>
+        <DashboardStatCard
+          label="Liquid Capital"
+          subtitle="Bank & Cash reserves"
+          value={insights.liquidCapital}
+          valueColor="text-primary"
+          trend={{
+            label: "Fluid Assets",
+            color: "bg-primary",
+            showPulse: true,
+          }}
+        />
       </div>
 
       <div className="space-y-2">
@@ -450,7 +431,7 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="flex-1 space-y-3">
+          <div className="space-y-4 lg:space-y-6">
             {goals.length === 0 ? (
               <div className="h-full p-6 sm:p-10 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center gap-3">
                 <TargetIcon className="w-8 h-8 text-slate-300 dark:text-slate-700 opacity-50" />

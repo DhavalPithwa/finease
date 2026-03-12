@@ -134,49 +134,49 @@ export default function PortfolioPageClient() {
   if (!user) return null;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 sm:space-y-6 pb-20 lg:pb-8 pt-0">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 pb-20 lg:pb-8 pt-0">
       <PageHeader
         title="Portfolio"
         subtitle="Unified wealth command"
         className="space-y-3"
         actions={
-          <div className="grid grid-cols-2 lg:flex items-center gap-2 w-full lg:w-auto">
+          <div className="flex flex-wrap md:flex-nowrap items-center gap-2 w-full lg:w-auto">
             <Button
               size="sm"
               variant="secondary"
-              className="flex-1 lg:flex-initial"
+              className="flex-1 lg:flex-initial text-[10px]"
               onClick={() => {
                 setEditingAssetType(null);
                 setIsAssetTypeModalOpen(true);
               }}
             >
-              <Plus className="w-3.5 h-3.5 mr-1" />
+              <Plus className="w-3 h-3 mr-1" />
               Class
             </Button>
             <Button 
               size="sm" 
-              className="flex-1 lg:flex-initial"
+              className="flex-1 lg:flex-initial text-[10px]"
               onClick={() => setIsAddInvestmentOpen(true)}
             >
-              <Plus className="w-3.5 h-3.5 mr-1" />
+              <Plus className="w-3 h-3 mr-1" />
               Invest
             </Button>
             <Button
               size="sm"
               variant="danger"
-              className="flex-1 lg:flex-initial"
+              className="flex-1 lg:flex-initial text-[10px]"
               onClick={() => setIsAddLiabilityOpen(true)}
             >
-              <Plus className="w-3.5 h-3.5 mr-1" />
+              <Plus className="w-3 h-3 mr-1" />
               Debt
             </Button>
             <Button
               size="sm"
               variant="success"
-              className="flex-1 lg:flex-initial"
+              className="flex-1 lg:flex-initial text-[10px]"
               onClick={() => setIsAddAssetOpen(true)}
             >
-              <Plus className="w-3.5 h-3.5 mr-1" />
+              <Plus className="w-3 h-3 mr-1" />
               Asset
             </Button>
           </div>
@@ -258,7 +258,7 @@ export default function PortfolioPageClient() {
               {stat.label}
             </div>
             <div
-              className={`text-base font-black ${stat.color} mt-1 tracking-tighter`}
+              className={`text-base font-black ${stat.color} mt-1 tracking-tighter truncate md:overflow-visible`}
             >
               ₹{stat.value.toLocaleString()}
             </div>

@@ -40,7 +40,7 @@ export default function AdminUsersPage() {
     isOpen: false,
     title: "",
     message: "",
-    onConfirm: async () => {},
+    onConfirm: async () => { },
   });
 
   const fetchUsers = useCallback(async () => {
@@ -143,7 +143,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 pt-4 pb-20 lg:pb-8 space-y-6 lg:space-y-8">
+    <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 pb-20 lg:pb-8 space-y-6 lg:space-y-8">
       <PageHeader
         title="User Governance"
         subtitle={`Commanding ${users.length} registered identities`}
@@ -203,11 +203,10 @@ export default function AdminUsersPage() {
                   <td className="px-6 py-6">
                     <button
                       onClick={() => changeUserRole(u.id, u.role)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                        u.role === "admin"
-                          ? "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20"
-                          : "bg-slate-500/10 text-slate-500 border border-slate-500/20"
-                      }`}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${u.role === "admin"
+                        ? "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20"
+                        : "bg-slate-500/10 text-slate-500 border border-slate-500/20"
+                        }`}
                     >
                       {u.role === "admin" ? (
                         <ShieldAlert className="size-3" />
@@ -219,11 +218,10 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-6 py-6">
                     <div
-                      className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest ${
-                        u.status === "inactive"
-                          ? "text-rose-500"
-                          : "text-emerald-500"
-                      }`}
+                      className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest ${u.status === "inactive"
+                        ? "text-rose-500"
+                        : "text-emerald-500"
+                        }`}
                     >
                       {u.status === "inactive" ? (
                         <XCircle className="size-3" />
@@ -246,11 +244,10 @@ export default function AdminUsersPage() {
                         onClick={() =>
                           toggleUserStatus(u.id, u.status || "active")
                         }
-                        className={`h-8 px-4 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${
-                          u.status === "inactive"
-                            ? "bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/20"
-                            : "bg-white dark:bg-slate-900 text-rose-500 border-rose-100 dark:border-rose-500/20"
-                        }`}
+                        className={`h-8 px-4 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${u.status === "inactive"
+                          ? "bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/20"
+                          : "bg-white dark:bg-slate-900 text-rose-500 border-rose-100 dark:border-rose-500/20"
+                          }`}
                       >
                         {u.status === "inactive" ? "Activate" : "Deactivate"}
                       </button>
@@ -285,9 +282,8 @@ export default function AdminUsersPage() {
                 </div>
               </div>
               <div
-                className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest ${
-                  u.status === "inactive" ? "text-rose-500" : "text-emerald-500"
-                }`}
+                className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest ${u.status === "inactive" ? "text-rose-500" : "text-emerald-500"
+                  }`}
               >
                 {u.status === "inactive" ? (
                   <XCircle className="size-3" />
@@ -301,11 +297,10 @@ export default function AdminUsersPage() {
             <div className="grid grid-cols-2 gap-3 pt-2">
               <button
                 onClick={() => changeUserRole(u.id, u.role)}
-                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                  u.role === "admin"
-                    ? "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20"
-                    : "bg-slate-500/10 text-slate-500 border border-slate-500/20"
-                }`}
+                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${u.role === "admin"
+                  ? "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20"
+                  : "bg-slate-500/10 text-slate-500 border border-slate-500/20"
+                  }`}
               >
                 {u.role === "admin" ? (
                   <ShieldAlert className="size-3" />
@@ -324,11 +319,10 @@ export default function AdminUsersPage() {
 
               <button
                 onClick={() => toggleUserStatus(u.id, u.status || "active")}
-                className={`col-span-2 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
-                  u.status === "inactive"
-                    ? "bg-emerald-500 text-white border-emerald-600"
-                    : "bg-white dark:bg-slate-900/50 text-rose-500 border-rose-100 dark:border-rose-500/20"
-                }`}
+                className={`col-span-2 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${u.status === "inactive"
+                  ? "bg-emerald-500 text-white border-emerald-600"
+                  : "bg-white dark:bg-slate-900/50 text-rose-500 border-rose-100 dark:border-rose-500/20"
+                  }`}
               >
                 {u.status === "inactive"
                   ? "Activate Authority"

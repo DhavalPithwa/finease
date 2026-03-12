@@ -12,6 +12,8 @@ import {
   TrendingUp,
   Compass,
   Zap,
+  UserCircle2,
+  Lock,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -64,6 +66,18 @@ export function FeatureTour() {
       description:
         "Your data is encrypted and private. Use biometric locks or PINs to secure your financial architecture on any device.",
       icon: <ShieldCheck className="w-10 h-10 text-primary" />,
+    },
+    {
+      title: "Identity Gateway",
+      description:
+        "Switch profiles instantly. Manage your family's or business's ledgers under one master identity without logging out.",
+      icon: <UserCircle2 className="w-10 h-10 text-primary" />,
+    },
+    {
+      title: "Protocol Governance",
+      description:
+        "Administer your financial architecture. Sanitize ledgers and govern sub-nodes via the encrypted Purge terminal.",
+      icon: <Lock className="w-10 h-10 text-orange-500" />,
     },
     {
       title: "Ready for Launch",

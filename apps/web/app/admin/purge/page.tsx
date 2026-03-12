@@ -14,7 +14,6 @@ import {
   History,
   UserPlus,
   RefreshCw,
-  MoreVertical,
   ShieldCheck,
   UserCog,
   ShieldHalf,
@@ -155,35 +154,34 @@ export default function AdminPurgePage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 pt-4 pb-32 lg:pb-12 space-y-8">
+    <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 pb-20 lg:pb-8 pt-0">
       <PageHeader
         title="Protocol Purge"
         subtitle="Command terminal for permanent ledger sanitation"
-        className="mb-8"
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:items-start">
-        
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-start relative z-10">
+
         {/* User Dropdown / Listing Sidebar */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="lg:col-span-4">
           {/* Mobile Dropdown Selector */}
           <div className="lg:hidden">
             <div className="relative">
-                <select 
-                    value={selectedUserId}
-                    onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="w-full h-14 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl px-5 text-sm font-bold appearance-none outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-xl"
-                >
-                    <option value="">Select Identity Cluster...</option>
-                    {filteredUsers.map(u => (
-                        <option key={u.id} value={u.id}>{u.displayName} ({u.email})</option>
-                    ))}
-                </select>
-                <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="w-full h-14 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl px-5 text-sm font-bold appearance-none outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-xl"
+              >
+                <option value="">Select Identity Cluster...</option>
+                {filteredUsers.map(u => (
+                  <option key={u.id} value={u.id}>{u.displayName} ({u.email})</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-2xl shadow-slate-200/50 dark:shadow-none flex flex-col h-[700px] hidden lg:flex">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-2xl shadow-slate-200/50 dark:shadow-none flex flex-col lg:h-[calc(100dvh-12rem)] hidden lg:flex">
             <div className="p-6 border-b border-slate-100 dark:border-white/5 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -214,7 +212,7 @@ export default function AdminPurgePage() {
               {filteredUsers.map((u) => {
                 const isActive = selectedUserId === u.id;
                 const isLocal = localAccounts.some(la => la.uid === u.id);
-                
+
                 return (
                   <button
                     key={u.id}
@@ -222,12 +220,12 @@ export default function AdminPurgePage() {
                     className={`w-full group rounded-2xl p-3 flex items-center gap-4 transition-all relative overflow-hidden ${isActive ? "bg-primary text-white shadow-lg shadow-primary/20" : "hover:bg-slate-50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400"}`}
                   >
                     <div className={`size-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${isActive ? "bg-white/20" : "bg-slate-100 dark:bg-white/5"}`}>
-                        {u.photoURL ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={u.photoURL} alt="" className="size-full rounded-xl object-cover" loading="lazy" />
-                        ) : (
-                          u.displayName.charAt(0)
-                        )}
+                      {u.photoURL ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={u.photoURL} alt="" className="size-full rounded-xl object-cover" loading="lazy" />
+                      ) : (
+                        u.displayName.charAt(0)
+                      )}
                     </div>
                     <div className="flex flex-col items-start min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 w-full">
@@ -235,37 +233,37 @@ export default function AdminPurgePage() {
                           {u.displayName}
                         </span>
                         {u.role === "admin" && (
-                            <ShieldCheck className={`size-3 shrink-0 ${isActive ? "text-white/70" : "text-primary/50"}`} />
+                          <ShieldCheck className={`size-3 shrink-0 ${isActive ? "text-white/70" : "text-primary/50"}`} />
                         )}
                         {isLocal && (
-                            <div className={`size-1.5 rounded-full shrink-0 animate-pulse ${isActive ? "bg-white" : "bg-primary"}`} title="Authorized locally" />
+                          <div className={`size-1.5 rounded-full shrink-0 animate-pulse ${isActive ? "bg-white" : "bg-primary"}`} title="Authorized locally" />
                         )}
                       </div>
                       <span className={`text-[9px] font-bold truncate opacity-70 ${isActive ? "text-white" : "text-slate-400"}`}>
                         {u.email}
                       </span>
                     </div>
-                    
+
                     {u.id === currentUser?.uid && (
-                        <div className={`text-[7px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded ${isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary"}`}>Current</div>
+                      <div className={`text-[7px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded ${isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary"}`}>Current</div>
                     )}
 
                     {isActive && (
-                        <motion.div layoutId="active-indicator" className="absolute left-0 top-0 bottom-0 w-1 bg-white" />
+                      <motion.div layoutId="active-indicator" className="absolute left-0 top-0 bottom-0 w-1 bg-white" />
                     )}
                   </button>
                 );
               })}
             </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-white/5">
-                <button 
-                  onClick={() => router.push('/login?mode=add')}
-                  className="w-full h-11 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 border border-slate-100 dark:border-white/5 hover:border-primary/50 hover:text-primary transition-all font-sans"
-                >
-                    <UserPlus className="size-4" />
-                    Authorize Sub-Node
-                </button>
+            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-white/5 mt-auto">
+              <button
+                onClick={() => router.push('/login?mode=add')}
+                className="w-full h-11 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 border border-slate-100 dark:border-white/5 hover:border-primary/50 hover:text-primary transition-all font-sans"
+              >
+                <UserPlus className="size-4" />
+                Authorize Sub-Node
+              </button>
             </div>
           </div>
         </div>
@@ -279,16 +277,16 @@ export default function AdminPurgePage() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
               >
-                <div className="h-[700px] bg-slate-50/50 dark:bg-slate-900/20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[3rem] flex flex-col items-center justify-center p-12 text-center">
-                    <div className="size-24 rounded-[2.5rem] bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-slate-700 mb-8 border border-white/10 shadow-2xl">
-                        <Zap className="size-12 fill-current" />
-                    </div>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-[0.3em] mb-3">
-                        Terminal Standby
-                    </h3>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-[280px] leading-relaxed">
-                        Interface ready for identity synchronization. Select a target cluster from the matrix to begin fragmentation scan.
-                    </p>
+                <div className="lg:h-[calc(100dvh-12rem)] bg-slate-50/50 dark:bg-slate-900/20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[3rem] flex flex-col items-center justify-center p-8 lg:p-12 text-center min-h-[400px]">
+                  <div className="size-24 rounded-[2.5rem] bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-slate-700 mb-8 border border-white/10 shadow-2xl">
+                    <Zap className="size-12 fill-current" />
+                  </div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-[0.3em] mb-3">
+                    Terminal Standby
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-[280px] leading-relaxed">
+                    Interface ready for identity synchronization. Select a target cluster from the matrix to begin fragmentation scan.
+                  </p>
                 </div>
               </motion.div>
             ) : (
@@ -299,71 +297,64 @@ export default function AdminPurgePage() {
                 className="space-y-6"
               >
                 {/* Active Selection Hero */}
-                <div className="relative p-8 rounded-[3rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 overflow-hidden shadow-2xl">
-                    <div className="absolute top-0 right-0 p-8">
-                        <div className="flex gap-2">
-                             {localAccounts.some(a => a.uid === selectedUserId) ? (
-                                <button 
-                                    onClick={() => switchAccount(selectedUserId)}
-                                    className="px-4 h-9 bg-primary/10 text-primary rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-primary hover:text-white transition-all border border-primary/20"
-                                >
-                                    <Zap className="size-3" />
-                                    Switch To Mind
-                                </button>
-                             ) : (
-                                <button 
-                                    onClick={() => handleAuthorizeNode(selectedUserId)}
-                                    disabled={authorizingId === selectedUserId}
-                                    className="px-4 h-9 bg-slate-100 dark:bg-white/5 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border border-slate-100 dark:border-white/10 hover:border-primary/50 hover:text-primary transition-all disabled:opacity-50"
-                                >
-                                    {authorizingId === selectedUserId ? (
-                                        <Loader2 className="size-3 animate-spin" />
-                                    ) : (
-                                        <ShieldHalf className="size-3" />
-                                    )}
-                                    Authorize Node
-                                </button>
-                             )}
-                             <button className="size-9 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors border border-slate-100 dark:border-white/10">
-                                <MoreVertical className="size-4" />
-                             </button>
+                <div className="relative p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 overflow-hidden shadow-2xl">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-4 sm:gap-6">
+                      <div className="size-16 sm:size-20 rounded-2xl sm:rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary text-xl sm:text-2xl font-black border-2 border-primary/20 shadow-xl shadow-primary/20 shrink-0">
+                        {users.find(u => u.id === selectedUserId)?.displayName.charAt(0)}
+                      </div>
+                      <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                        <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
+                          {users.find(u => u.id === selectedUserId)?.displayName}
+                        </h2>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          <span className="flex items-center gap-1 text-primary">
+                            <UserCog className="size-3" />
+                            {users.find(u => u.id === selectedUserId)?.role}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Mail className="size-3" />
+                            {users.find(u => u.id === selectedUserId)?.email}
+                          </span>
                         </div>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                        <div className="size-20 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary text-2xl font-black border-2 border-primary/20 shadow-xl shadow-primary/20">
-                            {users.find(u => u.id === selectedUserId)?.displayName.charAt(0)}
-                        </div>
-                        <div className="space-y-1">
-                            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                                {users.find(u => u.id === selectedUserId)?.displayName}
-                            </h2>
-                            <div className="flex flex-wrap items-center gap-4 text-[10px] font-black uppercase tracking-widest">
-                                <span className="flex items-center gap-1.5 text-primary">
-                                    <UserCog className="size-3" />
-                                    {users.find(u => u.id === selectedUserId)?.role}
-                                </span>
-                                <span className="flex items-center gap-1.5 text-slate-400">
-                                    <Mail className="size-3" />
-                                    {users.find(u => u.id === selectedUserId)?.email}
-                                </span>
-                                <span className="flex items-center gap-1.5 text-slate-400">
-                                    <History className="size-3" />
-                                    {selectedUserId.substring(0, 12)}...
-                                </span>
-                            </div>
-                        </div>
+                    <div className="flex gap-2">
+                      {localAccounts.some(a => a.uid === selectedUserId) ? (
+                        <button
+                          onClick={() => switchAccount(selectedUserId)}
+                          className="flex-1 sm:flex-initial px-4 h-9 bg-primary/10 text-primary rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary hover:text-white transition-all border border-primary/20"
+                        >
+                          <Zap className="size-3" />
+                          Switch
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleAuthorizeNode(selectedUserId)}
+                          disabled={authorizingId === selectedUserId}
+                          className="flex-1 sm:flex-initial px-4 h-9 bg-slate-100 dark:bg-white/5 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-slate-100 dark:border-white/10 hover:border-primary/50 hover:text-primary transition-all disabled:opacity-50"
+                        >
+                          {authorizingId === selectedUserId ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : (
+                            <ShieldHalf className="size-3" />
+                          )}
+                          Authorize
+                        </button>
+                      )}
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-10">
-                        <StatItem label="Fragment Count" value={deletedItems.length} color="text-rose-500" />
-                        <StatItem label="Auth Status" value={localAccounts.some(a => a.uid === selectedUserId) ? "RECOGNIZED" : "UNAUTHORIZED"} color={localAccounts.some(a => a.uid === selectedUserId) ? "text-emerald-500" : "text-amber-500"} />
-                        <StatItem label="Sector Safety" value={deletedItems.length > 10 ? "CRITICAL" : "STABLE"} color={deletedItems.length > 10 ? "text-rose-500" : "text-emerald-500"} />
-                    </div>
-                    
-                    <div className="absolute bottom-0 right-0 p-12 opacity-5 pointer-events-none">
-                        <Database className="size-64" />
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
+                    <StatItem label="Fragment Count" value={deletedItems.length} color="text-rose-500" />
+                    <StatItem label="Auth Status" value={localAccounts.some(a => a.uid === selectedUserId) ? "RECOGNIZED" : "UNAUTHORIZED"} color={localAccounts.some(a => a.uid === selectedUserId) ? "text-emerald-500" : "text-amber-500"} />
+                    <StatItem label="Sector Safety" value={deletedItems.length > 10 ? "CRITICAL" : "STABLE"} color={deletedItems.length > 10 ? "text-rose-500" : "text-emerald-500"} />
+                  </div>
+
+                  <div className="absolute bottom-0 right-0 p-12 opacity-5 pointer-events-none">
+                    <Database className="size-64" />
+                  </div>
                 </div>
 
                 {/* Listing of fragments */}
@@ -377,9 +368,9 @@ export default function AdminPurgePage() {
                       </h3>
                     </div>
                     <div className="flex gap-2">
-                        <button className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-primary">
-                            Latest First
-                        </button>
+                      <button className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-primary">
+                        Latest First
+                      </button>
                     </div>
                   </div>
 
@@ -421,41 +412,41 @@ export default function AdminPurgePage() {
                                       <span className="text-primary group-hover:text-rose-500">{item.collection.charAt(0).toUpperCase()}</span>
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                            <span className="text-[9px] font-black text-primary group-hover:text-rose-500 transition-colors uppercase tracking-[0.2em]">
-                                                {item.collection}
-                                            </span>
-                                            <span className="text-[8px] text-slate-400 font-bold opacity-50">•</span>
-                                            <span className="text-[8px] text-slate-400 font-bold uppercase">
-                                                ID: {item.id.slice(0, 8)}
-                                            </span>
-                                        </div>
+                                      <div className="flex items-center gap-2 mb-0.5">
+                                        <span className="text-[9px] font-black text-primary group-hover:text-rose-500 transition-colors uppercase tracking-[0.2em]">
+                                          {item.collection}
+                                        </span>
+                                        <span className="text-[8px] text-slate-400 font-bold opacity-50">•</span>
+                                        <span className="text-[8px] text-slate-400 font-bold uppercase">
+                                          ID: {item.id.slice(0, 8)}
+                                        </span>
+                                      </div>
                                       <span className="text-sm font-black text-slate-900 dark:text-white tracking-tight truncate">
                                         {item.description || item.name || "Untitled Fragment"}
                                       </span>
                                       <div className="flex items-center gap-3 mt-1.5">
                                         <div className="flex items-center gap-1.5 text-[8px] text-slate-400 font-black uppercase tracking-widest">
-                                            <History className="size-2.5" />
-                                            {new Date(item.deletedAt).toLocaleDateString()}
+                                          <History className="size-2.5" />
+                                          {new Date(item.deletedAt).toLocaleDateString()}
                                         </div>
                                         {item.amount !== undefined && (
-                                            <div className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-500 text-[8px] font-black uppercase">
-                                                ₹{item.amount.toLocaleString()}
-                                            </div>
+                                          <div className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-500 text-[8px] font-black uppercase">
+                                            ₹{item.amount.toLocaleString()}
+                                          </div>
                                         )}
                                       </div>
                                     </div>
                                   </div>
-                                  
+
                                   <button
                                     onClick={() => setConfirmModal({ isOpen: true, item })}
                                     disabled={purgingId === item.id}
                                     className="px-5 h-10 rounded-xl bg-slate-50 dark:bg-white/5 text-rose-500 hover:bg-rose-500 hover:text-white transition-all border border-slate-100 dark:border-white/5 active:scale-95 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest shrink-0 shadow-sm"
                                   >
                                     {purgingId === item.id ? (
-                                        <Loader2 className="size-4 animate-spin mx-auto" />
+                                      <Loader2 className="size-4 animate-spin mx-auto" />
                                     ) : (
-                                        "Sanitize"
+                                      "Sanitize"
                                     )}
                                   </button>
                                 </div>
@@ -479,10 +470,10 @@ export default function AdminPurgePage() {
         message={
           <div className="space-y-4">
             <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex gap-3">
-                <AlertTriangle className="size-5 text-rose-500 shrink-0" />
-                <p className="text-xs font-bold text-rose-500/80 leading-relaxed uppercase tracking-widest italic">
-                    Attention: Executing this command will result in permanent binary destruction of the fragment. Data is not recoverable after sanitation.
-                </p>
+              <AlertTriangle className="size-5 text-rose-500 shrink-0" />
+              <p className="text-xs font-bold text-rose-500/80 leading-relaxed uppercase tracking-widest italic">
+                Attention: Executing this command will result in permanent binary destruction of the fragment. Data is not recoverable after sanitation.
+              </p>
             </div>
             {confirmModal.item && (
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 text-[10px] space-y-2">
@@ -506,10 +497,10 @@ export default function AdminPurgePage() {
 }
 
 function StatItem({ label, value, color }: { label: string; value: string | number; color: string }) {
-    return (
-        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 flex flex-col gap-1">
-            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
-            <span className={`text-xs font-black uppercase ${color}`}>{value}</span>
-        </div>
-    );
+  return (
+    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 flex flex-col gap-1">
+      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+      <span className={`text-xs font-black uppercase ${color}`}>{value}</span>
+    </div>
+  );
 }

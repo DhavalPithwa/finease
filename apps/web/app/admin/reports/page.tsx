@@ -59,7 +59,7 @@ export default function AdminReportsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 pt-4 pb-20 lg:pb-8 space-y-6 lg:space-y-8">
+    <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 w-full space-y-4 pb-20 lg:pb-8 pt-0">
       <PageHeader
         title="Usage Analytics"
         subtitle="Comprehensive platform metrics and system health monitoring"

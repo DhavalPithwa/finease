@@ -91,5 +91,16 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     return null;
   }
 
+  // User route protection in render body to prevent flash/API calls
+  if (user) {
+    if (pathname?.startsWith("/admin") && user.role !== "admin") {
+      return null;
+    }
+    const USER_ONLY_ROUTES = ["/dashboard", "/transactions", "/accounts", "/portfolio", "/goals"];
+    if (user.role === "admin" && USER_ONLY_ROUTES.some((route) => pathname?.startsWith(route))) {
+      return null;
+    }
+  }
+
   return <>{children}</>;
 }

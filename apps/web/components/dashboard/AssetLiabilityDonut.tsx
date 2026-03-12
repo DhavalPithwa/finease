@@ -88,11 +88,11 @@ export function AssetAllocationDonut({
               <Tooltip content={<CustomTooltip />} />
             </PieChart>
           </ResponsiveContainer>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-4 text-center">
-            <span className="text-slate-400 text-[8px] font-black uppercase tracking-[0.2em] mb-0.5">
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6 text-center overflow-hidden">
+            <span className="text-slate-400 text-[8px] font-black uppercase tracking-[0.2em] mb-0.5 truncate w-full">
               Net Worth
             </span>
-            <span className="text-slate-900 dark:text-white text-lg font-black tracking-tighter leading-none break-all">
+            <span className="text-slate-900 dark:text-white text-lg font-black tracking-tighter leading-none truncate w-full">
               {formatCurrency(netWorth)}
             </span>
           </div>

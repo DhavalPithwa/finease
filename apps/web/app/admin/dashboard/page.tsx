@@ -86,7 +86,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 pt-0 pb-20 lg:pb-8 space-y-4 sm:space-y-6">
+    <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 w-full space-y-4 pb-20 lg:pb-8 pt-0">
       <PageHeader title="Platform Overview" subtitle="Administrative Portal" />
 
       <div className="grid grid-cols-2 gap-4">

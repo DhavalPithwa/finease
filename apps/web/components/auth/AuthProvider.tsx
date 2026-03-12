@@ -69,6 +69,7 @@ interface AuthContextType {
   accounts: AuthUser[];
   switchAccount: (uid: string) => Promise<void>;
   authorizeSubNode: (uid: string) => Promise<void>;
+  removeAccount: (uid: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -122,17 +123,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return updated;
           });
 
-          void dispatch(fetchCategories());
-          void dispatch(fetchAssetClasses());
-          void dispatch(fetchGoals());
+          const dataPromises = [
+            dispatch(fetchCategories()),
+            dispatch(fetchAssetClasses()),
+            dispatch(fetchGoals())
+          ];
+          await Promise.all(dataPromises);
         } catch (err: unknown) {
           const axiosError = err as { response?: { status?: number } };
           // Only logout on 401 Unauthorized
+          // Handle 401 Unauthorized
           if (axiosError.response?.status === 401) {
             localStorage.removeItem("finease_token");
             dispatch({ type: "USER_LOGOUT" });
           }
-          // For other errors (network, 500), keep the session and maybe show a toast
+          // Handle 403 Forbidden (Role mismatch during switch)
+          if (axiosError.response?.status === 403) {
+            window.location.href = "/dashboard";
+          }
           console.error("Profile fetch failed:", err);
         }
       }
@@ -232,6 +240,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const removeAccount = (uid: string) => {
+    const tokenMap = JSON.parse(localStorage.getItem("finease_token_map") || "{}");
+    const activeUid = user?.uid;
+
+    if (uid === activeUid) {
+      // If we're removing the active account, just perform a logout (which handles switching)
+      void logout();
+      return;
+    }
+
+    // Otherwise, just remove it from the background list
+    delete tokenMap[uid];
+    localStorage.setItem("finease_token_map", JSON.stringify(tokenMap));
+
+    setAccounts(prev => {
+      const updated = prev.filter(a => a.uid !== uid);
+      localStorage.setItem("finease_multi_accounts", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const authorizeSubNode = async (uid: string) => {
     try {
       const res = await api.post<{ token: string }>(`/admin/impersonate/${uid}`);
@@ -294,6 +323,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         accounts,
         switchAccount,
         authorizeSubNode,
+        removeAccount,
       }}
     >
       {children}

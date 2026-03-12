@@ -131,7 +131,7 @@ export function AccountList({ accounts }: AccountListProps) {
               </h4>
               <div className="flex items-baseline justify-between gap-2">
                 <p
-                  className={`text-sm font-black tracking-tighter truncate ${account.type === "card" && usedAmount > 0 ? "text-rose-500" : "text-slate-900 dark:text-white"}`}
+                  className={`text-sm font-black tracking-tighter truncate flex-1 min-w-0 ${account.type === "card" && usedAmount > 0 ? "text-rose-500" : "text-slate-900 dark:text-white"}`}
                 >
                   {account.type === "card" && usedAmount > 0 ? "-" : ""}₹
                   {(account.type === "card"
@@ -149,7 +149,7 @@ export function AccountList({ accounts }: AccountListProps) {
                           ? "Min Bal"
                           : "Type"}
                   </span>
-                  <span className="text-[9px] font-black text-slate-500 dark:text-slate-400">
+                  <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 truncate max-w-[50px]">
                     {account.type === "card"
                       ? `₹${(account.maxLimit || 0).toLocaleString()}`
                       : account.type === "investment"
