@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { FirebaseAdminService } from '../common/services/firebase-admin.service';
 import { Transaction, Account, FinancialGoal } from '@repo/types';
 
@@ -16,7 +16,7 @@ export class TransactionsService {
   private readonly accountsCollection = 'accounts';
   private readonly goalsCollection = 'goals';
 
-  constructor(private readonly firebaseAdmin: FirebaseAdminService) {}
+  constructor(private readonly firebaseAdmin: FirebaseAdminService) { }
 
   private get db() {
     return this.firebaseAdmin.getFirestore();
@@ -88,6 +88,10 @@ export class TransactionsService {
       transaction.status ??
       (transaction.isAutomated ? 'pending_confirmation' : 'completed');
 
+    const amount = Number(transaction.amount) || 0;
+    const interestAmount = Number(transaction.interestAmount) || 0;
+    this.validateInterestAmount(amount, interestAmount);
+
     await txRef.set({
       ...transaction,
       id: txRef.id,
@@ -121,6 +125,12 @@ export class TransactionsService {
       (updateData.toAccountId ?? oldTx.toAccountId)
         ? 'transfer'
         : (updateData.type ?? oldTx.type);
+
+    const mergedTx = { ...oldTx, ...updateData };
+    this.validateInterestAmount(
+      Number(mergedTx.amount),
+      Number(mergedTx.interestAmount),
+    );
 
     await txRef.update({
       ...updateData,
@@ -231,6 +241,22 @@ export class TransactionsService {
     return { ...txData, status: 'completed' } as Transaction;
   }
 
+  /**
+   * Validates that the interest portion of a transaction is not greater than the total amount.
+   * Throws BadRequestException if validation fails.
+   */
+  private validateInterestAmount(amount: number, interestAmount?: number) {
+    if (
+      interestAmount !== undefined &&
+      interestAmount !== null &&
+      interestAmount > amount
+    ) {
+      throw new BadRequestException(
+        `Interest portion (₹${interestAmount}) cannot be greater than total amount (₹${amount})`,
+      );
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Balance Recalculation Engine
   //
@@ -267,20 +293,26 @@ export class TransactionsService {
         .where('status', 'in', ['completed', 'approved'])
         .get(),
     ]);
+    console.log("🚀 ~ TransactionsService ~ recalculateBalances ~ asDestSnap:", asDestSnap)
+    console.log("🚀 ~ TransactionsService ~ recalculateBalances ~ asSourceSnap:", asSourceSnap)
 
     // Merge and de-duplicate (a transfer appears in both queries).
     const txMap = new Map<string, Transaction>();
     [...asSourceSnap.docs, ...asDestSnap.docs].forEach((doc) => {
       txMap.set(doc.id, { id: doc.id, ...doc.data() } as Transaction);
     });
+    console.log("🚀 ~ TransactionsService ~ recalculateBalances ~ txMap:", txMap)
+
     const txs = Array.from(txMap.values()).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
+    console.log("🚀 ~ TransactionsService ~ recalculateBalances ~ txs:", txs)
 
     // Starting balance = initialAmount when the account was created.
     // If initialAmount is missing (legacy account) and transactions exist,
     // start from 0 to avoid double-counting the already-applied history.
     let balance: number;
+    console.log("🚀 ~ TransactionsService ~ recalculateBalances ~ acc:", acc)
     if (acc.initialAmount !== undefined && acc.initialAmount !== null) {
       balance = Number(acc.initialAmount);
     } else {
@@ -308,25 +340,34 @@ export class TransactionsService {
         // -----------------------------------------------------------------
         if (tx.type === 'income') {
           // IN flow: money arrives at this account.
-          const isSync = !!(tx.metadata as Record<string, unknown>)
-            ?.isBalanceSync;
+          const isSync = (tx.metadata as any)?.isBalanceSync;
           if (acc.type === 'investment' && isSync) {
             // Valuation Sync: set balance to exact market value.
             balance = amount;
             // invested is intentionally unchanged — preserves cost basis.
+          } else if (acc.type === 'card') {
+            // Card spending increases debt balance (more negative).
+            balance -= amount;
           } else {
             balance += amount;
-            // Fix: direct income (dividend/yield) does NOT increase cost basis.
-            // Only MOVE transfers (toAccountId block below) increase invested.
           }
         } else if (tx.type === 'expense') {
-          // OUT flow: money leaves to an external party.
-          balance -= amount;
-          if (acc.type === 'investment') invested -= amount;
+          // OUT flow: money leaves.
+          if (acc.type === 'card') {
+            // Spending increases debt (makes it more negative).
+            balance -= amount;
+          } else {
+            balance -= amount;
+            if (acc.type === 'investment') invested -= amount;
+          }
         } else {
-          // MOVE (transfer) OUT: money moves to another internal account.
-          balance -= amount;
-          if (acc.type === 'investment') invested -= amount;
+          // MOVE (transfer) OUT.
+          if (acc.type === 'card') {
+            balance -= amount;
+          } else {
+            balance -= amount;
+            if (acc.type === 'investment') invested -= amount;
+          }
         }
 
         batch.update(this.collection.doc(tx.id), { balanceAfter: balance });
@@ -334,14 +375,16 @@ export class TransactionsService {
         // -----------------------------------------------------------------
         // This account is the DESTINATION of the transaction.
         // -----------------------------------------------------------------
-        if (acc.type === 'debt') {
-          // Debt repayment: split amount into principal + interest.
+        if (acc.type === 'debt' || acc.type === 'card') {
+          // Debt/Card repayment: split amount into principal + interest.
           // Triggered for both 'transfer' (MOVE) and 'expense' (OUT + CreditTo).
           const interest = Number(tx.interestAmount) || 0;
           const principal = amount - interest;
-          balance += principal; // Reduces what is owed (moves toward 0)
-          repaidCapital += principal;
-          burnedInterest += interest;
+          balance += principal; // Reduces what is owed (moves toward 0/positive)
+          if (acc.type === 'debt') {
+            repaidCapital += principal;
+            burnedInterest += interest;
+          }
         } else {
           // Standard credit: add to balance.
           balance += amount;

@@ -88,7 +88,9 @@ export const transactionsSlice = createSlice({
       })
       .addCase(fetchTransactions.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = action.payload;
+        state.items = [...action.payload].sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
         state.lastFetched = Date.now();
       })
       .addCase(fetchTransactions.rejected, (state, action) => {
@@ -97,6 +99,9 @@ export const transactionsSlice = createSlice({
       })
       .addCase(createTransaction.fulfilled, (state, action) => {
         state.items.unshift(action.payload);
+        state.items.sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
       })
       .addCase(deleteTransaction.fulfilled, (state, action) => {
         state.items = state.items.filter((t) => t.id !== action.payload);

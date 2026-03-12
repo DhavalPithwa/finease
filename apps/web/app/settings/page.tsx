@@ -31,6 +31,18 @@ export default function SettingsPage() {
   const { user, updateProfile, accounts, switchAccount } = useAuth();
   const { isLockEnabled, toggleLock, lockType } = useSecurity();
   const router = useRouter();
+  const [isPWA, setIsPWA] = useState(false);
+
+  useEffect(() => {
+    const checkPWA = () => {
+      const nav = window.navigator as any;
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+        || nav.standalone 
+        || document.referrer.includes('android-app://');
+      setIsPWA(!!isStandalone);
+    };
+    checkPWA();
+  }, []);
 
   const [formData, setFormData] = useState({
     needsTarget: 50,
@@ -249,12 +261,15 @@ export default function SettingsPage() {
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
                         Biological Origin
                     </label>
-                    <input 
-                        type="date"
-                        value={formData.dob}
-                        onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                        className="w-full h-11 px-4 bg-white dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all"
-                    />
+                    <div className="relative group">
+                        <input 
+                            type="date"
+                            value={formData.dob}
+                            onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                            className="w-full h-11 pl-11 pr-4 bg-white dark:bg-slate-950 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white text-xs font-black ring-1 ring-slate-100 dark:ring-white/5 transition-all appearance-none"
+                        />
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" />
+                    </div>
                 </div>
             </div>
           </SectionCard>
@@ -364,47 +379,49 @@ export default function SettingsPage() {
 
         {/* Sidebar Sections */}
         <div className="md:col-span-4 space-y-6">
-           <div className="p-6 rounded-3xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 space-y-6">
-                <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-primary" />
-                    <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">
-                        Security Lattice
-                    </h3>
-                </div>
+           {isPWA && (
+             <div className="p-6 rounded-3xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 space-y-6">
+                  <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-primary" />
+                      <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                          Security Lattice
+                      </h3>
+                  </div>
 
-                <div className="space-y-3">
-                    <button
-                        onClick={() => toggleLock(!isLockEnabled || lockType !== "biometric", "biometric")}
-                        className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${isLockEnabled && lockType === "biometric" ? "border-primary bg-primary/5" : "border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50"}`}
-                    >
-                        <div className="flex items-center justify-between mb-2">
-                            <Fingerprint className={`w-5 h-5 ${isLockEnabled && lockType === "biometric" ? "text-primary" : "text-slate-400"}`} />
-                            <div className={`size-4 rounded-full border-2 flex items-center justify-center ${isLockEnabled && lockType === "biometric" ? "border-primary bg-primary" : "border-slate-300 dark:border-slate-600"}`}>
-                                {isLockEnabled && lockType === "biometric" && <div className="size-1 bg-white rounded-full" />}
-                            </div>
-                        </div>
-                        <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Biometric Access</p>
-                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">FaceID / TouchID</p>
-                    </button>
+                  <div className="space-y-3">
+                      <button
+                          onClick={() => toggleLock(!isLockEnabled || lockType !== "biometric", "biometric")}
+                          className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${isLockEnabled && lockType === "biometric" ? "border-primary bg-primary/5" : "border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50"}`}
+                      >
+                          <div className="flex items-center justify-between mb-2">
+                              <Fingerprint className={`w-5 h-5 ${isLockEnabled && lockType === "biometric" ? "text-primary" : "text-slate-400"}`} />
+                              <div className={`size-4 rounded-full border-2 flex items-center justify-center ${isLockEnabled && lockType === "biometric" ? "border-primary bg-primary" : "border-slate-300 dark:border-slate-600"}`}>
+                                  {isLockEnabled && lockType === "biometric" && <div className="size-1 bg-white rounded-full" />}
+                              </div>
+                          </div>
+                          <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Biometric Access</p>
+                          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">FaceID / TouchID</p>
+                      </button>
 
-                    <button
-                        onClick={() => {
-                            if (isLockEnabled && lockType === "pin") toggleLock(false);
-                            else setShowPinModal(true);
-                        }}
-                        className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${isLockEnabled && lockType === "pin" ? "border-indigo-500 bg-indigo-500/5" : "border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50"}`}
-                    >
-                        <div className="flex items-center justify-between mb-2">
-                            <Key className={`w-5 h-5 ${isLockEnabled && lockType === "pin" ? "text-indigo-500" : "text-slate-400"}`} />
-                            <div className={`size-4 rounded-full border-2 flex items-center justify-center ${isLockEnabled && lockType === "pin" ? "border-indigo-500 bg-indigo-500" : "border-slate-300 dark:border-slate-600"}`}>
-                                {isLockEnabled && lockType === "pin" && <div className="size-1 bg-white rounded-full" />}
-                            </div>
-                        </div>
-                        <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Secure PIN</p>
-                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">4-Digit Verification</p>
-                    </button>
-                </div>
-           </div>
+                      <button
+                          onClick={() => {
+                              if (isLockEnabled && lockType === "pin") toggleLock(false);
+                              else setShowPinModal(true);
+                          }}
+                          className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${isLockEnabled && lockType === "pin" ? "border-indigo-500 bg-indigo-500/5" : "border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50"}`}
+                      >
+                          <div className="flex items-center justify-between mb-2">
+                              <Key className={`w-5 h-5 ${isLockEnabled && lockType === "pin" ? "text-indigo-500" : "text-slate-400"}`} />
+                              <div className={`size-4 rounded-full border-2 flex items-center justify-center ${isLockEnabled && lockType === "pin" ? "border-indigo-500 bg-indigo-500" : "border-slate-300 dark:border-slate-600"}`}>
+                                  {isLockEnabled && lockType === "pin" && <div className="size-1 bg-white rounded-full" />}
+                              </div>
+                          </div>
+                          <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Secure PIN</p>
+                          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">4-Digit Verification</p>
+                      </button>
+                  </div>
+             </div>
+           )}
 
            <div className="p-6 rounded-3xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 space-y-4">
                 <div className="flex items-center gap-2">

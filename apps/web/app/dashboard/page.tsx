@@ -347,13 +347,12 @@ export default function Home() {
             <span className="text-[7px] font-medium normal-case tracking-normal text-slate-400">Total 30-day income</span>
           </div>
           <div className="text-lg font-black text-emerald-500 tracking-tighter truncate">
-            ₹{insights.monthlyIncome.toLocaleString()}{" "}
-            {insights.savingsRate}% Savings
+            ₹{insights.monthlyIncome.toLocaleString()}
           </div>
           <div className="mt-2 flex items-center gap-1.5">
-            <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-white/10" />
-            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-              Current Month Window
+            <div className={`w-1 h-1 rounded-full ${parseFloat(insights.savingsRate) >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+            <span className={`text-[8px] font-black ${parseFloat(insights.savingsRate) >= 0 ? 'text-emerald-500' : 'text-rose-500'} uppercase tracking-widest`}>
+              {insights.savingsRate}% Savings Rate
             </span>
           </div>
         </div>

@@ -46,11 +46,20 @@ repaidCapital += principal
 burnedInterest += interest
 ```
 
-### Non-debt account:
+### Non-debt/Non-card account:
 ```
 balance += amount
 if investment AND tx.type == 'transfer':
     invested += amount          ← only MOVE transfers increase cost basis
+```
+
+### Card account (liability):
+```
+// Both source and destination logic
+if Source:
+    balance -= amount           ← Spending/Outflow increases debt
+if Destination:
+    balance += amount           ← Payments/Inflow reduces debt
 ```
 
 ## Final Account Update

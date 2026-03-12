@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseAdminService } from '../common/services/firebase-admin.service';
-import { Account } from '@repo/types';
+import { Account, TransactionType } from '@repo/types';
 import { TransactionsService } from './transactions.service';
 
 @Injectable()
@@ -94,11 +94,15 @@ export class AccountsService {
       } else {
         // For Bank/Cash/Card, we preserve the "traction" adjustment transaction logic
         const delta = newBalance - (currentAccount.balance || 0);
+        let type: TransactionType = delta > 0 ? 'income' : 'expense';
+        
+        // For cards, manual increase in balance is income (paid off debt).
+        
         await this.transactionsService.create({
           userId: currentAccount.userId,
           accountId: id,
           amount: Math.abs(delta),
-          type: delta > 0 ? 'income' : 'expense',
+          type: type,
           category: 'Valuation Adjustment',
           description: `Manual adjustment to match ${newBalance.toLocaleString()} valuation`,
           date: new Date().toISOString(),

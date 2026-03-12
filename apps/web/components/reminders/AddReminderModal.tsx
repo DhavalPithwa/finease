@@ -145,16 +145,16 @@ export function AddReminderModal({
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
             Horizon Date (Expiration)
           </label>
-          <div className="relative">
+          <div className="relative group">
             <input
               type="date"
               value={formData.expiryDate}
               onChange={(e) =>
                 setFormData({ ...formData, expiryDate: e.target.value })
               }
-              className="w-full h-12 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl pl-10 pr-4 text-sm font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all"
+              className="w-full h-12 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl pl-10 pr-4 text-sm font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
             />
-            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" />
           </div>
         </div>
       </div>

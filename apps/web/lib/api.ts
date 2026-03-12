@@ -41,6 +41,12 @@ api.interceptors.response.use(
   },
   (error) => {
     updateLoadingState(-1);
+    if (error.response?.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("finease_token");
+        window.dispatchEvent(new CustomEvent("finease-auth-failure"));
+      }
+    }
     return Promise.reject(error);
   },
 );

@@ -644,7 +644,7 @@ export default function TransactionsImportClient() {
                       <select
                         value={
                           mappings[
-                            field.key as keyof TransactionImportMapping
+                          field.key as keyof TransactionImportMapping
                           ] || ""
                         }
                         onChange={(e) =>
@@ -780,7 +780,92 @@ export default function TransactionsImportClient() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-2xl overflow-hidden shadow-xl">
+          <div className="lg:hidden space-y-3">
+            {reviewQueue.map((t, idx) => (
+              <div
+                key={t.id}
+                className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-2xl p-4 shadow-sm space-y-4"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1 flex-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                      Narration
+                    </label>
+                    <input
+                      value={t.description}
+                      onChange={(e) => {
+                        const q = [...reviewQueue];
+                        q[idx]!.description = e.target.value;
+                        setReviewQueue(q);
+                      }}
+                      className="bg-transparent border-none p-0 w-full text-[10px] font-black focus:ring-0 outline-none text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <button
+                    onClick={() =>
+                      setReviewQueue(reviewQueue.filter((_, i) => i !== idx))
+                    }
+                    className="size-8 flex items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-500"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50 dark:border-white/5">
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                      Timeline
+                    </label>
+                    <p className="text-[10px] font-bold text-slate-500">
+                      {formatDate(t.date || new Date().toISOString())}
+                    </p>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                      Quantum
+                    </label>
+                    <div
+                      className={`text-[11px] font-black ${t.type === "expense" ? "text-rose-500" : "text-emerald-500"}`}
+                    >
+                      {t.type === "expense" ? "-" : "+"} ₹
+                      {t.amount?.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="col-span-2 space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                      Category
+                    </label>
+                    <select
+                      value={t.category}
+                      onChange={(e) => {
+                        const q = [...reviewQueue];
+                        q[idx]!.category = e.target.value;
+                        setReviewQueue(q);
+                      }}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border-none rounded-xl h-10 px-3 text-[10px] font-black outline-none ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="Uncategorized">Select Category</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {reviewQueue.length === 0 && (
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-2xl p-12 text-center">
+                <ClipboardCheck className="size-12 text-slate-100 dark:text-white/5 mx-auto mb-4" />
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Acquisition channel empty
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="hidden lg:block bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-2xl overflow-hidden shadow-xl">
             <div className="overflow-x-auto overflow-y-hidden">
               <table className="w-full text-left">
                 <thead className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400 bg-slate-50 dark:bg-white/5 sticky top-0 z-10">

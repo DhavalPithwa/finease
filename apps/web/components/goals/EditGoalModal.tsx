@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Flag } from "lucide-react";
+import { Flag, Calendar } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { AmountInput } from "@/components/ui/AmountInput";
@@ -120,14 +120,17 @@ export function EditGoalModal({
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
             Horizon Date
           </label>
-          <input
-            type="date"
-            value={formData.targetDate}
-            onChange={(e) =>
-              setFormData({ ...formData, targetDate: e.target.value })
-            }
-            className="w-full h-12 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all"
-          />
+          <div className="relative group">
+            <input
+              type="date"
+              value={formData.targetDate}
+              onChange={(e) =>
+                setFormData({ ...formData, targetDate: e.target.value })
+              }
+              className="w-full h-12 pl-10 pr-4 bg-slate-50 dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
+            />
+            <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" />
+          </div>
         </div>
       </div>
     </Modal>

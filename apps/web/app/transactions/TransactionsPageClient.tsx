@@ -6,6 +6,7 @@ import { TransactionDetailsModal } from "@/components/transactions/TransactionDe
 import { AddAccountModal } from "@/components/accounts/AddAccountModal";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
+import { ArrowRight, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import {
   fetchTransactions,
   createTransaction,
@@ -26,15 +27,11 @@ import {
   Trash2,
   Edit2,
   Filter,
-  ArrowRight,
   CheckCircle2,
   Plus,
-  Download,
   ChevronUp,
   ChevronDown,
   FileUp,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import toast from "react-hot-toast";
@@ -45,8 +42,9 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
 import { Button } from "@/components/ui/Button";
+import { AccountType } from "@repo/types";
 
-const liquidTypes = ["bank", "cash", "card"];
+const liquidTypes: AccountType[] = ["bank", "cash", "card"];
 
 export default function TransactionsPageClient() {
   const { user } = useAuth();
@@ -110,9 +108,10 @@ export default function TransactionsPageClient() {
       // Add the primary transaction
       result.push(t);
 
-      // If it's a transfer between liquid accounts, add a virtual "credit" entry
+      // If it's a transfer to a liquid account (bank, cash, OR card), add a virtual "credit" entry
       if (t.type === "transfer" && t.toAccountId) {
         const toAcc = accounts.find((a) => a.id === t.toAccountId);
+        // "card" accounts should also show the credit side of a transfer
         if (toAcc && liquidTypes.includes(toAcc.type)) {
           result.push({
             ...t,
@@ -314,9 +313,9 @@ export default function TransactionsPageClient() {
       startY: 40,
       head: [
         [
-          "Execution Date",
+          "Date",
           "Description",
-          "Nexus Category",
+          "Category",
           "Source Entity",
           "Quantum",
           "Bal. Before",
@@ -572,29 +571,35 @@ export default function TransactionsPageClient() {
                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">
                   From Date
                 </label>
-                <input
-                  type="date"
-                  value={filterDateFrom}
-                  onChange={(e) => {
-                    setFilterDateFrom(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full h-8 bg-slate-50 dark:bg-slate-900 border-none rounded-lg px-2 text-[10px] font-bold outline-none ring-1 ring-slate-100 dark:ring-white/5"
-                />
+                <div className="relative group">
+                  <input
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={(e) => {
+                      setFilterDateFrom(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full h-8 bg-slate-50 dark:bg-slate-900 border-none rounded-lg pl-8 pr-2 text-[10px] font-bold outline-none ring-1 ring-slate-100 dark:ring-white/5 appearance-none"
+                  />
+                  <CalendarIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" />
+                </div>
               </div>
               <div className="space-y-1">
                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">
                   To Date
                 </label>
-                <input
-                  type="date"
-                  value={filterDateTo}
-                  onChange={(e) => {
-                    setFilterDateTo(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full h-8 bg-slate-50 dark:bg-slate-900 border-none rounded-lg px-2 text-[10px] font-bold outline-none ring-1 ring-slate-100 dark:ring-white/5"
-                />
+                <div className="relative group">
+                  <input
+                    type="date"
+                    value={filterDateTo}
+                    onChange={(e) => {
+                      setFilterDateTo(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full h-8 bg-slate-50 dark:bg-slate-900 border-none rounded-lg pl-8 pr-2 text-[10px] font-bold outline-none ring-1 ring-slate-100 dark:ring-white/5 appearance-none"
+                  />
+                  <CalendarIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" />
+                </div>
               </div>
             </div>
 
@@ -678,7 +683,7 @@ export default function TransactionsPageClient() {
                   {tx.isAutomated &&
                     tx.status === "pending_confirmation" &&
                     (String(tx.date).split("T")[0] || "") <=
-                      (new Date().toISOString().split("T")[0] || "") && (
+                    (new Date().toISOString().split("T")[0] || "") && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -731,7 +736,7 @@ export default function TransactionsPageClient() {
                   onClick={() => handleSort("date")}
                 >
                   <div className="flex items-center gap-2">
-                    Execution Date
+                    Date
                     {sortConfig.key === "date" &&
                       (sortConfig.direction === "asc" ? (
                         <ChevronUp className="w-3 h-3 text-primary" />
@@ -755,7 +760,7 @@ export default function TransactionsPageClient() {
                       ))}
                   </div>
                 </th>
-                <th className="px-8 py-6" scope="col">
+                <th className="px-8 py-6 w-[280px] min-w-[280px]" scope="col">
                   Entity
                 </th>
                 <th
@@ -764,7 +769,7 @@ export default function TransactionsPageClient() {
                   onClick={() => handleSort("category")}
                 >
                   <div className="flex items-center gap-2">
-                    Nexus Category
+                    Category
                     {sortConfig.key === "category" &&
                       (sortConfig.direction === "asc" ? (
                         <ChevronUp className="w-3 h-3 text-primary" />
@@ -779,7 +784,7 @@ export default function TransactionsPageClient() {
                   onClick={() => handleSort("amount")}
                 >
                   <div className="flex items-center justify-end gap-2">
-                    Quantum Amount
+                    Amount
                     {sortConfig.key === "amount" &&
                       (sortConfig.direction === "asc" ? (
                         <ChevronUp className="w-3 h-3 text-primary" />
@@ -789,7 +794,7 @@ export default function TransactionsPageClient() {
                   </div>
                 </th>
                 <th className="px-8 py-6 text-right" scope="col">
-                  Running Balance
+                  Balance
                 </th>
                 <th className="px-8 py-6 text-right w-36" scope="col">
                   Operations
@@ -842,18 +847,18 @@ export default function TransactionsPageClient() {
                         {tx.description}
                       </button>
                     </td>
-                    <td className="px-8 py-5">
-                      <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 flex items-center gap-2 uppercase tracking-widest">
-                        <span className="bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg text-slate-900 dark:text-white border border-slate-200 dark:border-white/5">
+                    <td className="px-8 py-5 w-[280px] min-w-[280px]">
+                      <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 flex items-center gap-2 uppercase tracking-widest overflow-hidden">
+                        <span className="bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg text-slate-900 dark:text-white border border-slate-200 dark:border-white/5 truncate max-w-[110px]">
                           {accounts.find((a) => a.id === tx.accountId)?.name ||
                             "N/A"}
                         </span>
                         {tx.type === "transfer" && tx.toAccountId && (
                           <>
-                            <span className="material-symbols-outlined text-[16px] text-primary/40">
+                            <span className="material-symbols-outlined text-[16px] text-primary/40 flex-shrink-0">
                               trending_flat
                             </span>
-                            <span className="bg-primary/5 text-primary px-2.5 py-1 rounded-lg border border-primary/10 tracking-widest">
+                            <span className="bg-primary/5 text-primary px-2.5 py-1 rounded-lg border border-primary/10 tracking-widest truncate max-w-[110px]">
                               {accounts.find((a) => a.id === tx.toAccountId)
                                 ?.name ||
                                 goals.find((g) => g.id === tx.toAccountId)
@@ -865,9 +870,9 @@ export default function TransactionsPageClient() {
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <span className="inline-flex items-center rounded-xl bg-slate-50 border border-slate-100 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.1em] text-slate-600 dark:bg-slate-800/50 dark:border-white/5 dark:text-slate-400">
+                      <span className="inline-flex items-center rounded-full bg-slate-100/50 border border-slate-200/50 px-3 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-slate-700 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 whitespace-nowrap shadow-sm">
                         <div
-                          className={`w-1.5 h-1.5 rounded-full mr-2 ${categories.find((c) => c.id === tx.category)?.color || "bg-slate-400"}`}
+                          className={`w-2 h-2 rounded-full mr-2 shadow-sm ${categories.find((c) => c.id === tx.category)?.color || "bg-slate-400"}`}
                         />
                         {categories.find((c) => c.id === tx.category)?.name ||
                           tx.category}
@@ -901,7 +906,7 @@ export default function TransactionsPageClient() {
                         {tx.isAutomated &&
                           tx.status === "pending_confirmation" &&
                           (String(tx.date).split("T")[0] || "") <=
-                            (new Date().toISOString().split("T")[0] || "") && (
+                          (new Date().toISOString().split("T")[0] || "") && (
                             <Button
                               size="sm"
                               onClick={async (e) => {
@@ -921,30 +926,30 @@ export default function TransactionsPageClient() {
                           )}
                         {!(tx as Transaction & { isVirtual?: boolean })
                           .isVirtual && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingData(tx);
-                                setIsModalOpen(true);
-                              }}
-                              className="p-2.5 rounded-xl hover:bg-primary/10 text-slate-400 hover:text-primary transition-all border border-transparent hover:border-primary/20"
-                              title="Edit entry"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTransactionToDelete(tx);
-                              }}
-                              className="p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-all border border-transparent hover:border-rose-500/20"
-                              title="Delete entry"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingData(tx);
+                                  setIsModalOpen(true);
+                                }}
+                                className="p-2.5 rounded-xl hover:bg-primary/10 text-slate-400 hover:text-primary transition-all border border-transparent hover:border-primary/20"
+                                title="Edit entry"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTransactionToDelete(tx);
+                                }}
+                                className="p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-all border border-transparent hover:border-rose-500/20"
+                                title="Delete entry"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
                       </div>
                     </td>
                   </tr>

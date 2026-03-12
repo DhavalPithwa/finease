@@ -125,15 +125,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           void dispatch(fetchCategories());
           void dispatch(fetchAssetClasses());
           void dispatch(fetchGoals());
-        } catch {
-          localStorage.removeItem("finease_token");
-          dispatch({ type: "USER_LOGOUT" });
+        } catch (err: any) {
+          // Only logout on 401 Unauthorized
+          if (err.response?.status === 401) {
+            localStorage.removeItem("finease_token");
+            dispatch({ type: "USER_LOGOUT" });
+          }
+          // For other errors (network, 500), keep the session and maybe show a toast
+          console.error("Profile fetch failed:", err);
         }
       }
       setLoading(false);
     };
 
+    const handleAuthFailure = () => {
+      dispatch({ type: "USER_LOGOUT" });
+      dispatch(setUser(null));
+    };
+
+    window.addEventListener("finease-auth-failure", handleAuthFailure);
     void initAuth();
+    return () => {
+      window.removeEventListener("finease-auth-failure", handleAuthFailure);
+    };
   }, [dispatch]);
 
   const loginWithGoogle = async (

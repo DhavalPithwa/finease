@@ -462,11 +462,13 @@ export default function ReportsPageClient() {
         <Card className="p-4 sm:p-6 shadow-none border-slate-100 dark:border-slate-800 bg-primary/[0.03] border-primary/10 hover:bg-primary/[0.05] transition-all group">
           <div className="text-xs font-bold text-primary/60 mb-2">Savings</div>
           <div className="text-lg sm:text-2xl font-black text-primary mb-2 truncate shrink-0">
-            {inflow > 0 ? Math.round(((inflow - outflow) / inflow) * 100) : 0}%
+            {formatCurrency(inflow - outflow)}
           </div>
           <div className="flex items-center gap-1.5 text-[10px] font-black text-primary/80">
             <Percent className="w-3 h-3" />
-            <span className="truncate leading-none">RATE</span>
+            <span className="truncate leading-none">
+              {inflow > 0 ? Math.round(((inflow - outflow) / inflow) * 100) : 0}% RATE
+            </span>
           </div>
         </Card>
       </div>
