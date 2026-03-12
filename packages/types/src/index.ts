@@ -106,6 +106,7 @@ export interface Transaction {
   metadata?: {
     originalInstitutionDescription?: string;
     isCashWithdrawal?: boolean;
+    isBalanceSync?: boolean;
     [key: string]: unknown;
   };
   isAutomated?: boolean;

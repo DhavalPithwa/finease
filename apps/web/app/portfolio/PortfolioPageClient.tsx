@@ -144,6 +144,7 @@ export default function PortfolioPageClient() {
             <Button
               size="sm"
               variant="secondary"
+              className="flex-1 lg:flex-initial"
               onClick={() => {
                 setEditingAssetType(null);
                 setIsAssetTypeModalOpen(true);
@@ -152,13 +153,18 @@ export default function PortfolioPageClient() {
               <Plus className="w-3.5 h-3.5 mr-1" />
               Class
             </Button>
-            <Button size="sm" onClick={() => setIsAddInvestmentOpen(true)}>
+            <Button 
+              size="sm" 
+              className="flex-1 lg:flex-initial"
+              onClick={() => setIsAddInvestmentOpen(true)}
+            >
               <Plus className="w-3.5 h-3.5 mr-1" />
               Invest
             </Button>
             <Button
               size="sm"
               variant="danger"
+              className="flex-1 lg:flex-initial"
               onClick={() => setIsAddLiabilityOpen(true)}
             >
               <Plus className="w-3.5 h-3.5 mr-1" />
@@ -167,6 +173,7 @@ export default function PortfolioPageClient() {
             <Button
               size="sm"
               variant="success"
+              className="flex-1 lg:flex-initial"
               onClick={() => setIsAddAssetOpen(true)}
             >
               <Plus className="w-3.5 h-3.5 mr-1" />

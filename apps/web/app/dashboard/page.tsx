@@ -310,10 +310,11 @@ export default function Home() {
         title="Command Center"
         subtitle="Unified wealth landscape"
         actions={
-          <div className="flex gap-2">
+          <div className="flex w-full sm:w-auto gap-2">
             <Button
               size="sm"
               onClick={() => setIsAccountModalOpen(true)}
+              className="flex-1 sm:flex-initial"
               leftIcon={<Plus className="w-3.5 h-3.5" />}
             >
               Account

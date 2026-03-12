@@ -45,20 +45,25 @@ export class GoalService {
     id: string,
     goal: Partial<FinancialGoal>,
   ): Promise<FinancialGoal> {
-    const currentGoal = (await this.collection.doc(id).get()).data() as FinancialGoal;
-    
-    if (goal.currentAmount !== undefined && Math.abs(goal.currentAmount - (currentGoal.currentAmount || 0)) > 0.01) {
+    const currentGoal = (
+      await this.collection.doc(id).get()
+    ).data() as FinancialGoal;
+
+    if (
+      goal.currentAmount !== undefined &&
+      Math.abs(goal.currentAmount - (currentGoal.currentAmount || 0)) > 0.01
+    ) {
       const delta = goal.currentAmount - (currentGoal.currentAmount || 0);
       const newInitial = (currentGoal.initialAmount || 0) + delta;
-      
+
       const updateData = { ...goal };
       delete updateData.currentAmount;
-      
+
       await this.collection.doc(id).update({
         ...updateData,
         initialAmount: newInitial,
       });
-      
+
       // Trigger recalculation to ensure everything is consistent
       await this.transactionsService.recalculateGoalProgress(id);
     } else {

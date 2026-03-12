@@ -342,7 +342,7 @@ export default function TransactionsPageClient() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 pb-20 lg:pb-8 pt-0">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 sm:space-y-6 pb-20 lg:pb-8 pt-0">
       <PageHeader
         title="Transactions"
         subtitle="Unified financial ledger"
@@ -382,13 +382,15 @@ export default function TransactionsPageClient() {
                 </div>
               )}
             </div>
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => toast.success("Ledger Import coming soon", { icon: "🚀" })}
-              className="inline-flex items-center justify-center h-8 rounded-xl border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm dark:border-white/5 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-white/10 transition-all duration-200"
+              className="w-full sm:w-auto"
+              leftIcon={<FileUp className="w-3.5 h-3.5" />}
             >
-              <FileUp className="w-3.5 h-3.5 mr-1.5" />
               Import
-            </button>
+            </Button>
             <Button
               size="sm"
               onClick={() => {

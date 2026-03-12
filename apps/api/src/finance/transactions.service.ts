@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { FirebaseAdminService } from '../common/services/firebase-admin.service';
 import { Transaction, Account, FinancialGoal } from '@repo/types';
 
@@ -16,7 +20,7 @@ export class TransactionsService {
   private readonly accountsCollection = 'accounts';
   private readonly goalsCollection = 'goals';
 
-  constructor(private readonly firebaseAdmin: FirebaseAdminService) { }
+  constructor(private readonly firebaseAdmin: FirebaseAdminService) {}
 
   private get db() {
     return this.firebaseAdmin.getFirestore();
@@ -257,22 +261,12 @@ export class TransactionsService {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Balance Recalculation Engine
-  //
-  // Replays the full chronological transaction history for an account starting
-  // from its `initialAmount`, then updates the account's balance summary.
-  //
-  // Rules:
-  //   OUT  (expense)  → balance -= amount. For investments, invested -= amount.
-  //   IN   (income)   → balance += amount. For investments, invested += amount.
-  //                     Special: if metadata.isBalanceSync == true on an investment,
-  //                     balance = amount (absolute set, for market valuation sync).
-  //   MOVE (transfer) → as source: balance -= amount (+ invested for investments)
-  //                     as destination: balance += amount (+ invested for investments)
-  //                     Special: if destination is debt, tracks principal/interest split.
-  // ---------------------------------------------------------------------------
-
+  /**
+   * RECALCULATION ENGINE
+   *
+   * Replays the full chronological transaction history for an account starting from
+   * its initialAmount, ensuring the balance summary is mathematically consistent.
+   */
   public async recalculateBalances(accountId: string): Promise<void> {
     const accRef = this.db.collection(this.accountsCollection).doc(accountId);
     const accDoc = await accRef.get();
@@ -280,7 +274,7 @@ export class TransactionsService {
 
     const acc = accDoc.data() as Account;
 
-    // Fetch all non-deleted completed transactions involving this account.
+    // 1. DATA FETCHING: Get all transactions involving this account
     const [asSourceSnap, asDestSnap] = await Promise.all([
       this.collection
         .where('accountId', '==', accountId)
@@ -293,77 +287,59 @@ export class TransactionsService {
         .where('status', 'in', ['completed', 'approved'])
         .get(),
     ]);
-    console.log("🚀 ~ TransactionsService ~ recalculateBalances ~ asDestSnap:", asDestSnap)
-    console.log("🚀 ~ TransactionsService ~ recalculateBalances ~ asSourceSnap:", asSourceSnap)
 
-    // Merge and de-duplicate (a transfer appears in both queries).
+    // 2. MERGE & SORT: De-duplicate (transfers) and order chronologically
     const txMap = new Map<string, Transaction>();
     [...asSourceSnap.docs, ...asDestSnap.docs].forEach((doc) => {
       txMap.set(doc.id, { id: doc.id, ...doc.data() } as Transaction);
     });
-    console.log("🚀 ~ TransactionsService ~ recalculateBalances ~ txMap:", txMap)
 
     const txs = Array.from(txMap.values()).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
-    console.log("🚀 ~ TransactionsService ~ recalculateBalances ~ txs:", txs)
 
-    // Starting balance = initialAmount when the account was created.
-    // If initialAmount is missing (legacy account) and transactions exist,
-    // start from 0 to avoid double-counting the already-applied history.
+    // 3. STATE INITIALIZATION
+    // Use initialAmount from creation; legacy accounts without it use 0 or current balance.
     let balance: number;
-    console.log("🚀 ~ TransactionsService ~ recalculateBalances ~ acc:", acc)
     if (acc.initialAmount !== undefined && acc.initialAmount !== null) {
       balance = Number(acc.initialAmount);
     } else {
       balance = txs.length > 0 ? 0 : Number(acc.balance) || 0;
     }
 
-    // Debt balances are always stored as negative.
+    // Debt balances are inherently negative or zero
     if (acc.type === 'debt' && balance > 0) balance = -balance;
 
-    // Tracks actual capital contributed to investment accounts.
-    let invested = balance;
-
-    // Tracks how much has been repaid on debt accounts.
-    let repaidCapital = 0;
-    let burnedInterest = 0;
+    let invested = balance; // Total capital contributed (for investments)
+    let repaidCapital = 0; // Principal repaid (for debt)
+    let burnedInterest = 0; // Total interest paid (for debt)
 
     const batch = this.db.batch();
 
+    // 4. TRANSACTION REPLAY LOOP
     for (const tx of txs) {
       const amount = Number(tx.amount);
 
       if (tx.accountId === accountId) {
-        // -----------------------------------------------------------------
-        // This account is the SOURCE of the transaction.
-        // -----------------------------------------------------------------
+        /**
+         * ACTION: Account is the SOURCE (Money leaving or spending)
+         */
         if (tx.type === 'income') {
-          // IN flow: money arrives at this account.
-          const isSync = (tx.metadata as any)?.isBalanceSync;
+          // Special Case: Incomes usually go INTO accounts, but here it's sourced from this account.
+          // This often handles balance syncs or adjustments.
+          const isSync = tx.metadata?.isBalanceSync;
+
           if (acc.type === 'investment' && isSync) {
-            // Valuation Sync: set balance to exact market value.
-            balance = amount;
-            // invested is intentionally unchanged — preserves cost basis.
+            balance = amount; // Absolute market valuation sync
           } else if (acc.type === 'card') {
-            // Card spending increases debt balance (more negative).
-            balance -= amount;
+            balance -= amount; // Spending on a card increases debt
           } else {
-            balance += amount;
-          }
-        } else if (tx.type === 'expense') {
-          // OUT flow: money leaves.
-          if (acc.type === 'card') {
-            // Spending increases debt (makes it more negative).
-            balance -= amount;
-          } else {
-            balance -= amount;
-            if (acc.type === 'investment') invested -= amount;
+            balance += amount; // Standard income credit
           }
         } else {
-          // MOVE (transfer) OUT.
+          // Standard EXIT flow (Expense or Transfer Out)
           if (acc.type === 'card') {
-            balance -= amount;
+            balance -= amount; // Card spending
           } else {
             balance -= amount;
             if (acc.type === 'investment') invested -= amount;
@@ -372,24 +348,24 @@ export class TransactionsService {
 
         batch.update(this.collection.doc(tx.id), { balanceAfter: balance });
       } else if (tx.toAccountId === accountId) {
-        // -----------------------------------------------------------------
-        // This account is the DESTINATION of the transaction.
-        // -----------------------------------------------------------------
+        /**
+         * ACTION: Account is the DESTINATION (Money arriving or being repaid)
+         */
         if (acc.type === 'debt' || acc.type === 'card') {
-          // Debt/Card repayment: split amount into principal + interest.
-          // Triggered for both 'transfer' (MOVE) and 'expense' (OUT + CreditTo).
+          // Repayment logic: Split payment into principal vs interest
           const interest = Number(tx.interestAmount) || 0;
           const principal = amount - interest;
-          balance += principal; // Reduces what is owed (moves toward 0/positive)
+
+          balance += principal; // Reduces debt (moves balance toward 0)
+
           if (acc.type === 'debt') {
             repaidCapital += principal;
             burnedInterest += interest;
           }
         } else {
-          // Standard credit: add to balance.
+          // Standard arrival
           balance += amount;
-          // Only MOVE (transfer) into investment increases cost basis.
-          // This prevents dividends credited as income from inflating invested.
+          // Only explicit transfers into investments affect the "Invested Amount" (cost basis)
           if (acc.type === 'investment' && tx.type === 'transfer') {
             invested += amount;
           }
@@ -399,19 +375,22 @@ export class TransactionsService {
       }
     }
 
-    // Write the final account summary.
+    // 5. FINAL ACCOUNT UPDATE
     const accUpdate: Partial<Account> = {
       balance,
       lastSyncedAt: new Date().toISOString(),
     };
+
     if (acc.type === 'investment') accUpdate.investedAmount = invested;
-    if (acc.valuationAdjustment) {
-      balance += Number(acc.valuationAdjustment);
-      accUpdate.balance = balance;
-    }
     if (acc.type === 'debt') {
       accUpdate.repaidCapital = repaidCapital;
       accUpdate.burnedInterest = burnedInterest;
+    }
+
+    // Apply manual valuation adjustments if present
+    if (acc.valuationAdjustment) {
+      balance += Number(acc.valuationAdjustment);
+      accUpdate.balance = balance;
     }
 
     batch.update(accRef, accUpdate);

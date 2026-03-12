@@ -90,7 +90,7 @@ export default function GoalsPageClient() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full pb-20 lg:pb-8 pt-0">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full space-y-4 sm:space-y-6 pb-20 lg:pb-8 pt-0">
       <PageHeader
         title="Goals"
         subtitle={
@@ -106,9 +106,9 @@ export default function GoalsPageClient() {
             to meet all targets.
           </>
         }
-        className="mb-6 space-y-3"
+        className="space-y-3"
         actions={
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               size="sm"
@@ -133,7 +133,7 @@ export default function GoalsPageClient() {
         }
       />
 
-      <div className="mt-8 space-y-10">
+      <div className="space-y-6 lg:space-y-10">
         <div className="space-y-4">
           <div className="bg-slate-50 dark:bg-white/5 -mx-4 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
             <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">

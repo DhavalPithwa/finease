@@ -400,14 +400,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
             </div>
           </motion.div>
         ) : (
-          <motion.div
-            key="content"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex-1 flex flex-col"
-          >
-            {children}
-          </motion.div>
+          children
         )}
       </AnimatePresence>
     </SecurityContext.Provider>

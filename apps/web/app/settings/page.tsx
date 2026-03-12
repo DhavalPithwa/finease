@@ -35,7 +35,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const checkPWA = () => {
-      const nav = window.navigator as any;
+      const nav = window.navigator as Navigator & { standalone?: boolean };
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
         || nav.standalone 
         || document.referrer.includes('android-app://');

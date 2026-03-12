@@ -125,9 +125,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           void dispatch(fetchCategories());
           void dispatch(fetchAssetClasses());
           void dispatch(fetchGoals());
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const axiosError = err as { response?: { status?: number } };
           // Only logout on 401 Unauthorized
-          if (err.response?.status === 401) {
+          if (axiosError.response?.status === 401) {
             localStorage.removeItem("finease_token");
             dispatch({ type: "USER_LOGOUT" });
           }

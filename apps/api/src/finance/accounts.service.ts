@@ -94,10 +94,10 @@ export class AccountsService {
       } else {
         // For Bank/Cash/Card, we preserve the "traction" adjustment transaction logic
         const delta = newBalance - (currentAccount.balance || 0);
-        let type: TransactionType = delta > 0 ? 'income' : 'expense';
-        
+        const type: TransactionType = delta > 0 ? 'income' : 'expense';
+
         // For cards, manual increase in balance is income (paid off debt).
-        
+
         await this.transactionsService.create({
           userId: currentAccount.userId,
           accountId: id,
