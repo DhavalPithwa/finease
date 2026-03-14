@@ -13,7 +13,6 @@ import {
   Compass,
   Zap,
   UserCircle2,
-  Lock,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -62,6 +61,12 @@ export function FeatureTour() {
       icon: <Target className="w-10 h-10 text-rose-500" />,
     },
     {
+      title: "Predictive Intelligence",
+      description:
+        "Our analytical engine synthesizes your data to project future wealth. See your FIRE date and capital retention rates in real-time.",
+      icon: <Compass className="w-10 h-10 text-primary" />,
+    },
+    {
       title: "Privacy Protocol",
       description:
         "Your data is encrypted and private. Use biometric locks or PINs to secure your financial architecture on any device.",
@@ -74,16 +79,10 @@ export function FeatureTour() {
       icon: <UserCircle2 className="w-10 h-10 text-primary" />,
     },
     {
-      title: "Protocol Governance",
-      description:
-        "Administer your financial architecture. Sanitize ledgers and govern sub-nodes via the encrypted Purge terminal.",
-      icon: <Lock className="w-10 h-10 text-orange-500" />,
-    },
-    {
       title: "Ready for Launch",
       description:
         "You're now ready to pilot your financial future. Sync your data and let FinEase guide you to absolute clarity.",
-      icon: <Compass className="w-10 h-10 text-emerald-500" />,
+      icon: <Sparkles className="w-10 h-10 text-emerald-500" />,
     },
   ];
 
